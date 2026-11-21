@@ -1,5 +1,11 @@
 # HANDOFF – Model A
 
+## 2026-11-21 17:10 – HANDOFF #5: obraz Docker naprawiony i sprawdzony
+
+- **Zrobione:** `Dockerfile` kopiuje `data/granice/` (bez tego w Dockerze `/pokrycie` dawało 404, a `gminy_bez_danych` = 0). Nowy `.dockerignore` (bez `.git`, `deliverables`, `node_modules` – szybszy build). **Pierwszy pełny build i start obu obrazów (api + ui) przetestowany**: 18 039 AED, `/pokrycie`, `/aed/punkty` z gzip, UI przez nginx bez trybu demonstracyjnego.
+- **Uwaga:** gdy przy pierwszym starcie kontenera nie ma sieci, a w `data/cache/` brak `aed_poland.geojson`, baza dostaje tylko próbkę OSM i nie odświeża się sama (`start.sh` seeduje tylko pustą bazę) – wtedy `POST /zrodla/osm/odswiez` albo usunięcie wolumenu.
+- **Następny krok:** –
+
 ## 2026-11-21 16:45 – HANDOFF #4: decyzje TL (CR-TL-2) – uprawnienia dysponenta, /aed/punkty, granice 16 województw, LICZBY
 
 - **Czas:** sob 15:10–16:45
