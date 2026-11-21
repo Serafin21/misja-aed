@@ -1,0 +1,11 @@
+# Kontekst budowania obrazu API – tylko to, co potrzebne (szybszy build)
+.git
+**/__pycache__
+**/node_modules
+src/ui/dist
+deliverables
+pitch
+brand
+qa
+data/*.sqlite3*
+data/cache/prg
