@@ -1,0 +1,24 @@
+# Uruchomienie: docker compose up --build   →  API: http://localhost:8000/api/v1/docs, aplikacja: http://localhost:8080
+services:
+  api:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      AED_DB: /data/aed.sqlite3
+    ports:
+      - "8000:8000"
+    volumes:
+      - aed-data:/data
+      - ./data/cache:/app/data/cache
+  ui:
+    build: ./src/ui
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    profiles: ["ui"]   # do czasu dodania src/ui przez Model B: docker compose --profile ui up
+volumes:
+  aed-data:

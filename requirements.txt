@@ -1,0 +1,10 @@
+# Licencje: MIT / BSD / Apache-2.0 (sprawdzone – docs/tech/COMPLIANCE.md)
+fastapi==0.165.0          # MIT
+uvicorn[standard]==0.54.0 # BSD-3-Clause
+python-multipart==0.0.32  # Apache-2.0
+jsonschema==4.26.0        # MIT
+openpyxl==3.1.5           # MIT
+rapidfuzz==3.14.6         # MIT
+# tylko testy
+pytest==9.1.1             # MIT
+httpx==0.28.1             # BSD-3-Clause
