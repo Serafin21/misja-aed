@@ -1,5 +1,11 @@
 # HANDOFF – Model A
 
+## 2026-11-21 20:30 – HANDOFF #7: wyszukiwarka miejsc (`GET /miejsca`) i gmina w `/aed/punkty`
+
+- **Zrobione:** `GET /api/v1/miejsca?q=&blisko=lat,lon` (`src/core/geocode.py`) – województwa i 2479 gmin z granic PRG (bez sieci, bez polskich znaków: „lodz” → Łódź, miasto przed gminą wiejską o tej samej nazwie) + miejscowości (także wsie), ulice („Kraków, Floriańska” albo „Kraków Floriańska”) i adresy („Kraków, Floriańska 3”) z **usługi geokodowania GUGiK** (`services.gugik.gov.pl/uug`, bezpłatna, oficjalne punkty adresowe; pamięć podręczna, limit 4 s; `AED_GEOKODER=brak` wyłącza). Sama nazwa ulicy + `blisko` → ulica w gminie na środku mapy. Wynik: `{typ: wojewodztwo|gmina|miejscowosc|ulica|adres, nazwa, opis, lat, lon, bbox|null, teryt (gmina), liczba_aed (gmina, województwo – po położeniu)}`; stare pola `nazwa, lat, lon` zostają. `/aed/punkty` ma `gmina_teryt` – filtr gminy w przeglądarce daje dokładną liczbę (np. Kraków: wszystkie AED w granicach miasta, a nie tylko te z „Kraków” w nazwie). 70 testów (geokoder w testach zastąpiony atrapą).
+- **Dlaczego „Kraków” dawał mało wyników:** stare wyszukiwanie szukało tekstu w nazwie i adresie, a 99% rekordów OSM nie ma adresu.
+- **Użycie AI:** Claude.
+
 ## 2026-11-21 19:00 – HANDOFF #6: CR od B (#14) + pod nową mapę E2
 
 - **Zrobione:** (1) `tzdata` w `requirements.txt` (tylko Windows, Apache-2.0) i w `check_licenses.py`; (2) `GET /aed?wojewodztwo=` filtruje **po położeniu** w granicach PRG (pole rekordu tylko gdy punkt poza granicami); (3) `GET /aed/punkty` ma dodatkowo `dostep`, `wiek_danych_dni` (null = brak daty), `mobilny`, `wojewodztwo` (z położenia) – do filtrów po stronie przeglądarki; (4) `GET /aed?ids=a,b,c` (maks. 200) – rekordy w podanej kolejności, dla listy obok mapy. 66 testów.

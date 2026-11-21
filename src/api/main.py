@@ -235,7 +235,7 @@ _points_cache: dict[tuple, tuple[bytes, bytes, str]] = {}
          description="Cała Polska albo `bbox`. Każdy punkt: `id`, współrzędne i pola do kolorowania i filtrowania: "
                      "`dostepny_teraz` (true/false/null), `stan_danych` (aktualne/nieaktualne), `osm` (true = warstwa ODbL), "
                      "`dostep` (publiczny/ograniczony/prywatny), `wiek_danych_dni` (null = brak daty), `mobilny`, "
-                     "`wojewodztwo` (z położenia). "
+                     "`wojewodztwo` i `gmina_teryt` (z położenia). "
                      "Odpowiedź skompresowana gzip, gdy klient to obsługuje; nagłówek `ETag` – przy `If-None-Match` serwer zwraca 304. "
                      "`dostepny_teraz` przeliczane co minutę.")
 def aed_points(request: Request, bbox: Optional[str] = Query(None, description="minLon,minLat,maxLon,maxLat (WGS 84)")):
@@ -265,7 +265,8 @@ def aed_points(request: Request, bbox: Optional[str] = Query(None, description="
                                          # for client-side filters next to the map (availability, freshness, area)
                                          "dostep": r.get("dostep"), "wiek_danych_dni": coverage.wiek_danych_dni(r),
                                          "mobilny": bool(r.get("mobilny")),
-                                         "wojewodztwo": coverage.wojewodztwo_z_polozenia(r) or r.get("wojewodztwo")}})
+                                         "wojewodztwo": coverage.wojewodztwo_z_polozenia(r) or r.get("wojewodztwo"),
+                                         "gmina_teryt": coverage.gmina_teryt(r)}})
         body = _json.dumps({"type": "FeatureCollection", "features": feats,
                             "meta": {"count": len(feats), "liczone_na": minute, "prog_aktualnosci_dni": coverage.PROG_DNI,
                                      "atrybucja_osm": "© autorzy OpenStreetMap (ODbL)"}},
@@ -799,22 +800,47 @@ def dictionaries():
                      "wymagane": schema.required_fields(), "zalecane": schema.recommended_fields()}}
 
 
-@app.get(f"{API}/miejsca", tags=["aed"], summary="Wyszukiwanie miejscowości (środek rekordów AED) – CR-B2")
-def places(q: str = Query(..., min_length=2), limit: int = Query(10, ge=1, le=50)):
-    """No geocoding: localities known from the dataset, centre = mean of their AED coordinates."""
-    ql = q.lower()
-    groups: dict[tuple, list] = {}
-    for r in get_store().records.values():
-        m = r.get("miejscowosc")
-        if m and ql in m.lower():
-            groups.setdefault((m, r.get("wojewodztwo")), []).append(r)
-    out = []
-    for (m, w), rs in groups.items():
-        out.append({"nazwa": m, "wojewodztwo": w, "liczba_aed": len(rs),
-                    "lat": round(sum(x["szerokosc_geograficzna"] for x in rs) / len(rs), 6),
-                    "lon": round(sum(x["dlugosc_geograficzna"] for x in rs) / len(rs), 6)})
-    out.sort(key=lambda x: (not x["nazwa"].lower().startswith(ql), -x["liczba_aed"]))
-    return {"data": out[:limit], "meta": {"count": min(len(out), limit)}}
+_counts_cache: dict[str, Any] = {"version": None}
+
+
+def _area_counts() -> tuple[dict, dict]:
+    """AED per gmina (TERYT) and per voivodeship, by location; recomputed when the dataset changes."""
+    st = get_store()
+    if _counts_cache["version"] != st.version:
+        gm = {t: a + n for t, (a, n) in coverage.counts_by_gmina(st.records.values()).items()}
+        woj: dict[str, int] = {}
+        for t, c in gm.items():
+            w = coverage.WOJ_KOD.get(t[:2])
+            woj[w] = woj.get(w, 0) + c
+        _counts_cache.update(version=st.version, gm=gm, woj=woj)
+    return _counts_cache["gm"], _counts_cache["woj"]
+
+
+@app.get(f"{API}/miejsca", tags=["aed"], summary="Wyszukiwarka miejsc: województwa, gminy, miejscowości, ulice, adresy",
+         description="Województwa i gminy z granic PRG (bez sieci, bez polskich znaków też działa: „lodz”), miejscowości, ulice "
+                     "(„Kraków, Floriańska”) i adresy („Kraków, Floriańska 3”) z geokodera GUGiK. `blisko=lat,lon` (środek mapy): "
+                     "sama nazwa ulicy szuka jej w gminie na środku mapy. Każdy wynik: `typ`, `nazwa`, `opis`, `lat`, `lon`, "
+                     "`bbox` [minLon,minLat,maxLon,maxLat] albo null, dla gmin `teryt`, dla gmin i województw `liczba_aed`.")
+def places(q: str = Query(..., min_length=2), limit: int = Query(8, ge=1, le=20),
+           blisko: Optional[str] = Query(None, description="lat,lon środka mapy")):
+    from src.core import geocode
+    near = None
+    if blisko:
+        try:
+            a, b = (float(x) for x in blisko.split(","))
+            near = (a, b)
+        except ValueError:
+            err(422, "walidacja", "Parametr blisko: lat,lon.", {"blisko": "Nieprawidłowy format."})
+    online = os.environ.get("AED_GEOKODER", "gugik") != "brak"
+    items = geocode.search(q, limit=limit, blisko=near, online=online)
+    gm, woj = _area_counts()
+    for i in items:
+        if i["typ"] == "gmina":
+            i["liczba_aed"] = gm.get(i["teryt"], 0)
+        elif i["typ"] == "wojewodztwo":
+            i["liczba_aed"] = woj.get(i["nazwa"], 0)
+    return {"data": items, "meta": {"count": len(items), "q": q,
+                                    "zrodla": "granice: PRG (GUGiK); miejscowości, ulice, adresy: usługa geokodowania GUGiK"}}
 
 
 @app.get("/api/docs", include_in_schema=False)
