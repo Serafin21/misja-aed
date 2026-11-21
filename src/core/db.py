@@ -25,6 +25,21 @@ CREATE TABLE IF NOT EXISTS zgloszenia (id TEXT PRIMARY KEY, status TEXT NOT NULL
 CREATE TABLE IF NOT EXISTS potwierdzenia (
   id INTEGER PRIMARY KEY AUTOINCREMENT, id_aed TEXT NOT NULL, data TEXT NOT NULL, created TEXT);
 CREATE INDEX IF NOT EXISTS ix_potw_aed ON potwierdzenia(id_aed);
+-- model ról (docs/MODEL_ROL.md): pochodzenie rekordu wspólnej listy od dostawcy (bez scalania)
+CREATE TABLE IF NOT EXISTS lista (id_aed TEXT PRIMARY KEY, data TEXT NOT NULL);
+-- kopia robocza dostawcy (kreator plików do publikacji) – nie trafia na listę
+CREATE TABLE IF NOT EXISTS robocze (
+  dostawca TEXT NOT NULL, id_aed TEXT NOT NULL, data TEXT NOT NULL, updated TEXT, PRIMARY KEY (dostawca, id_aed));
+CREATE TABLE IF NOT EXISTS organizacje (dostawca TEXT PRIMARY KEY, data TEXT NOT NULL);
+-- dziennik zdarzeń: tylko INSERT (rozliczalność, K10)
+CREATE TABLE IF NOT EXISTS dziennik (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, czas TEXT NOT NULL, kto TEXT NOT NULL, rola TEXT, operacja TEXT NOT NULL,
+  obiekt TEXT, przed TEXT, po TEXT);
+CREATE TRIGGER IF NOT EXISTS dziennik_bez_zmian BEFORE UPDATE ON dziennik BEGIN SELECT RAISE(ABORT, 'dziennik tylko do odczytu'); END;
+CREATE TRIGGER IF NOT EXISTS dziennik_bez_usuwania BEFORE DELETE ON dziennik BEGIN SELECT RAISE(ABORT, 'dziennik tylko do odczytu'); END;
+CREATE TABLE IF NOT EXISTS powiadomienia (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, dostawca TEXT NOT NULL, typ TEXT NOT NULL, tresc TEXT NOT NULL, ref TEXT,
+  czas TEXT NOT NULL, przeczytane INTEGER NOT NULL DEFAULT 0, UNIQUE (dostawca, typ, ref));
 CREATE TABLE IF NOT EXISTS konta (
   login TEXT PRIMARY KEY, rola TEXT NOT NULL, dysponent_nazwa TEXT, haslo TEXT NOT NULL, aktywne INTEGER NOT NULL DEFAULT 1,
   utworzono TEXT, utworzyl TEXT, email TEXT);

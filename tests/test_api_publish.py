@@ -1,7 +1,5 @@
 import csv
 import io
-import json
-import xml.dom.minidom
 
 from scripts.check_csv import check
 from tests.conftest import ROOT
@@ -16,9 +14,11 @@ def test_list_and_paging(client):
 
 
 def test_filters(client):
-    assert client.get("/api/v1/aed?wojewodztwo=małopolskie").json()["meta"]["count"] == 2
-    assert client.get("/api/v1/aed?bbox=19.9,50.0,20.0,50.1").json()["meta"]["count"] == 2
-    assert client.get("/api/v1/aed?warstwa=osm").json()["meta"]["count"] == 2
+    # list: Uczelnia Testowa 2 + MPK 2 (Kraków), Urząd Gminy Przykładowo 3 (Warszawa)
+    assert client.get("/api/v1/aed?wojewodztwo=małopolskie").json()["meta"]["count"] == 4
+    assert client.get("/api/v1/aed?bbox=19.9,50.0,20.0,50.1").json()["meta"]["count"] == 4
+    assert client.get("/api/v1/aed?warstwa=pomocnicza").json()["meta"]["count"] == 3
+    assert client.get("/api/v1/aed?warstwa=wszystkie").json()["meta"]["count"] == 10
 
 
 def test_nearest(client):
@@ -34,9 +34,10 @@ def test_private_never_available(client):
 
 
 def test_detail_with_provenance(client):
-    j = client.get("/api/v1/aed/AED-PL-B939F7EBA4").json()
-    kody = {p["kod_zrodla"] for p in j["data"]["meta"]["pochodzenie"]}
-    assert kody == {"dysponent:gmina-przykladowo", "osm"}
+    """K4: every record of the list shows its provider, dataset and resource links and the data date."""
+    m = client.get("/api/v1/aed/AED-PL-B939F7EBA4").json()["data"]["meta"]
+    assert m["warstwa"] == "lista" and m["dostawca"] == "Urząd Gminy Przykładowo"
+    assert m["zbior_url"].startswith("https://dane.gov.pl/") and m["zasob_url"].startswith("https://") and m["data_danych"]
 
 
 def test_import_flow(client, auth):
@@ -50,16 +51,15 @@ def test_import_flow(client, auth):
     rep = client.post(f"/api/v1/import/{iid}/mapowanie", json={}, headers=auth).json()
     assert rep["wiersze"] == 3 and rep["bledy"] == 0
     res = client.post(f"/api/v1/import/{iid}/zatwierdz", headers=auth).json()
-    # re-import of the same owner file updates the existing records – no duplicates
-    assert res["zaktualizowane"] == 3 and res["dodane"] == 0
+    # goes to the provider's working copy – the common list does not change until the files are published (P2, P3)
+    assert res["dodane"] == 3 and "kopii roboczej" in res["komunikat"]
     assert client.get("/api/v1/aed").json()["meta"]["count"] == 7
+    assert client.get("/api/v1/moje-aed", headers=auth).json()["meta"]["w_kopii_roboczej"] == 3
 
 
-def test_auth(client, monkeypatch):
+def test_auth(client):
     assert client.post("/api/v1/aed", json={}, headers={"Authorization": "Bearer zly.token"}).status_code == 401
-    from src.api import auth
-    monkeypatch.setattr(auth, "AUTH_MODE", "wymagane")
-    assert client.post("/api/v1/aed", json={}).status_code == 401
+    assert client.post("/api/v1/aed", json={}).status_code == 401  # §9: every write needs a logged-in user
 
 
 def test_ui_contract_shapes(client):
@@ -68,12 +68,8 @@ def test_ui_contract_shapes(client):
     assert "dostepny_teraz" in a
     d = client.get("/api/v1/aed/AED-PL-B939F7EBA4").json()
     assert d["pochodzenie"] and "liczba" in d["potwierdzenia"]
-    z = client.post("/api/v1/zgloszenia", json={"lat": 52.24372, "lon": 21.01395, "opis": "AED w holu"}).json()
-    assert z["status"] == "do_weryfikacji" and z["id"]
-    lst = client.get("/api/v1/zgloszenia").json()["data"]
-    assert lst[0]["type"] == "zgloszenie" and lst[0]["meta"]["mozliwy_duplikat"] == "AED-PL-B939F7EBA4"
-    r = client.post(f"/api/v1/zgloszenia/{z['id']}/decyzja", json={"decyzja": "scal"}).json()
-    assert r["data"]["status"] == "scalone"
+    z = client.post("/api/v1/zgloszenia", json={"lat": 52.24372, "lon": 21.01395, "opis": "AED w holu", "id_aed": "AED-PL-B939F7EBA4", "typ": "awaria"}).json()
+    assert z["status"] == "do_weryfikacji" and z["id"] and z["data"]["dostawca"] == "Urząd Gminy Przykładowo"
     s = client.get("/api/v1/statystyki").json()["data"]
     assert {"liczba_aed", "liczba_dysponentow", "wg_wojewodztw", "wg_zrodel", "kompletnosc_rozklad", "zweryfikowane_12m_proc"} <= set(s)
     e = client.get("/api/v1/eksport").json()["data"]
@@ -82,25 +78,9 @@ def test_ui_contract_shapes(client):
     assert m[0]["nazwa"] == "Kraków" and 50 < m[0]["lat"] < 50.1
 
 
-def test_form_422(client, auth):
+def test_form_422(client, auth):  # the wizard validates against the standard
     r = client.post("/api/v1/aed", json={"nazwa_obiektu": "X"}, headers=auth)
     assert r.status_code == 422 and "kod_pocztowy" in r.json()["error"]["fields"]
-
-
-def test_citizen_report_moderation(client):
-    t = client.post("/api/v1/auth/login", json={"login": "moderator", "haslo": "moderator-demo"}).json()["token"]
-    h = {"Authorization": f"Bearer {t}"}
-    z = client.post("/api/v1/zgloszenia", json={"lat": 52.2401, "lon": 21.0203, "opis": "AED w aptece przy rynku, za ladą"}).json()
-    zid = z["data"]["id"]
-    assert client.get("/api/v1/aed").json()["meta"]["count"] == 7  # not in dataset before moderation
-    r = client.post(f"/api/v1/zgloszenia/{zid}/decyzja", json={"decyzja": "zatwierdz"}, headers=h)
-    assert r.status_code == 422  # missing address
-    rek = {"nazwa_obiektu": "Apteka przy Rynku", "miejscowosc": "Warszawa", "numer_budynku": "1", "kod_pocztowy": "00-001",
-           "ulica": "Rynek", "dostep": "ograniczony", "godziny_dostepnosci": "Mo-Sa 08:00-20:00",
-           "dysponent_nazwa": "Apteka przy Rynku", "dysponent_typ": "handel_uslugi"}
-    r = client.post(f"/api/v1/zgloszenia/{zid}/decyzja", json={"decyzja": "zatwierdz", "rekord": rek}, headers=h)
-    assert r.status_code == 200
-    assert client.get("/api/v1/aed").json()["meta"]["count"] == 8
 
 
 def test_passport(client):
@@ -109,7 +89,7 @@ def test_passport(client):
 
 
 def test_exports_standard(client, tmp_path):
-    for name in ["aed.csv", "aed_osm_odbl.csv", "aed_pochodzenie.csv", "zrodla.csv", "slownik_danych.csv"]:
+    for name in ["aed.csv", "aed_pochodzenie.csv", "zrodla.csv", "slownik_danych.csv"]:
         r = client.get(f"/api/v1/eksport/{name}")
         assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
         p = tmp_path / name
@@ -118,13 +98,13 @@ def test_exports_standard(client, tmp_path):
         assert hard == [], (name, hard)
     rows = list(csv.reader(io.StringIO(client.get("/api/v1/eksport/aed.csv").text, newline="")))
     from src.core import schema
-    assert rows[0] == schema.field_order()
-    assert all(r[schema.field_order().index("licencja")] != "ODbL-1.0" for r in rows[1:])
+    from src.core.publish import PROV_COLS
+    assert rows[0] == schema.field_order() + PROV_COLS  # compilation: every record carries its provider and dataset (§7)
+    assert len(rows) == 8 and all(r[schema.field_order().index("licencja")] != "ODbL-1.0" for r in rows[1:])
     gj = client.get("/api/v1/eksport/aed.geojson").json()
-    assert gj["type"] == "FeatureCollection" and len(gj["features"]) == 5
-    xml.dom.minidom.parseString(client.get("/api/v1/eksport/dane_gov_pl_import.xml").content)
-    meta = json.loads(client.get("/api/v1/eksport/metadane.jsonld").content)
-    assert meta["@type"] == "dcat:Dataset" and {t["@language"] for t in meta["dct:title"]} == {"pl", "en"}
+    assert gj["type"] == "FeatureCollection" and len(gj["features"]) == 7 and "Kompilacja" in gj["description"]
+    for gone in ("aed_osm_odbl.csv", "dane_gov_pl_import.xml", "metadane.jsonld"):  # the list is not a dataset of its own
+        assert client.get(f"/api/v1/eksport/{gone}").status_code == 404
 
 
 def test_template(client):

@@ -332,6 +332,54 @@
         "dc:description": "Dodatkowe informacje.",
         "datatype": "string",
         "required": false
+      },
+      {
+        "name": "dostawca",
+        "titles": "dostawca",
+        "datatype": "string",
+        "dc:description": "pochodzenie rekordu (wspólna lista)"
+      },
+      {
+        "name": "dostawca_regon",
+        "titles": "dostawca_regon",
+        "datatype": "string",
+        "dc:description": "pochodzenie rekordu (wspólna lista)"
+      },
+      {
+        "name": "zbior_id",
+        "titles": "zbior_id",
+        "datatype": "string",
+        "dc:description": "pochodzenie rekordu (wspólna lista)"
+      },
+      {
+        "name": "zbior_url",
+        "titles": "zbior_url",
+        "datatype": "string",
+        "dc:description": "pochodzenie rekordu (wspólna lista)"
+      },
+      {
+        "name": "zasob_url",
+        "titles": "zasob_url",
+        "datatype": "string",
+        "dc:description": "pochodzenie rekordu (wspólna lista)"
+      },
+      {
+        "name": "data_danych",
+        "titles": "data_danych",
+        "datatype": "string",
+        "dc:description": "pochodzenie rekordu (wspólna lista)"
+      },
+      {
+        "name": "licencja_zbioru",
+        "titles": "licencja_zbioru",
+        "datatype": "string",
+        "dc:description": "pochodzenie rekordu (wspólna lista)"
+      },
+      {
+        "name": "mozliwy_duplikat",
+        "titles": "mozliwy_duplikat",
+        "datatype": "string",
+        "dc:description": "pochodzenie rekordu (wspólna lista)"
       }
     ],
     "primaryKey": "id_aed"
@@ -344,7 +392,5 @@
       "\r\n"
     ]
   },
-  "dc:license": {
-    "@id": "http://creativecommons.org/publicdomain/zero/1.0/"
-  }
+  "dc:description": "Kompilacja zbiorów dostawców AED opublikowanych w dane.gov.pl (wspólna lista AED). Za każdy rekord odpowiada wskazany dostawca; warunki ponownego wykorzystywania – jak w zbiorze źródłowym (kolumna licencja_zbioru)."
 }

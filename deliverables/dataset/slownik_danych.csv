@@ -14,7 +14,7 @@ ulica,Ulica,"Nazwa ulicy bez cechy; puste, gdy miejscowość nie ma ulic.",tekst
 numer_budynku,Numer budynku,Numer porządkowy budynku.,tekst,maks. 10 znaków,27,wymagane,,addr:housenumber,
 numer_lokalu,Numer lokalu,"Numer lokalu, jeśli dotyczy.",tekst,maks. 10 znaków,4,opcjonalne,,addr:unit,
 kod_pocztowy,Kod pocztowy,Kod pocztowy w formacie NN-NNN.,tekst,^\d{2}-\d{3}$,00-060,wymagane,,addr:postcode,schema:postalCode
-teryt_terc,Kod TERC,"Kod terytorialny (województwo, powiat, gmina) – 6 cyfr, jak w adresie uniwersalnym.",tekst,^\d{6}$,146501,zalecane,,,
+teryt_terc,Kod TERC,"Kod TERYT gminy – 7 cyfr (województwo, powiat, gmina, rodzaj gminy), np. 1465011 = m.st. Warszawa; wymagany na wspólnej liście AED.",tekst,^\d{7}$,1465011,zalecane,,,
 teryt_simc,Kod SIMC,Identyfikator miejscowości z rejestru TERYT – 7 cyfr.,tekst,^\d{7}$,0918123,zalecane,,,
 szerokosc_geograficzna,Szerokość geograficzna,"WGS 84 (EPSG:4326), stopnie dziesiętne, kropka, 6 miejsc po przecinku.",liczba dziesiętna,49.000000…54.900000,52.243700,wymagane,,lat,schema:latitude
 dlugosc_geograficzna,Długość geograficzna,"WGS 84 (EPSG:4326), stopnie dziesiętne, kropka, 6 miejsc po przecinku.",liczba dziesiętna,14.100000…24.200000,21.013900,wymagane,,lon,schema:longitude

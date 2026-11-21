@@ -1,4 +1,4 @@
-"""Refreshing the external sources: OpenStreetMap (AED export for Poland) and AED datasets of municipalities on dane.gov.pl.
+"""Refreshing: aggregation of providers' datasets into the common list (P5) + the OSM helper layer "Do sprawdzenia".
 
 - every night at AED_ODSWIEZANIE (default "03:30" Europe/Warsaw; "wylaczone" turns it off),
 - once at start-up when the database only has the OSM sample (e.g. the first start had no network),
@@ -24,7 +24,7 @@ def run(store: Store, powod: str = "na żądanie") -> dict:
         return {"status": "w_toku"}
     try:
         STATUS.update(w_toku=True, blad=None, start=now_min(), powod=powod)
-        from .connectors import dane_gov_pl, osm
+        from .connectors import osm
         wynik: dict = {}
         before = len(store.records)
         try:
@@ -33,11 +33,12 @@ def run(store: Store, powod: str = "na żądanie") -> dict:
         except Exception as e:  # noqa: BLE001
             wynik["osm"] = {"blad": str(e)}
         try:
-            d = dane_gov_pl.search(store, "defibrylator defibrylatory AED", do_import=True)
-            wynik["dane_gov_pl"] = [{k: i.get(k) for k in ("kod_zrodla", "status", "dodane", "zaktualizowane", "scalone", "odrzucone", "powod")}
-                                    for i in d["meta"]["importy"]]
+            from . import dostawcy
+            a = dostawcy.agreguj(store)
+            wynik["lista"] = {"rekordy": a["rekordy"], "zbiory": [{k: z.get(k) for k in ("zbior_id", "tytul", "dostawca", "status", "wlaczone", "odrzucone", "nieaktualny")}
+                                                                for z in a["zbiory"]]}
         except Exception as e:  # noqa: BLE001
-            wynik["dane_gov_pl"] = {"blad": str(e)}
+            wynik["lista"] = {"blad": str(e)}
         wynik["rekordy_przed"], wynik["rekordy_po"] = before, len(store.records)
         STATUS.update(ostatnie=now_min(), wynik=wynik)
         return {"status": "zakonczone", "wynik": wynik}
@@ -78,7 +79,7 @@ def start_scheduler(get_store) -> None:
     def loop():
         st = get_store()
         osm_n = sum(1 for srcs in st.sources.values() for s in srcs if s["kod_zrodla"] == "osm")
-        if osm_n < 1000:
+        if osm_n < 1000 or not st.lista:
             time.sleep(5)
             run(st, "start: w bazie tylko próbka OpenStreetMap")
         while True:

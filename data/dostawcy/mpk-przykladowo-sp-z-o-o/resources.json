@@ -1,0 +1,15 @@
+{
+ "data": [
+  {
+   "type": "resource",
+   "id": "9900030",
+   "attributes": {
+    "title": "Defibrylatory AED – MPK Przykładowo sp. z o.o. – CSV",
+    "format": "csv",
+    "data_date": "2026-11-15",
+    "file_url": "https://dane.gov.pl/media/resources/fikcyjne/aed-mpk-przykladowo-sp-z-o-o.csv",
+    "_plik_prototypu": "aed.csv"
+   }
+  }
+ ]
+}

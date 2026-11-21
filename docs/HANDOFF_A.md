@@ -1,5 +1,19 @@
 # HANDOFF – Model A
 
+## 2026-11-22 – HANDOFF #9: model ról i odpowiedzialności (CONTRACT v2.0, `docs/MODEL_ROL.md`)
+
+- **Zrobione:** wdrożenie dokumentu „Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności”. Kryteria K1–K11 mają testy (`tests/test_model_rol.py`, 84 testy razem).
+  - **Lista tylko ze zbiorów dostawców** (`src/core/dostawcy.py`): agregacja zbiorów oznaczonych `wspolna-lista-aed` (prototyp: 3 fikcyjnych dostawców w `data/dostawcy/`, `scripts/build_dostawcy.py`, kształt API 1.4), ścisła walidacja (44 pola, `teryt_terc` zgodny z położeniem, tylko własne urządzenia, bez OSM), rekord niezgodny → poza mapą + raport i powiadomienie; **bez scalania** – duplikaty ≤ 25 m oznaczone u obu, powiadomienia dla obu; `zbior_nieaktualny` (updateFrequency + 30 dni) ≠ rekord „do weryfikacji”. Prawdziwe zbiory samorządów (Krosno, Przemyśl, Marki, Warszawa) → raport `poza_lista`.
+  - **OSM = warstwa pomocnicza** („Do sprawdzenia”): bez scalania z niczym, poza listą, eksportem i API listy (`warstwa=pomocnicza` na żądanie).
+  - **Role:** `dysponent` (dostawca) pisze tylko do swojej kopii roboczej; `administrator` (dawniej moderator, login `moderator` działa jako alias) – 403 na każdy zapis AED; tryb „bez tokenu = wszystkie role” usunięty (§9).
+  - **Kreator:** `POST/PATCH /aed` i import → kopia robocza (`/moje-aed`), `POST /moje-aed/pakiet` → ZIP z CSV, XML 1.13 (responsibilities, regions/terytIdent, updateFrequency, https, supplements), słownikiem, metadanymi, instrukcją – brak funkcji „Opublikuj” (K11).
+  - **Zgłoszenia:** `id_aed` + `typ` → dostawca (`przyjete`/`odrzucone`), bez dostawcy → administrator (`zaproszenie`/`odrzucone`); filtr treści (e-maile, telefony, linki), e-mail zgłaszającego usuwany po zamknięciu; potwierdzenia → powiadomienie dostawcy.
+  - **Dziennik zdarzeń** (tabela `dziennik`, wyzwalacze blokują UPDATE/DELETE), **powiadomienia** dostawców, `GET /admin/luki` (gminy bez dostawcy z liczbą punktów OSM), `/admin/przypomnienia`, `/admin/agregacja`.
+  - **Eksport listy** = kompilacja z kolumnami pochodzenia; bez plików OSM, XML i DCAT listy. `deliverables/dataset/` i nowy `deliverables/pakiet_dostawcy_przyklad/`.
+  - Wzorzec: `teryt_terc` 7 cyfr (kod gminy z rodzajem) – `docs/schema/` zaktualizowane.
+- **CR do B:** logowanie w stopce, menu wg roli („Moje AED” / „Panel administratora”), ekrany kreatora i panelu na nowych endpointach, warstwa „Do sprawdzenia” na mapie, karta z dostawcą/zbiorem/datą, neutralna nazwa aplikacji (logo tylko w akcji).
+- **Użycie AI:** Claude.
+
 ## 2026-11-21 22:30 – HANDOFF #8: odświeżanie źródeł, konta instytucji, zdjęcie w zgłoszeniu, prawdziwe zbiory samorządów, XSD dane.gov.pl
 
 - **Zrobione:**

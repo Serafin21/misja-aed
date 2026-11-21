@@ -1,0 +1,32 @@
+{
+ "data": {
+  "type": "dataset",
+  "id": "990001",
+  "attributes": {
+   "title": "Defibrylatory AED – Urząd Gminy Przykładowo",
+   "slug": "defibrylatory-aed-urzad-gminy-przykladowo",
+   "notes": "Zbiór FIKCYJNY (prototyp HackNation 2026): defibrylatory AED, których właścicielem jest Urząd Gminy Przykładowo.",
+   "keywords": [
+    "wspolna-lista-aed",
+    "AED",
+    "defibrylator"
+   ],
+   "categories": [
+    {
+     "code": "HEAL"
+    }
+   ],
+   "update_frequency": "monthly",
+   "modified": "2026-11-02T08:00:00Z",
+   "license_name": "CC0 1.0",
+   "institution": {
+    "title": "Urząd Gminy Przykładowo",
+    "regon": "999000011",
+    "email": "aed@przykladowo.example"
+   }
+  },
+  "links": {
+   "self": "https://dane.gov.pl/pl/dataset/990001,defibrylatory-aed-urzad-gminy-przykladowo"
+  }
+ }
+}

@@ -1,0 +1,32 @@
+{
+ "data": {
+  "type": "dataset",
+  "id": "990003",
+  "attributes": {
+   "title": "Defibrylatory AED – MPK Przykładowo sp. z o.o.",
+   "slug": "defibrylatory-aed-mpk-przykladowo-sp-z-o-o",
+   "notes": "Zbiór FIKCYJNY (prototyp HackNation 2026): defibrylatory AED, których właścicielem jest MPK Przykładowo sp. z o.o..",
+   "keywords": [
+    "wspolna-lista-aed",
+    "AED",
+    "defibrylator"
+   ],
+   "categories": [
+    {
+     "code": "HEAL"
+    }
+   ],
+   "update_frequency": "monthly",
+   "modified": "2026-11-15T08:00:00Z",
+   "license_name": "CC0 1.0",
+   "institution": {
+    "title": "MPK Przykładowo sp. z o.o.",
+    "regon": "999000033",
+    "email": "dyspozytornia@mpk-przykladowo.example"
+   }
+  },
+  "links": {
+   "self": "https://dane.gov.pl/pl/dataset/990003,defibrylatory-aed-mpk-przykladowo-sp-z-o-o"
+  }
+ }
+}

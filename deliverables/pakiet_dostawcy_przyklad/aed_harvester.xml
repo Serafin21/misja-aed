@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Plik harmonizatora dane.gov.pl (schemat urn:otwarte-dane:harvester:1.13) wygenerowany kreatorem AED 2026-11-21T19:10.
+     Publikuje go dostawca na SWOIM koncie w dane.gov.pl – nikt inny. -->
+<ns:datasets xmlns:ns="urn:otwarte-dane:harvester:1.13">
+  <dataset status="published">
+    <extIdent>aed-urzad-gminy-przykladowo</extIdent>
+    <title><polish>Defibrylatory AED – Urząd Gminy Przykładowo</polish><english>AED defibrillators – Urząd Gminy Przykładowo</english></title>
+    <description><polish>Lokalizacja, dostępność i stan defibrylatorów AED, których właścicielem jest Urząd Gminy Przykładowo. Zbiór zgodny z wzorcem AED v0.9 (44 pola) i należy do wspólnej listy AED w dane.gov.pl.</polish><english>Location, availability and status of AED defibrillators owned by Urząd Gminy Przykładowo. Follows the AED reference data scope v0.9.</english></description>
+    <updateFrequency>monthly</updateFrequency>
+    <categories><category>HEAL</category></categories>
+    <conditions>
+      <source>true</source>
+      <modification>true</modification>
+      <responsibilities>Urząd Gminy Przykładowo odpowiada za jakość, aktualność i poprawność danych o swoich defibrylatorach AED w tym zbiorze. Każde urządzenie weryfikujemy na miejscu co najmniej raz na 12 miesięcy, a zmianę stanu (awaria, wycofanie, nowe miejsce) wprowadzamy w ciągu 7 dni. Błędy prosimy zgłaszać w komentarzu do zbioru na dane.gov.pl albo na adres aed@przykladowo.example.</responsibilities>
+      <dbOrCopyrightedLicenseChosen>CC0 1.0</dbOrCopyrightedLicenseChosen>
+    </conditions>
+    <resources>
+      <resource status="published">
+        <extIdent>aed-urzad-gminy-przykladowo-csv</extIdent>
+        <url>https://przykladowo.example/dane/aed-urzad-gminy-przykladowo.csv</url>
+        <title><polish>Defibrylatory AED – CSV (wzorzec AED v0.9)</polish><english>AED defibrillators – CSV</english></title>
+        <description><polish>Jeden wiersz = jedno urządzenie dostawcy; 44 pola wzorca AED; UTF-8, przecinek, wiersz nagłówka.</polish><english>One row = one device of the provider; 44 fields of the AED standard.</english></description>
+        <availability>remote</availability>
+        <dataDate>2026-11-21</dataDate>
+        <hasDynamicData>false</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+        <regions><terytIdent>1465011</terytIdent></regions>
+      </resource>
+    </resources>
+    <tags><tag lang="pl">wspolna-lista-aed</tag><tag lang="pl">AED</tag><tag lang="pl">defibrylator</tag><tag lang="pl">pierwsza pomoc</tag><tag lang="en">AED</tag><tag lang="en">defibrillator</tag><tag lang="en">first aid</tag></tags>
+    <lastUpdateDate>2026-11-21T19:10:00</lastUpdateDate>
+    <hasDynamicData>false</hasDynamicData>
+    <hasHighValueData>false</hasHighValueData>
+    <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+    <hasResearchData>false</hasResearchData>
+    <supplements>
+      <supplement><url>https://WPISZ-ADRES-INSTYTUCJI.pl/dane/slownik_danych_aed_v0.9.csv</url><name><polish>Słownik pól – wzorzec AED v0.9</polish><english>Data dictionary – AED standard v0.9</english></name><language>pl</language></supplement>
+    </supplements>
+  </dataset>
+</ns:datasets>

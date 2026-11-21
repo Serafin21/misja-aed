@@ -1,0 +1,32 @@
+{
+ "data": {
+  "type": "dataset",
+  "id": "990002",
+  "attributes": {
+   "title": "Defibrylatory AED – Uczelnia Testowa",
+   "slug": "defibrylatory-aed-uczelnia-testowa",
+   "notes": "Zbiór FIKCYJNY (prototyp HackNation 2026): defibrylatory AED, których właścicielem jest Uczelnia Testowa.",
+   "keywords": [
+    "wspolna-lista-aed",
+    "AED",
+    "defibrylator"
+   ],
+   "categories": [
+    {
+     "code": "HEAL"
+    }
+   ],
+   "update_frequency": "quarterly",
+   "modified": "2025-06-30T08:00:00Z",
+   "license_name": "CC BY 4.0",
+   "institution": {
+    "title": "Uczelnia Testowa",
+    "regon": "999000022",
+    "email": "bhp@uczelnia-testowa.example"
+   }
+  },
+  "links": {
+   "self": "https://dane.gov.pl/pl/dataset/990002,defibrylatory-aed-uczelnia-testowa"
+  }
+ }
+}

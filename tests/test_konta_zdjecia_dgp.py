@@ -16,7 +16,7 @@ def test_konto_instytucji_pelny_cykl(client):
     r = client.post("/api/v1/konta", headers=mod, json={"login": "uczelnia.testowa", "dysponent_nazwa": "Uczelnia Testowa"})
     assert r.status_code == 201
     haslo = r.json()["haslo_jednorazowe"]
-    assert r.json()["data"]["liczba_aed"] == 2 and "haslo" not in r.json()["data"]
+    assert r.json()["data"]["liczba_aed"] == 2 and "haslo" not in r.json()["data"]  # its AED on the common list
     assert client.post("/api/v1/konta", headers=mod, json={"login": "uczelnia.testowa", "dysponent_nazwa": "Xyz"}).status_code == 409
     assert client.post("/api/v1/konta", headers=mod, json={"login": "Zły Login!", "dysponent_nazwa": "Xyz"}).status_code == 422
     r, uh = _login(client, "uczelnia.testowa", haslo)
@@ -24,11 +24,12 @@ def test_konto_instytucji_pelny_cykl(client):
     assert _login(client, "uczelnia.testowa", "zle-haslo")[0].status_code == 401
     assert client.get("/api/v1/konta/ja", headers=uh).json()["data"]["dysponent_nazwa"] == "Uczelnia Testowa"
     assert client.get("/api/v1/konta", headers=uh).status_code == 403  # only the moderator manages accounts
-    # the institution decides on reports about ITS AED (Uczelnia Testowa: AED-PL-AED495CA3B), not the gmina's
+    # the institution handles reports about ITS AED (Uczelnia Testowa: AED-PL-AED495CA3B), not the gmina's
     a = client.get("/api/v1/aed/AED-PL-AED495CA3B").json()["data"]["attributes"]
-    zid = client.post("/api/v1/zgloszenia", json={"lat": a["szerokosc_geograficzna"], "lon": a["dlugosc_geograficzna"], "opis": "jest"}).json()["id"]
+    zid = client.post("/api/v1/zgloszenia", json={"lat": a["szerokosc_geograficzna"], "lon": a["dlugosc_geograficzna"], "opis": "szafka zamknięta",
+                                                  "id_aed": "AED-PL-AED495CA3B", "typ": "brak_dostepu"}).json()["id"]
     assert zid in {i["id"] for i in client.get("/api/v1/zgloszenia", headers=uh).json()["data"]}
-    assert client.post(f"/api/v1/zgloszenia/{zid}/decyzja", headers=uh, json={"decyzja": "scal"}).status_code == 200
+    assert client.post(f"/api/v1/zgloszenia/{zid}/decyzja", headers=uh, json={"decyzja": "przyjete"}).status_code == 200
     # own password, then blocking the account stops its token at once
     assert client.post("/api/v1/konta/ja/haslo", headers=uh, json={"stare": haslo, "nowe": "nowe-haslo-123"}).status_code == 200
     assert _login(client, "uczelnia.testowa", "nowe-haslo-123")[0].status_code == 200
@@ -103,16 +104,3 @@ def test_filtr_zbiorow_niezwiazanych():
     assert dgp.RELEVANT.search("Lokalizacja defibrylatorów (AED)")
     assert not dgp.RELEVANT.search("Ceny ofertowe mieszkań dewelopera AD Progress")
     assert not dgp.RELEVANT.search("Zestawienie aktywnych ADE w BAE")
-
-
-def test_xml_dane_gov_pl_zgodny_z_xsd_portalu(seeded, monkeypatch):
-    """CR-1: the import XML validates against the portal's own XSD (urn:otwarte-dane:harvester:1.13)."""
-    import io
-
-    import pytest
-    etree = pytest.importorskip("lxml.etree")
-    from src.core import publish
-    from tests.conftest import ROOT
-    monkeypatch.setattr(publish, "BASE_URL", "https://aed.example.gov.pl")
-    xsd = etree.XMLSchema(etree.parse(str(ROOT / "docs" / "tech" / "otwarte_dane_1_13.xsd")))
-    assert xsd.validate(etree.parse(io.BytesIO(publish.import_xml(seeded)))), xsd.error_log

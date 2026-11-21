@@ -1,9 +1,4 @@
 kod_zrodla,nazwa,typ_zrodla,format,licencja,czestotliwosc_aktualizacji,liczba_rekordow,rekordy_wlaczone,pokrycie_pol_wymaganych_proc,pokrycie_pol_zalecanych_proc,obszar
-dane_gov_pl:3624,Defibrylatory zlokalizowane w Mieście Krosno (Urząd Miasta Krosna),dane_gov_pl,API dane.gov.pl,CC0-1.0,irregular,21,21,93,19,
-dane_gov_pl:39512,Lokalizacja defibrylatorów (AED) (Urząd m.st. Warszawy),dane_gov_pl,API dane.gov.pl,CC-BY-4.0,irregular,0,0,0,0,
-dane_gov_pl:4581,Lokalizacje AED – Automatycznych Defibrylatorów Zewnętrznych w Przemyślu (Urząd Miejski w Przemyślu),dane_gov_pl,API dane.gov.pl,CC0-1.0,irregular,21,21,95,30,
-dane_gov_pl:4955,Defibrylatory zlokalizowane na terenie Miasta Marki (Urząd Miasta Marki),dane_gov_pl,API dane.gov.pl,CC-BY-4.0,irregular,8,7,96,14,
-dysponent:gmina-przykladowo,Urząd Gminy Przykładowo (plik CSV),dysponent,"CSV (średnik, przecinek dziesiętny)",CC0-1.0,monthly,3,3,100,29,gmina Przykładowo
-dysponent:uczelnia-testowa,Uczelnia Testowa (JSON),dysponent,JSON,CC0-1.0,monthly,2,2,100,32,kampus Kraków
-osm,OpenStreetMap – warstwa AED (eksport AED OSM Polska),spolecznosc,GeoJSON,ODbL-1.0,daily,18057,18026,71,2,Polska
-prg-gugik:gminy,"Granice gmin (PRG, GUGiK; uproszczone z zachowaniem topologii). Źródło: Państwowy Rejestr Granic – Główny Urząd Geodezji i Kartografii",referencyjne,GeoJSON (z WFS GML PRG),PZGiK – bez opłat i ograniczeń (art. 40a ust. 2 pkt 1 Pgik),irregular,2479,2479,0,0,Polska
+dostawca:990001,Defibrylatory AED – Urząd Gminy Przykładowo (Urząd Gminy Przykładowo),dostawca,CSV (wzorzec AED),CC0-1.0,monthly,3,3,100,50,Urząd Gminy Przykładowo
+dostawca:990002,Defibrylatory AED – Uczelnia Testowa (Uczelnia Testowa),dostawca,CSV (wzorzec AED),CC-BY-4.0,quarterly,2,2,100,54,Uczelnia Testowa
+dostawca:990003,Defibrylatory AED – MPK Przykładowo sp. z o.o. (MPK Przykładowo sp. z o.o.),dostawca,CSV (wzorzec AED),CC0-1.0,monthly,3,2,100,61,MPK Przykładowo sp. z o.o.

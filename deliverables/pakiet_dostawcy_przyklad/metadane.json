@@ -1,0 +1,19 @@
+{
+  "tytul": "Defibrylatory AED – Urząd Gminy Przykładowo",
+  "dostawca": "Urząd Gminy Przykładowo",
+  "regon": null,
+  "slowa_kluczowe": [
+    "wspolna-lista-aed",
+    "AED",
+    "defibrylator",
+    "pierwsza pomoc"
+  ],
+  "kategoria": "HEAL (Zdrowie)",
+  "czestotliwosc_aktualizacji": "monthly",
+  "licencja": "CC0-1.0",
+  "wzorzec": "wzorcowy_zakres_danych_AED v0.9",
+  "liczba_urzadzen": 3,
+  "obszar_teryt": [
+    "1465011"
+  ]
+}

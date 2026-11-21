@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from .. import hours, normalize as N, pipeline, quality, validate
+from .. import dedup, hours, normalize as N, pipeline, quality, validate
 from ..pipeline import PLACEHOLDER_ID, _p
 from ..schema import ROOT
 from ..store import Store, now_min
@@ -153,7 +153,9 @@ def refresh(store: Store, source: str | None = None) -> dict:
                 reject(f"{errors[0]['pole'] or 'rekord'}: {errors[0]['komunikat']}")
                 continue
             problems += sum(pr["poziom"] == "ostrzezenie" for pr in probs)
-            res = store.upsert_source(KOD, osm_id(f.get("properties") or {}, f), rec, commit=False)
+            oid = osm_id(f.get("properties") or {}, f)
+            # model ról: OSM is a helper layer – never merged with providers' records (no duplicate search)
+            res = store.upsert_source(KOD, oid, rec, force_id=dedup.make_id(KOD, oid), commit=False)
             counts[res["status"]] += 1
         except Exception as e:  # malformed feature
             reject(f"nieczytelny obiekt ({type(e).__name__})")

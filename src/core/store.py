@@ -25,6 +25,7 @@ class Store:
         self.sources: dict[str, list[dict]] = {}  # id_aed -> provenance rows (with 'dane')
         self.by_key: dict[tuple[str, str], str] = {}  # (kod_zrodla, id_w_zrodle) -> id_aed
         self.master: dict[str, str] = {}  # id_aed -> kod_zrodla of master
+        self.lista: dict[str, dict] = {}  # id_aed -> provider provenance (common list records only)
         self.grid = dedup.GridIndex()
         self.version = 0  # bumped on every change of records (ETag of GET /aed/punkty)
         self.load()
@@ -33,7 +34,9 @@ class Store:
     def load(self):
         with self.lock:
             self.version += 1
-            self.records.clear(); self.sources.clear(); self.by_key.clear(); self.master.clear()
+            self.records.clear(); self.sources.clear(); self.by_key.clear(); self.master.clear(); self.lista.clear()
+            for row in self.conn.execute("SELECT id_aed, data FROM lista"):
+                self.lista[row["id_aed"]] = db.loads(row["data"])
             self.grid = dedup.GridIndex()
             for row in self.conn.execute("SELECT kod_zrodla, id_w_zrodle, id_aed, licencja_zrodla, data_pobrania, dane FROM pochodzenie"):
                 src = dict(row)
@@ -142,6 +145,31 @@ class Store:
             self._remerge(id_aed)
             self.conn.commit()
             return self.records[id_aed]
+
+    # ---------- common list (model ról): provider layer is rebuilt as a whole, never merged ----------
+    def warstwa(self, id_aed: str) -> str:
+        """'lista' – record from a provider's dataset; 'pomocnicza' – everything else (OSM, sample), 'do sprawdzenia'."""
+        return "lista" if id_aed in self.lista else "pomocnicza"
+
+    def replace_list(self, items: list[tuple[dict, dict]]) -> None:
+        """Replace all common-list records with `items` = [(record, provenance)]. Records are stored as given."""
+        with self.lock:
+            old = [r["id_aed"] for r in self.conn.execute("SELECT id_aed FROM lista")]
+            for i in old:
+                self.conn.execute("DELETE FROM aed WHERE id_aed=?", (i,))
+                self.conn.execute("DELETE FROM pochodzenie WHERE id_aed=?", (i,))
+            self.conn.execute("DELETE FROM lista")
+            for rec, prov in items:
+                kod = f"dostawca:{prov['zbior_id']}"
+                self.conn.execute("INSERT OR REPLACE INTO pochodzenie VALUES (?,?,?,?,?,?)",
+                                  (kod, rec["id_aed"], rec["id_aed"], rec.get("licencja"), prov.get("data_danych") or today(),
+                                   db.dumps(rec)))
+                self.conn.execute("INSERT OR REPLACE INTO aed VALUES (?,?,?,?,?,?)",
+                                  (rec["id_aed"], db.dumps(rec), rec["szerokosc_geograficzna"], rec["dlugosc_geograficzna"],
+                                   rec["licencja"], rec.get("data_aktualizacji")))
+                self.conn.execute("INSERT OR REPLACE INTO lista VALUES (?,?)", (rec["id_aed"], db.dumps(prov)))
+            self.conn.commit()
+        self.load()
 
     def commit(self):
         with self.lock:

@@ -161,9 +161,9 @@
       "anyOf": [
         {
           "type": "string",
-          "pattern": "^\\d{6}$",
+          "pattern": "^\\d{7}$",
           "title": "Kod TERC",
-          "description": "Kod terytorialny (województwo, powiat, gmina) – 6 cyfr, jak w adresie uniwersalnym."
+          "description": "Kod TERYT gminy – 7 cyfr (województwo, powiat, gmina, rodzaj gminy); wymagany na wspólnej liście AED."
         },
         {
           "type": "null"

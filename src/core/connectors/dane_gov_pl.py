@@ -80,7 +80,7 @@ def search(store: Store, q: str = "defibrylator AED", do_import: bool = False) -
     if do_import:
         for ds in results:
             imported.append(import_dataset(store, ds))
-    for ds in results:
+    for ds in results if store is not None else []:
         store.register_source(f"dane_gov_pl:{ds['id']}", {
             "nazwa": f"{ds['tytul']} ({ds['instytucja']})" if ds.get("instytucja") else ds["tytul"],
             "typ_zrodla": "dane_gov_pl", "format": "API dane.gov.pl",

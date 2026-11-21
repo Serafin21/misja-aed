@@ -80,7 +80,37 @@ async def req_error(_: Request, exc: RequestValidationError):
 
 # ---------- helpers ----------
 def warstwa(rec: dict) -> str:
-    return "osm" if rec.get("licencja") == "ODbL-1.0" else "otwarta"
+    """Model ról: 'lista' = record from a provider's dataset on dane.gov.pl; 'pomocnicza' = OSM etc., "Do sprawdzenia"."""
+    return get_store().warstwa(rec["id_aed"])
+
+
+WARSTWY = ("lista", "pomocnicza", "wszystkie")
+
+
+def _layer_filter(recs, w: str | None, default: str = "lista"):
+    w = w or default
+    if w in ("otwarta",):  # older name of the open layer
+        w = "lista"
+    if w == "osm":
+        w = "pomocnicza"
+    if w not in WARSTWY:
+        err(422, "walidacja", "Parametr warstwa: lista | pomocnicza | wszystkie.", {"warstwa": "Dozwolone: lista, pomocnicza, wszystkie."})
+    return recs if w == "wszystkie" else [r for r in recs if warstwa(r) == w]
+
+
+def lista_meta(rec: dict) -> dict:
+    """Provenance shown with every record of the common list (§7, K4)."""
+    p = get_store().lista.get(rec["id_aed"])
+    if not p:
+        return {"warstwa": "pomocnicza", "komunikat_warstwy":
+                "Do sprawdzenia: punkt z OpenStreetMap, nie potwierdzony przez właściciela urządzenia. Nie należy do wspólnej listy AED.",
+                "atrybucja": "© współtwórcy OpenStreetMap (ODbL 1.0)"}
+    return {"warstwa": "lista", "dostawca": p["dostawca"], "dostawca_regon": p.get("regon"), "zbior_id": p["zbior_id"],
+            "zbior_tytul": p["zbior_tytul"], "zbior_url": p["zbior_url"], "zasob_url": p["zasob_url"],
+            "data_danych": p.get("data_danych"), "zbior_zmodyfikowany": p.get("zbior_zmodyfikowany"),
+            "czestotliwosc_aktualizacji": p.get("czestotliwosc"), "zbior_nieaktualny": p.get("zbior_nieaktualny", False),
+            "licencja_zbioru": p.get("licencja_zbioru"), "mozliwe_duplikaty": p.get("mozliwe_duplikaty", []),
+            "fikcyjny_dostawca": p.get("fikcyjny", False)}
 
 
 def available_now(rec: dict, when=None) -> bool | None:
@@ -93,17 +123,15 @@ def resource(rec: dict, extra_meta: dict | None = None) -> dict:
     attrs = {k: rec.get(k) for k in schema.field_order() if k != "id_aed"}
     now = available_now(rec)
     attrs["dostepny_teraz"] = now  # CR-B1: computed by the server, also in attributes
-    meta = {"dostepny_teraz": now, "warstwa": warstwa(rec),
-            # CR-TL-1: map mode "aktualność danych"
-            "stan_danych": coverage.stan_danych(rec), "wiek_danych_dni": coverage.wiek_danych_dni(rec)}
+    meta = {"dostepny_teraz": now,
+            # CR-TL-1: map mode "aktualność danych"; model ról: record "do weryfikacji" ≠ dataset "nieaktualny"
+            "stan_danych": coverage.stan_danych(rec), "wiek_danych_dni": coverage.wiek_danych_dni(rec)} | lista_meta(rec)
     if now is None:
         meta["komunikat_dostepnosci"] = "Sprawdź godziny na miejscu."
     if rec.get("mobilny"):
         meta["komunikat_mobilny"] = "Urządzenie w pojeździe – lokalizacja to miejsce stacjonowania."
     if rec.get("dostep") == "prywatny":
         meta["komunikat_dostepnosci"] = "Urządzenie niedostępne dla osób postronnych (informacja dla dyspozytora 112)."
-    if warstwa(rec) == "osm":
-        meta["atrybucja"] = "© autorzy OpenStreetMap (ODbL)"
     if extra_meta:
         meta.update(extra_meta)
     return {"type": "aed", "id": rec["id_aed"], "attributes": attrs, "meta": meta}
@@ -146,7 +174,7 @@ def list_aed(request: Request,
              dostep: Optional[str] = Query(None, description="publiczny | ograniczony | prywatny"),
              dostepne_teraz: Optional[bool] = None,
              q: Optional[str] = Query(None, description="wyszukiwanie w nazwie, adresie i opisie"),
-             warstwa_: Optional[str] = Query(None, alias="warstwa", description="otwarta | osm (domyślnie obie)"),
+             warstwa_: Optional[str] = Query(None, alias="warstwa", description="lista (domyślnie: wspólna lista AED dostawców) | pomocnicza (OSM, do sprawdzenia) | wszystkie"),
              zrodlo_danych: Optional[str] = None,
              stan_danych: Optional[str] = Query(None, description="aktualne (weryfikacja ≤ 365 dni) | nieaktualne (starsza lub brak daty) – CR-TL-1"),
              ids: Optional[str] = Query(None, description="lista id_aed rozdzielonych przecinkami (maks. 200) – rekordy w podanej kolejności, np. lista obok mapy"),
@@ -175,8 +203,7 @@ def list_aed(request: Request,
         recs = [r for r in recs if r.get("dostep") == dostep]
     if zrodlo_danych:
         recs = [r for r in recs if r.get("zrodlo_danych") == zrodlo_danych]
-    if warstwa_:
-        recs = [r for r in recs if warstwa(r) == warstwa_]
+    recs = _layer_filter(recs, warstwa_, "wszystkie" if ids else "lista")
     if stan_danych:
         if stan_danych not in coverage.STANY_DANYCH:
             err(422, "walidacja", "Parametr stan_danych: aktualne | nieaktualne.", {"stan_danych": "Dozwolone: aktualne, nieaktualne."})
@@ -201,15 +228,20 @@ def list_aed(request: Request,
 @app.get(f"{API}/aed/najblizsze", tags=["aed"], summary="Najbliższe AED (posortowane po odległości)")
 def nearest(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-180, le=180),
             limit: int = Query(5, ge=1, le=50), tylko_dostepne_teraz: bool = False,
-            promien_m: int = Query(20000, ge=100, le=200000)):
+            promien_m: int = Query(20000, ge=100, le=200000),
+            warstwa_: Optional[str] = Query(None, alias="warstwa", description="lista (domyślnie) | pomocnicza | wszystkie")):
     st = get_store()
     now = datetime.now(TZ)
+    layer = warstwa_ or "lista"
+    _layer_filter([], layer)
     # cheap prefilter by bounding box, then exact distance
     dlat = promien_m / 111_000
     dlon = promien_m / (111_000 * max(0.2, abs(__import__("math").cos(__import__("math").radians(lat)))))
     cands = []
     for r in st.records.values():
         if abs(r["szerokosc_geograficzna"] - lat) > dlat or abs(r["dlugosc_geograficzna"] - lon) > dlon:
+            continue
+        if layer != "wszystkie" and warstwa(r) != layer:
             continue
         d = dedup.distance_m(lat, lon, r["szerokosc_geograficzna"], r["dlugosc_geograficzna"])
         if d > promien_m:
@@ -225,7 +257,7 @@ def nearest(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-
         res["attributes"]["odleglosc_m"] = round(d)
         res["attributes"]["dostepny_teraz"] = a
         data.append(res)
-    return {"data": data, "meta": {"count": len(data), "lat": lat, "lon": lon, "promien_m": promien_m,
+    return {"data": data, "meta": {"count": len(data), "lat": lat, "lon": lon, "promien_m": promien_m, "warstwa": layer,
                                    "dostepne_teraz_liczone_na": now.strftime("%Y-%m-%dT%H:%M")},
             "links": {"self": f"{API}/aed/najblizsze?lat={lat}&lon={lon}&limit={limit}"}}
 
@@ -240,7 +272,8 @@ _points_cache: dict[tuple, tuple[bytes, bytes, str]] = {}
                      "`wojewodztwo` i `gmina_teryt` (z położenia). "
                      "Odpowiedź skompresowana gzip, gdy klient to obsługuje; nagłówek `ETag` – przy `If-None-Match` serwer zwraca 304. "
                      "`dostepny_teraz` przeliczane co minutę.")
-def aed_points(request: Request, bbox: Optional[str] = Query(None, description="minLon,minLat,maxLon,maxLat (WGS 84)")):
+def aed_points(request: Request, bbox: Optional[str] = Query(None, description="minLon,minLat,maxLon,maxLat (WGS 84)"),
+               warstwa_: Optional[str] = Query("wszystkie", alias="warstwa", description="wszystkie (domyślnie) | lista | pomocnicza")):
     import gzip
     import hashlib
     import json as _json
@@ -254,16 +287,22 @@ def aed_points(request: Request, bbox: Optional[str] = Query(None, description="
             err(422, "walidacja", "Parametr bbox: minLon,minLat,maxLon,maxLat.", {"bbox": "Nieprawidłowy format."})
     now = datetime.now(TZ)
     minute = now.strftime("%Y-%m-%dT%H:%M")
-    key = (box, minute, st.version)
+    _layer_filter([], warstwa_)
+    key = (box, minute, st.version, warstwa_)
     if key not in _points_cache:
         feats = []
         for r in sorted(st.records.values(), key=lambda r: r["id_aed"]):
             x, y = r["dlugosc_geograficzna"], r["szerokosc_geograficzna"]
             if box and not (box[0] <= x <= box[2] and box[1] <= y <= box[3]):
                 continue
+            if warstwa_ not in ("wszystkie", None) and warstwa(r) != warstwa_:
+                continue
             feats.append({"type": "Feature", "id": r["id_aed"], "geometry": {"type": "Point", "coordinates": [x, y]},
                           "properties": {"dostepny_teraz": available_now(r, now), "stan_danych": coverage.stan_danych(r),
-                                         "osm": warstwa(r) == "osm",
+                                         "osm": warstwa(r) == "pomocnicza",  # older name: helper layer "Do sprawdzenia"
+                                         "warstwa": warstwa(r),
+                                         "zbior_nieaktualny": bool(st.lista.get(r["id_aed"], {}).get("zbior_nieaktualny")),
+                                         "duplikat": bool(st.lista.get(r["id_aed"], {}).get("mozliwe_duplikaty")),
                                          # for client-side filters next to the map (availability, freshness, area)
                                          "dostep": r.get("dostep"), "wiek_danych_dni": coverage.wiek_danych_dni(r),
                                          "mobilny": bool(r.get("mobilny")),
@@ -290,8 +329,8 @@ def aed_points(request: Request, bbox: Optional[str] = Query(None, description="
 
 
 @app.get(f"{API}/aed.jsonld", tags=["aed"], summary="Zbiór AED jako JSON-LD (schema.org) – poziom 4 otwartości")
-def aed_jsonld(warstwa_: Optional[str] = Query("otwarta", alias="warstwa")):
-    recs = sorted((r for r in get_store().records.values() if not warstwa_ or warstwa(r) == warstwa_), key=lambda r: r["id_aed"])
+def aed_jsonld():
+    recs = sorted(_layer_filter(list(get_store().records.values()), "lista"), key=lambda r: r["id_aed"])
     return JSONResponse(linked.collection(recs, publish.BASE_URL), media_type="application/ld+json")
 
 
@@ -348,32 +387,79 @@ def _form_record(body: dict, base: dict | None = None) -> tuple[dict, list[dict]
     return rec, probs, kod
 
 
-@app.post(f"{API}/aed", tags=["aed"], status_code=201, summary="Formularz pojedynczego AED")
-def create_aed(body: AedIn, role: str = Depends(require("dysponent", "moderator"))):
+# ---------- provider workspace: the wizard (P2). Writes ONLY there – the common list is read-only (K1, K2) ----------
+def _dostawca(user) -> str:
+    if str(user) != "dysponent" or not getattr(user, "nazwa", None):
+        err(403, "brak_uprawnien", "Dane o AED wprowadza wyłącznie właściciel urządzenia (konto dostawcy). Administrator nie wprowadza danych.")
+    return user.nazwa
+
+
+def _robocze(dostawca: str) -> dict[str, dict]:
+    rows = get_store().conn.execute("SELECT id_aed, data FROM robocze WHERE lower(dostawca)=lower(?)", (dostawca,)).fetchall()
+    return {r["id_aed"]: db.loads(r["data"]) for r in rows}
+
+
+def _zapisz_robocze(user, rec: dict, operacja: str, przed: dict | None = None) -> dict:
+    from src.core import dostawcy, dziennik
+    rec = dostawcy.uzupelnij(rec)
+    st = get_store()
+    st.conn.execute("INSERT OR REPLACE INTO robocze VALUES (?,?,?,?)", (user.nazwa, rec["id_aed"], db.dumps(rec), now_min()))
+    st.conn.commit()
+    dziennik.zapisz(user, operacja, rec["id_aed"], przed=przed, po=rec)
+    return rec
+
+
+def _robocze_out(rec: dict, dostawca: str) -> dict:
+    from src.core import dostawcy
+    probs = dostawcy.sprawdz_rekord(rec, dostawca)
+    return {"type": "aed_roboczy", "id": rec["id_aed"], "attributes": {k: rec.get(k) for k in schema.field_order() if k != "id_aed"},
+            "meta": {"zgodny_ze_wzorcem": not probs, "problemy": probs,
+                     "na_liscie": rec["id_aed"] in get_store().lista and get_store().lista[rec["id_aed"]]["dostawca"].lower() == dostawca.lower()}}
+
+
+def _nowy_id(dostawca: str, seed: str) -> str:
+    return dedup.make_id(f"dostawca:{dostawca}", seed)
+
+
+@app.post(f"{API}/aed", tags=["kreator"], status_code=201, summary="Dodaj AED do kopii roboczej dostawcy (formularz)",
+          description="Tylko dostawca (dysponent), tylko własne urządzenie. Trafia do kopii roboczej kreatora, nie na wspólną listę – "
+                      "na listę trafi po opublikowaniu plików na koncie dostawcy w dane.gov.pl. Administrator: 403.")
+def create_aed(body: AedIn, role: str = Depends(require("dysponent", "administrator"))):
+    dostawca = _dostawca(role)
     data = body.model_dump(exclude_none=True)
-    rec, probs, kod = _form_record(data)
+    data["dysponent_nazwa"] = dostawca  # only own devices
+    data.setdefault("zrodlo_danych", "dysponent")
+    rec, probs, _ = _form_record(data)
     if validate.has_errors(probs):
         err(422, "walidacja", "Popraw zaznaczone pola.", problems_to_fields(probs))
-    sid = rec.get("id_dysponenta_aed") or uuid.uuid4().hex[:12]
-    res = get_store().upsert_source(kod, sid, rec)
-    get_store().register_source(kod, {"nazwa": f"Formularz – {rec.get('dysponent_nazwa')}", "typ_zrodla": "dysponent",
-                                      "format": "formularz", "licencja": rec["licencja"],
-                                      "czestotliwosc_aktualizacji": "na bieżąco"})
-    return {"data": resource(get_store().records[res["id_aed"]]), "meta": {"status": res["status"],
-            "ostrzezenia": [p for p in probs if p["poziom"] == "ostrzezenie"]}}
+    rec["id_aed"] = data.get("id_aed") or _nowy_id(dostawca, rec.get("id_dysponenta_aed") or uuid.uuid4().hex)
+    rec = _zapisz_robocze(role, rec, "kreator:dodaj")
+    return {"data": _robocze_out(rec, dostawca), "meta": {"ostrzezenia": [p for p in probs if p["poziom"] == "ostrzezenie"],
+            "komunikat": "Dodano do kopii roboczej. Pobierz pliki do publikacji i opublikuj je na koncie instytucji w dane.gov.pl."}}
 
 
-@app.patch(f"{API}/aed/{{id_aed}}", tags=["aed"], summary="Aktualizacja rekordu AED")
-def patch_aed(id_aed: str, body: AedIn, role: str = Depends(require("dysponent", "moderator"))):
+@app.patch(f"{API}/aed/{{id_aed}}", tags=["kreator"], summary="Zmień własne AED (w kopii roboczej dostawcy)",
+           description="Dostawca może zmienić tylko swoje urządzenie (rekord innego dostawcy → 403, K1). Administrator nie ma zapisu (403, K2). "
+                       "Zmiana trafia do kopii roboczej; wspólna lista pokazuje dane z opublikowanego zbioru.")
+def patch_aed(id_aed: str, body: AedIn, role: str = Depends(require("dysponent", "administrator"))):
+    dostawca = _dostawca(role)
     st = get_store()
-    base = st.records.get(id_aed)
-    if not base:
-        err(404, "nie_znaleziono", f"Nie znaleziono AED o identyfikatorze {id_aed}.")
+    work = _robocze(dostawca)
+    base = work.get(id_aed)
+    if base is None:
+        rec = st.records.get(id_aed)
+        if not rec:
+            err(404, "nie_znaleziono", f"Nie znaleziono AED o identyfikatorze {id_aed}.")
+        owner = st.lista.get(id_aed, {}).get("dostawca")
+        if not owner or owner.lower() != dostawca.lower():
+            err(403, "brak_uprawnien", "To urządzenie należy do innego dostawcy (albo nie ma dostawcy) – nie możesz go zmienić.")
+        base = {k: rec.get(k) for k in schema.field_order()}
     changes = body.model_dump(exclude_unset=True)
     changes.pop("kod_zrodla", None)
     unknown = [k for k in changes if k not in schema.field_order()]
     if unknown:
         err(422, "walidacja", "Nieznane pola.", {k: "Pole spoza wzorcowego zakresu danych." for k in unknown})
+    changes.pop("dysponent_nazwa", None)
     candidate = dict(base) | changes
     if "godziny_dostepnosci" in changes and "dostepny_24h" not in changes:
         candidate["dostepny_24h"] = hours.is_24_7(candidate["godziny_dostepnosci"])
@@ -381,9 +467,85 @@ def patch_aed(id_aed: str, body: AedIn, role: str = Depends(require("dysponent",
     probs = validate.validate_record(candidate)
     if validate.has_errors(probs):
         err(422, "walidacja", "Popraw zaznaczone pola.", problems_to_fields(probs))
-    rec = st.patch(id_aed, {k: candidate[k] for k in candidate if k in changes or k == "dostepny_24h"},
-                   kod_zrodla=f"formularz:{role}")
-    return {"data": resource(rec), "meta": {"ostrzezenia": [p for p in probs if p["poziom"] == "ostrzezenie"]}}
+    rec = _zapisz_robocze(role, candidate, "kreator:zmien", przed=base)
+    return {"data": _robocze_out(rec, dostawca), "meta": {"ostrzezenia": [p for p in probs if p["poziom"] == "ostrzezenie"],
+            "komunikat": "Zmiana jest w kopii roboczej. Opublikuj nowe pliki w dane.gov.pl – wtedy zmieni się na wspólnej liście."}}
+
+
+@app.get(f"{API}/moje-aed", tags=["kreator"], summary="Kopia robocza dostawcy: moje AED, zgodność ze wzorcem, stan na liście")
+def my_aed(role: str = Depends(require("dysponent", "administrator"))):
+    from src.core import dostawcy
+    dostawca = _dostawca(role)
+    work = _robocze(dostawca)
+    st = get_store()
+    published = [i for i, p in st.lista.items() if p["dostawca"].lower() == dostawca.lower()]
+    raport = [z for z in dostawcy.OSTATNI_RAPORT["zbiory"] if (z.get("dostawca") or "").lower() == dostawca.lower()]
+    return {"data": [_robocze_out(r, dostawca) for r in sorted(work.values(), key=lambda r: r.get("nazwa_obiektu") or "")],
+            "meta": {"dostawca": dostawca, "w_kopii_roboczej": len(work), "na_wspolnej_liscie": len(published),
+                     "raport_agregacji": raport, "agregacja_z": dostawcy.OSTATNI_RAPORT["czas"]}}
+
+
+@app.post(f"{API}/moje-aed/z-opublikowanego", tags=["kreator"], summary="Wczytaj do kopii roboczej moje AED z opublikowanego zbioru")
+def my_aed_from_list(role: str = Depends(require("dysponent", "administrator"))):
+    dostawca = _dostawca(role)
+    st = get_store()
+    work = _robocze(dostawca)
+    n = 0
+    for i, p in st.lista.items():
+        if p["dostawca"].lower() == dostawca.lower() and i not in work:
+            _zapisz_robocze(role, {k: st.records[i].get(k) for k in schema.field_order()}, "kreator:wczytaj_opublikowane")
+            n += 1
+    return {"data": {"wczytano": n}}
+
+
+@app.delete(f"{API}/moje-aed/{{id_aed}}", tags=["kreator"], summary="Usuń AED z kopii roboczej (np. wycofane urządzenie)")
+def my_aed_delete(id_aed: str, role: str = Depends(require("dysponent", "administrator"))):
+    from src.core import dziennik
+    dostawca = _dostawca(role)
+    work = _robocze(dostawca)
+    if id_aed not in work:
+        err(404, "nie_znaleziono", "Nie ma takiego AED w Twojej kopii roboczej.")
+    st = get_store()
+    st.conn.execute("DELETE FROM robocze WHERE lower(dostawca)=lower(?) AND id_aed=?", (dostawca, id_aed))
+    st.conn.commit()
+    dziennik.zapisz(role, "kreator:usun", id_aed, przed=work[id_aed])
+    return {"ok": True}
+
+
+class OrgIn(BaseModel):
+    czestotliwosc: str = Field("monthly", pattern="^(daily|weekly|monthly|quarterly|everyHalfYear|yearly)$")
+    licencja: str = Field("CC0-1.0", pattern="^(CC0-1.0|CC-BY-4.0)$")
+    csv_url: Optional[str] = Field(None, description="adres https, pod którym opublikujecie plik CSV (dla XML harmonizatora)")
+    odpowiedzialnosc: Optional[str] = Field(None, max_length=4000)
+    email: Optional[str] = Field(None, max_length=200)
+    regon: Optional[str] = Field(None, pattern=r"^\d{9}(\d{5})?$")
+
+
+@app.post(f"{API}/moje-aed/pakiet", tags=["kreator"], summary="Pobierz pliki do publikacji (ZIP) – K11: pobranie, nie publikacja",
+          response_class=Response)
+def my_package(body: OrgIn, role: str = Depends(require("dysponent", "administrator"))):
+    from src.core import dostawcy, dziennik
+    dostawca = _dostawca(role)
+    work = list(_robocze(dostawca).values())
+    if not work:
+        err(422, "pusta_kopia", "Kopia robocza jest pusta – dodaj AED albo wgraj plik.")
+    bad = [r["id_aed"] for r in (dostawcy.uzupelnij(x) for x in work) if dostawcy.sprawdz_rekord(r, dostawca)]
+    if bad:
+        err(422, "niezgodne_ze_wzorcem", f"{len(bad)} AED nie spełnia wzorca – popraw je przed pobraniem plików.", {"id_aed": ", ".join(bad[:10])})
+    org = {"nazwa": dostawca} | body.model_dump(exclude_none=True)
+    st = get_store()
+    st.conn.execute("INSERT OR REPLACE INTO organizacje VALUES (?,?)", (dostawca, db.dumps(org)))
+    st.conn.commit()
+    data = dostawcy.pakiet(org, work, body.csv_url)
+    dziennik.zapisz(role, "kreator:pobierz_pliki", dostawca, po={"urzadzenia": len(work), "czestotliwosc": org.get("czestotliwosc")})
+    fname = f"aed-{dostawcy.slug(dostawca)}-pliki-do-publikacji.zip"
+    return Response(data, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+@app.get(f"{API}/moje-aed/powiadomienia", tags=["kreator"], summary="Powiadomienia dostawcy: zgłoszenia, potwierdzenia, duplikaty, walidacja, przypomnienia")
+def my_notifications(role: str = Depends(require("dysponent", "administrator"))):
+    from src.core import dziennik
+    return {"data": dziennik.powiadomienia(_dostawca(role))}
 
 
 # ---------- import (F1) ----------
@@ -406,11 +568,11 @@ async def import_file(plik: UploadFile = File(...), kod_zrodla: str = Form(...),
                       dysponent_typ: Optional[str] = Form(None), status_urzadzenia: Optional[str] = Form(None),
                       data_weryfikacji: Optional[str] = Form(None), metoda_weryfikacji: Optional[str] = Form(None),
                       czestotliwosc_aktualizacji: Optional[str] = Form(None), obszar: Optional[str] = Form(None),
-                      role: str = Depends(require("dysponent", "moderator"))):
-    if licencja not in schema.dictionaries()["licencja"]:
-        err(422, "walidacja", "Nieznana licencja.", {"licencja": "Dozwolone: " + ", ".join(schema.dictionaries()["licencja"])})
-    if role == "dysponent" and role.login != "dysponent":
-        dysponent_nazwa = role.nazwa  # a real provider account always publishes as its own institution
+                      role: str = Depends(require("dysponent", "administrator"))):
+    dysponent_nazwa = _dostawca(role)  # a provider imports only its own devices (administrator: 403)
+    if licencja not in ("CC0-1.0", "CC-BY-4.0"):
+        err(422, "walidacja", "Licencja zbioru dostawcy: CC0-1.0 albo CC-BY-4.0 (dane OpenStreetMap/ODbL nie mogą trafić do zbioru).",
+            {"licencja": "Dozwolone: CC0-1.0, CC-BY-4.0"})
     raw = await plik.read()
     if len(raw) > 20 * 1024 * 1024:
         err(413, "plik_za_duzy", "Plik jest za duży (maks. 20 MB).")
@@ -485,7 +647,8 @@ class MappingIn(BaseModel):
 
 
 @app.post(f"{API}/import/{{import_id}}/mapowanie", tags=["import"], summary="Zatwierdzenie mapowania → raport walidacji")
-def import_mapping(import_id: str, body: MappingIn, role: str = Depends(require("dysponent", "moderator"))):
+def import_mapping(import_id: str, body: MappingIn, role: str = Depends(require("dysponent", "administrator"))):
+    _dostawca(role)
     imp = _load_import(import_id)
     if body.mapowanie is not None:
         bad = {c: "Nieznane pole docelowe." for c, t in body.mapowanie.items()
@@ -501,7 +664,8 @@ def import_mapping(import_id: str, body: MappingIn, role: str = Depends(require(
 
 
 @app.post(f"{API}/import/{{import_id}}/zatwierdz", tags=["import"], summary="Włączenie poprawnych wierszy do zbioru")
-def import_commit(import_id: str, role: str = Depends(require("dysponent", "moderator"))):
+def import_commit(import_id: str, role: str = Depends(require("dysponent", "administrator"))):
+    dostawca = _dostawca(role)
     imp = _load_import(import_id)
     if imp["status"] == "zatwierdzony":
         err(409, "juz_zatwierdzony", "Ten import został już zatwierdzony.")
@@ -509,36 +673,58 @@ def import_commit(import_id: str, role: str = Depends(require("dysponent", "mode
     st = get_store()
     counts = {"dodane": 0, "zaktualizowane": 0, "scalone": 0, "odrzucone": 0}
     ids = []
+    work = _robocze(dostawca)
+    by_ref = {(w.get("id_dysponenta_aed") or ""): i for i, w in work.items() if w.get("id_dysponenta_aed")}
     for r in results:
         if not r["poprawny"]:
             counts["odrzucone"] += 1
             continue
-        res = st.upsert_source(imp["kod_zrodla"], r["id_w_zrodle"], r["rekord"], commit=False)
-        counts[res["status"]] += 1
-        ids.append(res["id_aed"])
-    st.commit()
-    st.register_source(imp["kod_zrodla"], imp["zrodlo"] | {"odrzucone": counts["odrzucone"]})
+        rec = dict(r["rekord"]) | {"dysponent_nazwa": dostawca, "zrodlo_danych": "dysponent"}
+        existing = by_ref.get(rec.get("id_dysponenta_aed") or "\0")
+        rec["id_aed"] = existing or _nowy_id(dostawca, rec.get("id_dysponenta_aed") or r["id_w_zrodle"])
+        if rec["id_aed"] in work:
+            counts["zaktualizowane"] += 1
+        else:
+            counts["dodane"] += 1
+        _zapisz_robocze(role, rec, "kreator:import", przed=work.get(rec["id_aed"]))
+        ids.append(rec["id_aed"])
     st.conn.execute("INSERT OR REPLACE INTO mapowania VALUES (?,?)", (imp["kod_zrodla"], db.dumps(imp["mapowanie"])))
     imp["status"] = "zatwierdzony"
     imp["wynik"] = counts
     _save_import(imp)
-    return counts | {"id_aed": ids, "raport": {k: report[k] for k in ("wiersze", "poprawne", "bledy", "z_ostrzezeniami")}}
+    return counts | {"id_aed": ids, "raport": {k: report[k] for k in ("wiersze", "poprawne", "bledy", "z_ostrzezeniami")},
+                     "komunikat": "Dodano do kopii roboczej. Pobierz pliki do publikacji i opublikuj je na koncie instytucji w dane.gov.pl."}
 
 
 # ---------- citizen reports & moderation ----------
 MAX_ZDJECIE_B = 1_500_000  # after the browser shrinks it (≈1600 px JPEG) a photo is 150–500 kB
 
 
+TYPY_ZGLOSZEN = ("brak", "awaria", "brak_dostepu", "bledne_polozenie", "inne", "nowe")
+
+
 class ZgloszenieIn(BaseModel):
     lat: float = Field(..., ge=49.0, le=54.9)
     lon: float = Field(..., ge=14.1, le=24.2)
     opis: str = Field(..., min_length=3, max_length=500)
+    id_aed: Optional[str] = Field(None, description="AED, którego dotyczy zgłoszenie (z karty AED); brak = urządzenie spoza listy (P7)")
+    typ: str = Field("nowe", description="brak | awaria | brak_dostepu | bledne_polozenie | inne | nowe (urządzenie spoza listy)")
     nazwa_obiektu: Optional[str] = Field(None, max_length=200)
     zdjecie: Optional[str] = Field(None, description="data:image/jpeg|png|webp;base64,… (maks. 1,5 MB) albo URL https://")
-    # CR from B (HANDOFF #16): optional details the reporter saw on site
     godziny_dostepnosci: Optional[str] = Field(None, max_length=200, description="np. Mo-Fr 08:00-16:00")
     szafka_zamknieta: Optional[bool] = None
     instrukcja_dostepu: Optional[str] = Field(None, max_length=300)
+    email: Optional[str] = Field(None, max_length=200, description="opcjonalny, tylko do odpowiedzi; usuwany po zamknięciu zgłoszenia (RODO)")
+
+
+_RE_EMAIL = __import__("re").compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+_RE_PHONE = __import__("re").compile(r"(?<!\d)(?:\+?48[\s-]?)?\d{3}[\s-]?\d{3}[\s-]?\d{3}(?!\d)")
+_RE_URL = __import__("re").compile(r"https?://\S+|www\.\S+", __import__("re").I)
+
+
+def filtr_tresci(t: str) -> str:
+    """Abuse filter before a report goes to a provider (§9): no e-mails, phone numbers or links in the description."""
+    return _RE_URL.sub("[link usunięty]", _RE_PHONE.sub("[telefon usunięty]", _RE_EMAIL.sub("[e-mail usunięty]", t or "")))
 
 
 def _photo(v: str | None) -> tuple[str, bytes] | None:
@@ -566,22 +752,41 @@ def _photo_token(zid: str) -> str:
     return _h.new(auth.SECRET.encode(), f"zdjecie:{zid}".encode(), hashlib.sha256).hexdigest()[:20]
 
 
-@app.post(f"{API}/zgloszenia", tags=["zgloszenia"], status_code=201, summary="Zgłoszenie AED przez obywatela",
+def _public(data: dict) -> dict:
+    return {k: v for k, v in data.items() if k not in ("zdjecie", "email")} | {"ma_zdjecie": bool(data.get("zdjecie")),
+                                                                            "podano_email": bool(data.get("email"))}
+
+
+@app.post(f"{API}/zgloszenia", tags=["zgloszenia"], status_code=201, summary="Zgłoszenie mieszkańca (P6, P7)",
+          description="Dotyczy konkretnego AED z listy → trafia do jego dostawcy (powiadomienie). Urządzenie spoza listy "
+                      "(albo punkt „Do sprawdzenia”) → kolejka administratora. Zgłoszenie nigdy nie zmienia danych (K7, K8).",
           dependencies=[Depends(rate_limit)])
 def create_report(body: ZgloszenieIn):
+    from src.core import dziennik
+    if body.typ not in TYPY_ZGLOSZEN:
+        err(422, "walidacja", "Nieznany typ zgłoszenia.", {"typ": "Dozwolone: " + ", ".join(TYPY_ZGLOSZEN)})
+    st = get_store()
+    if body.id_aed and body.id_aed not in st.records:
+        err(404, "nie_znaleziono", "Nie ma takiego AED.", {"id_aed": "Nieznany identyfikator."})
     zid = uuid.uuid4().hex[:12]
     photo = _photo(body.zdjecie)
-    data = body.model_dump() | {"id": zid, "status": "do_weryfikacji", "czas": now_min()}
+    prov = st.lista.get(body.id_aed) if body.id_aed else None
+    data = body.model_dump() | {"id": zid, "status": "do_weryfikacji", "czas": now_min(), "opis": filtr_tresci(body.opis),
+                                "dostawca": prov["dostawca"] if prov else None,
+                                "kolejka": "dostawca" if prov else "administrator"}
     data["zdjecie"] = body.zdjecie if photo else None
-    # no personal data stored: no reporter contact; the photo is shown only to moderators (signed link)
-    st = get_store()
     st.conn.execute("INSERT INTO zgloszenia VALUES (?,?,?,?)", (zid, "do_weryfikacji", db.dumps(data), now_min()))
     st.conn.commit()
+    if prov:
+        dziennik.powiadom(prov["dostawca"], "zgloszenie",
+                          f"Nowe zgłoszenie ({body.typ}) o AED {body.id_aed}: {data['opis'][:200]}", zid)
+    dziennik.zapisz("mieszkaniec", "zgloszenie:nowe", zid, po=_public(data))
     near = _nearest_aed(st, body.lat, body.lon)
-    pub = {k: v for k, v in data.items() if k != "zdjecie"} | {"ma_zdjecie": bool(photo)}
-    return {"id": zid, "status": "do_weryfikacji", "data": pub,
+    return {"id": zid, "status": "do_weryfikacji", "data": _public(data),
             "meta": {"mozliwy_duplikat": near[0] if near else None, "odleglosc_m": near[1] if near else None,
-                     "komunikat": "Dziękujemy! Zgłoszenie trafi do weryfikacji przed dodaniem do zbioru."}}
+                     "trafia_do": prov["dostawca"] if prov else "administrator (urządzenie bez dostawcy)",
+                     "komunikat": (f"Dziękujemy! Zgłoszenie trafi do właściciela urządzenia ({prov['dostawca']}), który odpowiada za te dane."
+                                   if prov else "Dziękujemy! Tego urządzenia nie ma na wspólnej liście – zaprosimy jego właściciela do publikacji danych.")}}
 
 
 @app.get(f"{API}/zgloszenia/{{zid}}/zdjecie", tags=["zgloszenia"], summary="Zdjęcie ze zgłoszenia (podpisany link z kolejki moderacji)")
@@ -613,15 +818,9 @@ def _same(a: str | None, b: str | None) -> bool:
     return bool(a and b) and a.strip().lower() == b.strip().lower()
 
 
-def _is_own(st, id_aed: str | None, user) -> bool:
-    """AED operated by the logged-in provider (its account's dysponent_nazwa)."""
-    rec = st.records.get(id_aed) if id_aed else None
-    return bool(rec) and _same(rec.get("dysponent_nazwa"), getattr(user, "nazwa", None))
-
-
-@app.get(f"{API}/zgloszenia", tags=["zgloszenia"], summary="Kolejka zgłoszeń do moderacji",
-         description="Moderator widzi wszystkie zgłoszenia. Dysponent – tylko dotyczące jego AED (najbliższy AED w promieniu 30 m).")
-def list_reports(status: Optional[str] = "do_weryfikacji", role: str = Depends(require("moderator", "dysponent"))):
+@app.get(f"{API}/zgloszenia", tags=["zgloszenia"], summary="Kolejka zgłoszeń: dostawcy – o jego AED; administratora – bez dostawcy",
+         description="Dostawca widzi tylko zgłoszenia o swoich AED (P6). Administrator – zgłoszenia urządzeń spoza listy (P7, K8).")
+def list_reports(status: Optional[str] = "do_weryfikacji", role: str = Depends(require("administrator", "dysponent"))):
     st = get_store()
     sql, args = "SELECT data, status FROM zgloszenia", ()
     if status:
@@ -629,30 +828,31 @@ def list_reports(status: Optional[str] = "do_weryfikacji", role: str = Depends(r
     rows = [db.loads(r["data"]) | {"status": r["status"]} for r in st.conn.execute(sql + " ORDER BY created DESC", args)]
     items = []
     for r in rows:
-        near = _nearest_aed(st, r["lat"], r["lon"])
-        target = r.get("id_aed") or (near[0] if near else None)
-        if role == "dysponent" and not _is_own(st, target, role):
+        if role == "dysponent" and not _same(r.get("dostawca"), role.nazwa):
             continue
-        attrs = {k: v for k, v in r.items() if k not in ("id", "zdjecie")}
+        if role == "administrator" and r.get("dostawca"):
+            continue
+        attrs = {k: v for k, v in r.items() if k not in ("id", "zdjecie", "email")}
         attrs["zdjecie_url"] = f"{API}/zgloszenia/{r['id']}/zdjecie?t={_photo_token(r['id'])}" if r.get("zdjecie") else None
+        attrs["podano_email"] = bool(r.get("email"))
+        near = _nearest_aed(st, r["lat"], r["lon"])
         items.append({"type": "zgloszenie", "id": r["id"], "attributes": attrs,
-                      "meta": {"mozliwy_duplikat": near[0] if near else None, "odleglosc_m": near[1] if near else None}})
-    return {"data": items, "meta": {"count": len(items), "page": 1, "per_page": len(items)},
+                      "meta": {"najblizsze_aed": near[0] if near else None, "odleglosc_m": near[1] if near else None}})
+    return {"data": items, "meta": {"count": len(items), "page": 1, "per_page": len(items), "kolejka": str(role)},
             "links": {"self": f"{API}/zgloszenia" + (f"?status={status}" if status else "")}}
 
 
 class Decyzja(BaseModel):
-    decyzja: str = Field(..., pattern="^(zatwierdz|odrzuc|scal)$")
-    id_aed_docelowy: Optional[str] = Field(None, description="dla „scal”: istniejący AED; domyślnie najbliższy w promieniu 30 m")
-    uzasadnienie: Optional[str] = None
-    rekord: Optional[dict[str, Any]] = Field(None, description="Pola rekordu uzupełnione przez moderatora (adres, dostęp…)")
+    decyzja: str = Field(..., description="dostawca: przyjete | odrzucone; administrator: zaproszenie | odrzucone")
+    uzasadnienie: Optional[str] = Field(None, max_length=1000)
 
 
-@app.post(f"{API}/zgloszenia/{{zid}}/decyzja", tags=["zgloszenia"], summary="Decyzja moderatora albo dysponenta",
-          description="Moderator: każde zgłoszenie. Dysponent: tylko dla swoich AED – `scal`/`odrzuc`, gdy zgłoszenie dotyczy "
-                      "jego AED (wskazany `id_aed_docelowy` albo najbliższy w 30 m); `zatwierdz` – nowy AED z jego `dysponent_nazwa`. "
-                      "Inaczej 403 `brak_uprawnien`.")
-def decide(zid: str, body: Decyzja, role: str = Depends(require("moderator", "dysponent"))):
+@app.post(f"{API}/zgloszenia/{{zid}}/decyzja", tags=["zgloszenia"], summary="Rozpatrzenie zgłoszenia – bez zmiany danych (K7)",
+          description="Dostawca: „przyjete” (uwzględni zmianę w swoim zbiorze) albo „odrzucone”. Administrator (zgłoszenia bez dostawcy): "
+                      "„zaproszenie” (zaprasza właściciela do publikacji, oznacza lukę) albo „odrzucone”. Zgłoszenie nie zmienia żadnego rekordu; "
+                      "e-mail zgłaszającego jest usuwany po zamknięciu.")
+def decide(zid: str, body: Decyzja, role: str = Depends(require("administrator", "dysponent"))):
+    from src.core import dziennik
     st = get_store()
     row = st.conn.execute("SELECT data, status FROM zgloszenia WHERE id=?", (zid,)).fetchone()
     if not row:
@@ -661,51 +861,28 @@ def decide(zid: str, body: Decyzja, role: str = Depends(require("moderator", "dy
     if row["status"] != "do_weryfikacji":
         err(409, "juz_rozpatrzone", "Zgłoszenie zostało już rozpatrzone.")
     if role == "dysponent":
-        if body.decyzja == "zatwierdz":
-            # a provider may add only its own device to the dataset
-            nazwa = (body.rekord or {}).get("dysponent_nazwa")
-            if nazwa and not _same(nazwa, role.nazwa):
-                err(403, "brak_uprawnien", "Dysponent może zatwierdzić zgłoszenie tylko jako swój AED.",
-                    {"rekord.dysponent_nazwa": f"Dozwolone: {role.nazwa}."})
-            body.rekord = (body.rekord or {}) | {"dysponent_nazwa": role.nazwa}
-        else:
-            near = _nearest_aed(st, data["lat"], data["lon"])
-            target = body.id_aed_docelowy or (near[0] if near else None)
-            if not _is_own(st, target, role):
-                err(403, "brak_uprawnien", "Dysponent rozpatruje tylko zgłoszenia dotyczące swoich AED.")
-    result = {}
-    if body.decyzja == "zatwierdz":
-        r = {"nazwa_obiektu": data.get("nazwa_obiektu"), "opis_lokalizacji": data["opis"][:250],
-             "szerokosc_geograficzna": data["lat"], "dlugosc_geograficzna": data["lon"]}
-        r |= {k: data[k] for k in ("godziny_dostepnosci", "szafka_zamknieta", "instrukcja_dostepu") if data.get(k) not in (None, "")}
-        r |= body.rekord or {}
-        m = {k: k for k in r}
-        rec, probs = pipeline.transform(r, m, {"kod_zrodla": "zgloszenia", "zrodlo_danych": "zgloszenie_obywatela",
-                                               "licencja": "CC0-1.0", "metoda_weryfikacji": "zgloszenie_obywatela"}, 1)
-        probs += pipeline.check(rec, 1)
-        if validate.has_errors(probs):
-            err(422, "walidacja", "Uzupełnij brakujące pola rekordu przed zatwierdzeniem.", problems_to_fields(probs))
-        result = st.upsert_source("zgloszenia", zid, rec)
-        data["id_aed"] = result["id_aed"]
-    if body.decyzja == "scal":
-        target = body.id_aed_docelowy
-        if not target:
-            best = _nearest_aed(st, data["lat"], data["lon"])
-            target = best[0] if best else None
-        if not target or target not in st.records:
-            err(422, "walidacja", "Brak istniejącego AED do scalenia (w promieniu 30 m). Wskaż id_aed_docelowy.",
-                {"id_aed_docelowy": "Wskaż istniejący AED."})
-        # the report confirms an existing device (counts as a QR-style confirmation)
-        st.conn.execute("INSERT INTO potwierdzenia (id_aed, data, created) VALUES (?,?,?)",
-                        (target, db.dumps({"jest_na_miejscu": True, "komentarz": f"zgłoszenie obywatela scalone ({role})"}), now_min()))
-        data["id_aed"] = target
-        result = {"status": "scalone", "id_aed": target}
-    data["status"] = {"zatwierdz": "zatwierdzone", "odrzuc": "odrzucone", "scal": "scalone"}[body.decyzja]
+        if not _same(data.get("dostawca"), role.nazwa):
+            err(403, "brak_uprawnien", "To zgłoszenie dotyczy urządzenia innego dostawcy.")
+        allowed = ("przyjete", "odrzucone")
+    else:
+        if data.get("dostawca"):
+            err(403, "brak_uprawnien", "Zgłoszenie dotyczy AED dostawcy – rozpatruje je dostawca.")
+        allowed = ("zaproszenie", "odrzucone")
+    if body.decyzja not in allowed:
+        err(422, "walidacja", "Niedozwolona decyzja.", {"decyzja": "Dozwolone: " + ", ".join(allowed)})
+    przed = _public(data)
+    data["status"] = body.decyzja
     data["uzasadnienie"] = body.uzasadnienie
-    data["decyzje_podjal"] = role
+    data["rozpatrzyl"] = getattr(role, "login", str(role))
+    data["rozpatrzono"] = now_min()
+    data.pop("email", None)  # RODO: the reporter's e-mail is deleted when the report is closed
     st.conn.execute("UPDATE zgloszenia SET status=?, data=? WHERE id=?", (data["status"], db.dumps(data), zid))
     st.conn.commit()
-    return {"data": {k: v for k, v in data.items() if k != "zdjecie"} | {"ma_zdjecie": bool(data.get("zdjecie"))}, "meta": result}
+    dziennik.zapisz(role, f"zgloszenie:{body.decyzja}", zid, przed=przed, po=_public(data))
+    return {"data": _public(data), "meta": {"komunikat": {
+        "przyjete": "Przyjęte. Zmień dane w kopii roboczej i opublikuj nowe pliki – wtedy zmieni się wspólna lista.",
+        "odrzucone": "Zgłoszenie odrzucone.",
+        "zaproszenie": "Zapisano zaproszenie właściciela do publikacji; miejsce jest oznaczone jako luka."}[body.decyzja]}}
 
 
 # ---------- AED passport (QR) ----------
@@ -722,33 +899,42 @@ def confirm(id_aed: str, body: Potwierdzenie):
     if id_aed not in st.records:
         err(404, "nie_znaleziono", f"Nie znaleziono AED o identyfikatorze {id_aed}.")
     st.conn.execute("INSERT INTO potwierdzenia (id_aed, data, created) VALUES (?,?,?)",
-                    (id_aed, db.dumps(body.model_dump()), now_min()))
+                    (id_aed, db.dumps(body.model_dump() | {"komentarz": filtr_tresci(body.komentarz or "") or None}), now_min()))
     st.conn.commit()
-    return {"ok": True, "data": confirmations(id_aed), "meta": {"komunikat": "Dziękujemy za potwierdzenie!"}}
+    prov = st.lista.get(id_aed)
+    if prov:  # information goes back to the source; it never changes the provider's data (§3.7)
+        from src.core import dziennik
+        dziennik.powiadom(prov["dostawca"], "potwierdzenie",
+                          f"Mieszkaniec potwierdził AED {id_aed}: {'jest na miejscu' if body.jest_na_miejscu else 'NIE MA go na miejscu'}"
+                          + ("" if body.szafka_dostepna is None else f", szafka {'dostępna' if body.szafka_dostepna else 'niedostępna'}") + ".",
+                          f"{id_aed}:{now_min()[:10]}:{body.jest_na_miejscu}")
+    return {"ok": True, "data": confirmations(id_aed),
+            "meta": {"komunikat": "Dziękujemy za potwierdzenie! Przekażemy je właścicielowi urządzenia." if prov else "Dziękujemy za potwierdzenie!"}}
 
 
-# ---------- accounts of institutions (created by a moderator) ----------
+# ---------- accounts: providers (and administrators), managed by an administrator ----------
 class KontoIn(BaseModel):
     login: str = Field(..., description="3–41 znaków: małe litery, cyfry, . _ -")
     dysponent_nazwa: str = Field(..., min_length=3, max_length=200, description="Instytucja – tak jak w polu dysponent_nazwa rekordów")
     email: Optional[str] = Field(None, max_length=200)
-    rola: str = Field("dysponent", pattern="^(dysponent|moderator)$")
+    rola: str = Field("dysponent", pattern="^(dysponent|administrator)$")
+    regon: Optional[str] = Field(None, pattern=r"^\d{9}(\d{5})?$")
 
 
 def _konto_out(a: dict) -> dict:
     return {k: a.get(k) for k in ("login", "rola", "dysponent_nazwa", "email", "aktywne", "utworzono", "utworzyl")} | \
         {"aktywne": bool(a.get("aktywne")),
-         "liczba_aed": sum(1 for r in get_store().records.values() if _same(r.get("dysponent_nazwa"), a.get("dysponent_nazwa")))}
+         "liczba_aed": sum(1 for p in get_store().lista.values() if _same(p["dostawca"], a.get("dysponent_nazwa")))}
 
 
 @app.get(f"{API}/konta", tags=["auth"], summary="Konta instytucji (moderator)")
-def accounts_list(role: str = Depends(require("moderator"))):
+def accounts_list(role: str = Depends(require("administrator"))):
     rows = [_konto_out(dict(r)) for r in get_store().conn.execute("SELECT * FROM konta ORDER BY utworzono DESC")]
     return {"data": rows, "meta": {"count": len(rows)}}
 
 
 @app.post(f"{API}/konta", tags=["auth"], status_code=201, summary="Załóż konto instytucji (moderator) – hasło pokazywane raz")
-def account_create(body: KontoIn, role: str = Depends(require("moderator"))):
+def account_create(body: KontoIn, role: str = Depends(require("administrator"))):
     login = body.login.strip().lower()
     if not auth.LOGIN_RE.match(login) or login in auth.DEMO or login == "demo":
         err(422, "walidacja", "Nieprawidłowy login.", {"login": "3–41 znaków: małe litery, cyfry, kropka, _ i -; inny niż konta demo."})
@@ -760,18 +946,22 @@ def account_create(body: KontoIn, role: str = Depends(require("moderator"))):
                     (login, body.rola, body.dysponent_nazwa.strip(), auth.hash_password(haslo), now_min(), getattr(role, "login", str(role)),
                      body.email))
     st.conn.commit()
+    from src.core import dziennik
+    dziennik.zapisz(role, "konto:zalozenie", login, po=_konto_out(auth.account(login)))
     return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo,
             "meta": {"komunikat": "Przekaż login i hasło instytucji bezpiecznym kanałem. Hasła nie da się później odczytać – tylko zresetować."}}
 
 
 @app.post(f"{API}/konta/{{login}}/reset-hasla", tags=["auth"], summary="Nowe hasło dla konta instytucji (moderator)")
-def account_reset(login: str, role: str = Depends(require("moderator"))):
+def account_reset(login: str, role: str = Depends(require("administrator"))):
     if not auth.account(login):
         err(404, "nie_znaleziono", "Nie ma takiego konta.")
     haslo = auth.new_password()
     st = get_store()
     st.conn.execute("UPDATE konta SET haslo=? WHERE login=?", (auth.hash_password(haslo), login))
     st.conn.commit()
+    from src.core import dziennik
+    dziennik.zapisz(role, "konto:reset_hasla", login)
     return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo}
 
 
@@ -780,12 +970,15 @@ class AktywneIn(BaseModel):
 
 
 @app.patch(f"{API}/konta/{{login}}", tags=["auth"], summary="Zablokuj / odblokuj konto instytucji (moderator)")
-def account_toggle(login: str, body: AktywneIn, role: str = Depends(require("moderator"))):
+def account_toggle(login: str, body: AktywneIn, role: str = Depends(require("administrator"))):
     if not auth.account(login):
         err(404, "nie_znaleziono", "Nie ma takiego konta.")
     st = get_store()
+    przed = _konto_out(auth.account(login))
     st.conn.execute("UPDATE konta SET aktywne=? WHERE login=?", (1 if body.aktywne else 0, login))
     st.conn.commit()
+    from src.core import dziennik
+    dziennik.zapisz(role, "konto:odblokowanie" if body.aktywne else "konto:blokada", login, przed=przed, po=_konto_out(auth.account(login)))
     return {"data": _konto_out(auth.account(login))}
 
 
@@ -795,7 +988,7 @@ class ZmianaHasla(BaseModel):
 
 
 @app.post(f"{API}/konta/ja/haslo", tags=["auth"], summary="Zmiana własnego hasła (konto instytucji)")
-def account_password(body: ZmianaHasla, role: str = Depends(require("dysponent", "moderator"))):
+def account_password(body: ZmianaHasla, role: str = Depends(require("dysponent", "administrator"))):
     a = auth.account(getattr(role, "login", ""))
     if not a:
         err(422, "walidacja", "Konta demo nie mają zmiany hasła (hasło w .env).")
@@ -804,11 +997,13 @@ def account_password(body: ZmianaHasla, role: str = Depends(require("dysponent",
     st = get_store()
     st.conn.execute("UPDATE konta SET haslo=? WHERE login=?", (auth.hash_password(body.nowe), a["login"]))
     st.conn.commit()
+    from src.core import dziennik
+    dziennik.zapisz(role, "konto:zmiana_hasla", a["login"])
     return {"ok": True}
 
 
 @app.get(f"{API}/konta/ja", tags=["auth"], summary="Kim jestem (po zalogowaniu)")
-def account_me(role: str = Depends(require("dysponent", "moderator"))):
+def account_me(role: str = Depends(require("dysponent", "administrator"))):
     return {"data": {"login": getattr(role, "login", None), "rola": str(role), "dysponent_nazwa": getattr(role, "nazwa", None)}}
 
 
@@ -826,8 +1021,8 @@ def _scheduler():
 
 
 @app.post(f"{API}/zrodla/odswiez", tags=["zrodla"], status_code=202,
-          summary="Odśwież teraz: OpenStreetMap i zbiory AED z dane.gov.pl (w tle)")
-def refresh_now(role: str = Depends(require("moderator"))):
+          summary="Odśwież teraz: agregacja zbiorów dostawców + warstwa pomocnicza OSM (w tle)")
+def refresh_now(role: str = Depends(require("administrator"))):
     from src.core import refresh
     started = refresh.run_in_background(get_store(), f"na żądanie ({role})")
     return {"data": refresh.STATUS | {"uruchomiono": started},
@@ -841,7 +1036,7 @@ def refresh_status():
 
 
 @app.post(f"{API}/zrodla/osm/odswiez", tags=["zrodla"], summary="Konektor OpenStreetMap (eksport AED OSM Polska)")
-def osm_refresh(role: str = Depends(require("moderator"))):
+def osm_refresh(role: str = Depends(require("administrator"))):
     from src.core.connectors import osm
     return osm.refresh(get_store())
 
@@ -851,10 +1046,81 @@ class Szukaj(BaseModel):
     importuj: bool = False
 
 
-@app.post(f"{API}/zrodla/dane-gov-pl/szukaj", tags=["zrodla"], summary="Wyszukiwanie zbiorów AED w dane.gov.pl")
-def dgp_search(body: Szukaj, role: str = Depends(require("moderator"))):
+@app.post(f"{API}/zrodla/dane-gov-pl/szukaj", tags=["zrodla"], summary="Wyszukiwanie zbiorów AED w dane.gov.pl (tylko podgląd)",
+          description="Model ról: nikt poza dostawcą nie wprowadza jego danych – import cudzych zbiorów do listy jest niedostępny. "
+                      "Zbiory trafiają na listę wyłącznie przez agregację (POST /admin/agregacja).")
+def dgp_search(body: Szukaj, role: str = Depends(require("administrator"))):
     from src.core.connectors import dane_gov_pl
-    return dane_gov_pl.search(get_store(), body.q, body.importuj)
+    if body.importuj:
+        err(422, "niedozwolone", "Administrator nie importuje danych. Zbiory dostawców trafiają na listę przez agregację.",
+            {"importuj": "Niedostępne w modelu ról."})
+    return dane_gov_pl.search(None, body.q, False)
+
+
+# ---------- administrator: system, not data (§4) ----------
+@app.post(f"{API}/admin/agregacja", tags=["administrator"], summary="Uruchom agregację: zbiory dostawców z dane.gov.pl → wspólna lista (P5)")
+def run_aggregation(role: str = Depends(require("administrator"))):
+    from src.core import dostawcy, dziennik
+    r = dostawcy.agreguj(get_store())
+    dziennik.zapisz(role, "agregacja:uruchomienie", "wspolna-lista", po={"rekordy": r["rekordy"], "zbiory": len(r["zbiory"])})
+    return {"data": r}
+
+
+@app.get(f"{API}/admin/agregacja", tags=["administrator"], summary="Raport ostatniej agregacji (walidacja każdego zbioru)")
+def aggregation_report(role: str = Depends(require("administrator"))):
+    from src.core import dostawcy
+    return {"data": dostawcy.OSTATNI_RAPORT}
+
+
+@app.get(f"{API}/admin/luki", tags=["administrator"], summary="Mapa luk: gminy bez żadnego zbioru dostawcy (cel akcji promocyjnej)",
+         description="Luka = gmina bez AED na wspólnej liście. `do_sprawdzenia` = punkty z OSM w tej gminie: wskazówka, gdzie są "
+                     "urządzenia, których właściciele jeszcze nie publikują danych (§8, §10).")
+def gaps(wojewodztwo: Optional[str] = None, limit: int = Query(100, ge=1, le=3000), role: str = Depends(require("administrator"))):
+    st = get_store()
+    lista = [r for r in st.records.values() if warstwa(r) == "lista"]
+    pom = [r for r in st.records.values() if warstwa(r) == "pomocnicza"]
+    cl, cp = coverage.counts_by_gmina(lista), coverage.counts_by_gmina(pom)
+    out = []
+    for woj in ([wojewodztwo.lower()] if wojewodztwo else list(coverage.boundary_files())):
+        fc = coverage.gminy(woj)
+        if not fc:
+            continue
+        for f in fc["features"]:
+            t = f["properties"]["teryt"]
+            if sum(cl.get(t, (0, 0))) == 0:
+                out.append({"teryt": t, "gmina": f["properties"]["gmina"], "wojewodztwo": woj, "rodzaj": f["properties"].get("rodzaj"),
+                            "do_sprawdzenia": sum(cp.get(t, (0, 0)))})
+    out.sort(key=lambda x: -x["do_sprawdzenia"])
+    gm_all = sum(len(coverage.gminy(w)["features"]) for w in coverage.boundary_files())
+    return {"data": out[:limit], "meta": {"luki": len(out), "gminy": gm_all if not wojewodztwo else None,
+                                          "zaproszenia": st.conn.execute("SELECT COUNT(*) FROM zgloszenia WHERE status='zaproszenie'").fetchone()[0]}}
+
+
+@app.get(f"{API}/admin/przypomnienia", tags=["administrator"], summary="Zbiory po terminie aktualizacji (P9)")
+def reminders(role: str = Depends(require("administrator"))):
+    from src.core import dostawcy
+    late = [z for z in dostawcy.OSTATNI_RAPORT["zbiory"] if z.get("nieaktualny") and z["status"] in ("wlaczony", "odrzucony")]
+    return {"data": late, "meta": {"count": len(late)}}
+
+
+@app.post(f"{API}/admin/przypomnienia", tags=["administrator"], summary="Wyślij przypomnienia dostawcom zbiorów po terminie (symulacja P9)")
+def send_reminders(role: str = Depends(require("administrator"))):
+    from src.core import dostawcy, dziennik
+    sent = []
+    for z in dostawcy.OSTATNI_RAPORT["zbiory"]:
+        if z.get("nieaktualny") and z.get("dostawca"):
+            if dziennik.powiadom(z["dostawca"], "przypomnienie",
+                                 f"Przypomnienie: zbiór „{z['tytul']}” wymaga aktualizacji (częstotliwość: {z.get('czestotliwosc')}, "
+                                 f"ostatnia zmiana: {z.get('zmodyfikowany')}).", f"{z['zbior_id']}:{today()}"):
+                sent.append(z["dostawca"])
+    dziennik.zapisz(role, "przypomnienia:wyslanie", "zbiory", po={"do": sent})
+    return {"data": {"wyslano": sent}}
+
+
+@app.get(f"{API}/dziennik", tags=["administrator"], summary="Dziennik zdarzeń (tylko odczyt): kto, kiedy, co, na czym, przed i po (K10)")
+def event_log(obiekt: Optional[str] = None, limit: int = Query(200, ge=1, le=1000), role: str = Depends(require("administrator"))):
+    from src.core import dziennik
+    return {"data": dziennik.lista(limit, obiekt)}
 
 
 # ---------- publication ----------
@@ -892,10 +1158,11 @@ def template_xlsx():
                     headers={"Content-Disposition": 'attachment; filename="szablon_aed.xlsx"'})
 
 
-@app.get(f"{API}/statystyki", tags=["publikacja"], summary="Statystyki zbioru")
+@app.get(f"{API}/statystyki", tags=["publikacja"], summary="Statystyki wspólnej listy i mierniki akcji (§10)")
 def stats():
     st = get_store()
-    recs = list(st.records.values())
+    all_recs = list(st.records.values())
+    recs = [r for r in all_recs if warstwa(r) == "lista"]
     by_woj, by_src, buckets = {}, {}, {"0-49": 0, "50-69": 0, "70-89": 0, "90-100": 0}
     verified = 0
     now = datetime.now(TZ)
@@ -924,9 +1191,14 @@ def stats():
         gminy_obj[woj] = {"gminy": len(fc["features"]), "gminy_bez_danych": bez}
     return {"data": {
         "liczba_aed": len(recs),
-        "liczba_dysponentow": len({r.get("dysponent_nazwa") for r in recs if r.get("dysponent_nazwa")}),
-        "warstwa_otwarta": sum(1 for r in recs if warstwa(r) == "otwarta"),
-        "warstwa_osm": sum(1 for r in recs if warstwa(r) == "osm"),
+        "liczba_dysponentow": len({p["dostawca"] for p in st.lista.values()}),
+        "liczba_dostawcow": len({p["dostawca"] for p in st.lista.values()}),
+        "liczba_zbiorow": len({p["zbior_id"] for p in st.lista.values()}),
+        "zbiory_nieaktualne": len({p["zbior_id"] for p in st.lista.values() if p.get("zbior_nieaktualny")}),
+        "mozliwe_duplikaty": sum(1 for p in st.lista.values() if p.get("mozliwe_duplikaty")),
+        "warstwa_lista": len(recs),
+        "warstwa_pomocnicza": len(all_recs) - len(recs),
+        "gminy_z_dostawca_proc": round(100 * (1 - gminy_bez / max(1, sum(g["gminy"] for g in gminy_obj.values()))), 1),
         "wg_wojewodztw": dict(sorted(by_woj.items())), "wg_zrodel": by_src,
         # by location in PRG boundaries (OSM records often have no address, so the field-based count shows "brak")
         "wg_wojewodztw_polozenie": dict(sorted(by_woj_loc.items())),
@@ -939,17 +1211,22 @@ def stats():
         "aktualne": fresh[coverage.AKTUALNE], "nieaktualne": fresh[coverage.NIEAKTUALNE],
         "gminy_bez_danych": gminy_bez,
         "zgloszenia_do_weryfikacji": st.conn.execute("SELECT COUNT(*) FROM zgloszenia WHERE status='do_weryfikacji'").fetchone()[0],
-        "liczba_zrodel": len(st.sources_scope()),
+        "liczba_zrodel": len([z for z in st.sources_scope() if z["kod_zrodla"].startswith("dostawca:")]),
     }, "meta": {"liczone_na": now.strftime("%Y-%m-%dT%H:%M"), "prog_aktualnosci_dni": coverage.PROG_DNI,
                  "gminy_liczone_dla": gminy_obj}}
 
 
 @app.get(f"{API}/pokrycie", tags=["aed"], summary="Pokrycie gmin danymi o AED (GeoJSON) – tryb mapy „aktualność danych” (CR-TL-1)")
 def coverage_map(wojewodztwo: str = Query("kujawsko-pomorskie", description="nazwa województwa; granice: data/granice/")):
-    fc = coverage.coverage(get_store().records.values(), wojewodztwo)
+    st = get_store()
+    lista = [r for r in st.records.values() if warstwa(r) == "lista"]
+    fc = coverage.coverage(lista, wojewodztwo)
     if fc is None:
         err(404, "brak_granic", f"Brak granic gmin dla województwa „{wojewodztwo}”. Dostępne: "
             + ", ".join(coverage.boundary_files()) + ".")
+    pom = coverage.counts_by_gmina([r for r in st.records.values() if warstwa(r) == "pomocnicza"])
+    for f in fc["features"]:  # helper layer: where there are devices whose owners do not publish yet (§8)
+        f["properties"]["do_sprawdzenia"] = sum(pom.get(f["properties"]["teryt"], (0, 0)))
     summary = {s: sum(1 for f in fc["features"] if f["properties"]["stan"] == s) for s in coverage.STANY_GMINY}
     return JSONResponse({**fc, "meta": {"wojewodztwo": wojewodztwo.lower(), "liczba_gmin": len(fc["features"]),
                                         "gminy_wg_stanu": summary, "prog_aktualnosci_dni": coverage.PROG_DNI,

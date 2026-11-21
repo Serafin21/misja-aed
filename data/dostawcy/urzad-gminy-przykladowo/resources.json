@@ -1,0 +1,15 @@
+{
+ "data": [
+  {
+   "type": "resource",
+   "id": "9900010",
+   "attributes": {
+    "title": "Defibrylatory AED – Urząd Gminy Przykładowo – CSV",
+    "format": "csv",
+    "data_date": "2026-11-02",
+    "file_url": "https://dane.gov.pl/media/resources/fikcyjne/aed-urzad-gminy-przykladowo.csv",
+    "_plik_prototypu": "aed.csv"
+   }
+  }
+ ]
+}

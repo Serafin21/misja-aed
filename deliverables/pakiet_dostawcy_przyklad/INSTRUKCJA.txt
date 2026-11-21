@@ -1,0 +1,22 @@
+PLIKI DO PUBLIKACJI – Urząd Gminy Przykładowo
+Wygenerowano: 2026-11-21T19:10. Urządzeń w zbiorze: 3.
+
+To komplet do opublikowania Waszych danych o AED na dane.gov.pl. Publikujecie je SAMI, na koncie
+Waszej organizacji – dzięki temu wiadomo, kto odpowiada za dane (jakość, aktualność, poprawność).
+
+1. Konto dostawcy: jeśli Wasza instytucja nie ma konta na dane.gov.pl, załóżcie je według procedury
+   portalu (docelowo logowanie przez login.gov.pl).
+2. Publikacja – jeden z dwóch sposobów:
+   a) dodajcie zbiór na dane.gov.pl i wgrajcie plik aed.csv jako zasób; w opisie podajcie dane z metadane.json,
+      a w słowach kluczowych koniecznie „wspolna-lista-aed”;
+   b) albo umieśćcie aed.csv pod stałym adresem https (np. na stronie instytucji), wpiszcie ten adres
+      w aed_harvester.xml (element <url> zasobu – teraz: https://przykladowo.example/dane/aed-urzad-gminy-przykladowo.csv) i podajcie adres pliku XML w portalu
+      – portal będzie pobierał go cyklicznie.
+3. Słownik pól (slownik_danych.csv) dołączcie jako materiał uzupełniający (w XML jest już w <supplements>).
+4. Po publikacji zbiór trafi na wspólną listę AED przy najbliższej agregacji (raz na dobę), o ile przejdzie
+   walidację. Raport walidacji i zgłoszenia mieszkańców zobaczycie w kreatorze („Moje AED”).
+5. Utrzymanie: aktualizujcie ten sam zbiór (nie zakładajcie nowego), zmianę stanu urządzenia wprowadzajcie
+   w ciągu 7 dni, a każde urządzenie sprawdzajcie na miejscu co najmniej raz na 12 miesięcy.
+
+Zasady: w zbiorze tylko Wasze urządzenia; żadnych danych z OpenStreetMap; kontakt wyłącznie służbowy;
+zdjęcia bez wizerunku osób.

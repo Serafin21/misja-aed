@@ -168,10 +168,10 @@
                   "type": "null"
                 }
               ],
-              "description": "otwarta | osm (domyślnie obie)",
+              "description": "lista (domyślnie: wspólna lista AED dostawców) | pomocnicza (OSM, do sprawdzenia) | wszystkie",
               "title": "Warstwa"
             },
-            "description": "otwarta | osm (domyślnie obie)"
+            "description": "lista (domyślnie: wspólna lista AED dostawców) | pomocnicza (OSM, do sprawdzenia) | wszystkie"
           },
           {
             "name": "zrodlo_danych",
@@ -272,9 +272,10 @@
       },
       "post": {
         "tags": [
-          "aed"
+          "kreator"
         ],
-        "summary": "Formularz pojedynczego AED",
+        "summary": "Dodaj AED do kopii roboczej dostawcy (formularz)",
+        "description": "Tylko dostawca (dysponent), tylko własne urządzenie. Trafia do kopii roboczej kreatora, nie na wspólną listę – na listę trafi po opublikowaniu plików na koncie dostawcy w dane.gov.pl. Administrator: 403.",
         "operationId": "create_aed_api_v1_aed_post",
         "parameters": [
           {
@@ -389,6 +390,24 @@
               "default": 20000,
               "title": "Promien M"
             }
+          },
+          {
+            "name": "warstwa",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "lista (domyślnie) | pomocnicza | wszystkie",
+              "title": "Warstwa"
+            },
+            "description": "lista (domyślnie) | pomocnicza | wszystkie"
           }
         ],
         "responses": {
@@ -439,6 +458,25 @@
               "title": "Bbox"
             },
             "description": "minLon,minLat,maxLon,maxLat (WGS 84)"
+          },
+          {
+            "name": "warstwa",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "wszystkie (domyślnie) | lista | pomocnicza",
+              "default": "wszystkie",
+              "title": "Warstwa"
+            },
+            "description": "wszystkie (domyślnie) | lista | pomocnicza"
           }
         ],
         "responses": {
@@ -470,41 +508,12 @@
         ],
         "summary": "Zbiór AED jako JSON-LD (schema.org) – poziom 4 otwartości",
         "operationId": "aed_jsonld_api_v1_aed_jsonld_get",
-        "parameters": [
-          {
-            "name": "warstwa",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": "otwarta",
-              "title": "Warstwa"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
               }
             }
           }
@@ -571,9 +580,10 @@
       },
       "patch": {
         "tags": [
-          "aed"
+          "kreator"
         ],
-        "summary": "Aktualizacja rekordu AED",
+        "summary": "Zmień własne AED (w kopii roboczej dostawcy)",
+        "description": "Dostawca może zmienić tylko swoje urządzenie (rekord innego dostawcy → 403, K1). Administrator nie ma zapisu (403, K2). Zmiana trafia do kopii roboczej; wspólna lista pokazuje dane z opublikowanego zbioru.",
         "operationId": "patch_aed_api_v1_aed__id_aed__patch",
         "parameters": [
           {
@@ -612,6 +622,255 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/moje-aed": {
+      "get": {
+        "tags": [
+          "kreator"
+        ],
+        "summary": "Kopia robocza dostawcy: moje AED, zgodność ze wzorcem, stan na liście",
+        "operationId": "my_aed_api_v1_moje_aed_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/moje-aed/z-opublikowanego": {
+      "post": {
+        "tags": [
+          "kreator"
+        ],
+        "summary": "Wczytaj do kopii roboczej moje AED z opublikowanego zbioru",
+        "operationId": "my_aed_from_list_api_v1_moje_aed_z_opublikowanego_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/moje-aed/{id_aed}": {
+      "delete": {
+        "tags": [
+          "kreator"
+        ],
+        "summary": "Usuń AED z kopii roboczej (np. wycofane urządzenie)",
+        "operationId": "my_aed_delete_api_v1_moje_aed__id_aed__delete",
+        "parameters": [
+          {
+            "name": "id_aed",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Aed"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/moje-aed/pakiet": {
+      "post": {
+        "tags": [
+          "kreator"
+        ],
+        "summary": "Pobierz pliki do publikacji (ZIP) – K11: pobranie, nie publikacja",
+        "operationId": "my_package_api_v1_moje_aed_pakiet_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/moje-aed/powiadomienia": {
+      "get": {
+        "tags": [
+          "kreator"
+        ],
+        "summary": "Powiadomienia dostawcy: zgłoszenia, potwierdzenia, duplikaty, walidacja, przypomnienia",
+        "operationId": "my_notifications_api_v1_moje_aed_powiadomienia_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -818,7 +1077,8 @@
         "tags": [
           "zgloszenia"
         ],
-        "summary": "Zgłoszenie AED przez obywatela",
+        "summary": "Zgłoszenie mieszkańca (P6, P7)",
+        "description": "Dotyczy konkretnego AED z listy → trafia do jego dostawcy (powiadomienie). Urządzenie spoza listy (albo punkt „Do sprawdzenia”) → kolejka administratora. Zgłoszenie nigdy nie zmienia danych (K7, K8).",
         "operationId": "create_report_api_v1_zgloszenia_post",
         "requestBody": {
           "required": true,
@@ -855,8 +1115,8 @@
         "tags": [
           "zgloszenia"
         ],
-        "summary": "Kolejka zgłoszeń do moderacji",
-        "description": "Moderator widzi wszystkie zgłoszenia. Dysponent – tylko dotyczące jego AED (najbliższy AED w promieniu 30 m).",
+        "summary": "Kolejka zgłoszeń: dostawcy – o jego AED; administratora – bez dostawcy",
+        "description": "Dostawca widzi tylko zgłoszenia o swoich AED (P6). Administrator – zgłoszenia urządzeń spoza listy (P7, K8).",
         "operationId": "list_reports_api_v1_zgloszenia_get",
         "parameters": [
           {
@@ -969,8 +1229,8 @@
         "tags": [
           "zgloszenia"
         ],
-        "summary": "Decyzja moderatora albo dysponenta",
-        "description": "Moderator: każde zgłoszenie. Dysponent: tylko dla swoich AED – `scal`/`odrzuc`, gdy zgłoszenie dotyczy jego AED (wskazany `id_aed_docelowy` albo najbliższy w 30 m); `zatwierdz` – nowy AED z jego `dysponent_nazwa`. Inaczej 403 `brak_uprawnien`.",
+        "summary": "Rozpatrzenie zgłoszenia – bez zmiany danych (K7)",
+        "description": "Dostawca: „przyjete” (uwzględni zmianę w swoim zbiorze) albo „odrzucone”. Administrator (zgłoszenia bez dostawcy): „zaproszenie” (zaprasza właściciela do publikacji, oznacza lukę) albo „odrzucone”. Zgłoszenie nie zmienia żadnego rekordu; e-mail zgłaszającego jest usuwany po zamknięciu.",
         "operationId": "decide_api_v1_zgloszenia__zid__decyzja_post",
         "parameters": [
           {
@@ -1433,7 +1693,7 @@
         "tags": [
           "zrodla"
         ],
-        "summary": "Odśwież teraz: OpenStreetMap i zbiory AED z dane.gov.pl (w tle)",
+        "summary": "Odśwież teraz: agregacja zbiorów dostawców + warstwa pomocnicza OSM (w tle)",
         "operationId": "refresh_now_api_v1_zrodla_odswiez_post",
         "parameters": [
           {
@@ -1546,7 +1806,8 @@
         "tags": [
           "zrodla"
         ],
-        "summary": "Wyszukiwanie zbiorów AED w dane.gov.pl",
+        "summary": "Wyszukiwanie zbiorów AED w dane.gov.pl (tylko podgląd)",
+        "description": "Model ról: nikt poza dostawcą nie wprowadza jego danych – import cudzych zbiorów do listy jest niedostępny. Zbiory trafiają na listę wyłącznie przez agregację (POST /admin/agregacja).",
         "operationId": "dgp_search_api_v1_zrodla_dane_gov_pl_szukaj_post",
         "parameters": [
           {
@@ -1576,6 +1837,341 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agregacja": {
+      "post": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Uruchom agregację: zbiory dostawców z dane.gov.pl → wspólna lista (P5)",
+        "operationId": "run_aggregation_api_v1_admin_agregacja_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Raport ostatniej agregacji (walidacja każdego zbioru)",
+        "operationId": "aggregation_report_api_v1_admin_agregacja_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/luki": {
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Mapa luk: gminy bez żadnego zbioru dostawcy (cel akcji promocyjnej)",
+        "description": "Luka = gmina bez AED na wspólnej liście. `do_sprawdzenia` = punkty z OSM w tej gminie: wskazówka, gdzie są urządzenia, których właściciele jeszcze nie publikują danych (§8, §10).",
+        "operationId": "gaps_api_v1_admin_luki_get",
+        "parameters": [
+          {
+            "name": "wojewodztwo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wojewodztwo"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 3000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/przypomnienia": {
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Zbiory po terminie aktualizacji (P9)",
+        "operationId": "reminders_api_v1_admin_przypomnienia_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Wyślij przypomnienia dostawcom zbiorów po terminie (symulacja P9)",
+        "operationId": "send_reminders_api_v1_admin_przypomnienia_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dziennik": {
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Dziennik zdarzeń (tylko odczyt): kto, kiedy, co, na czym, przed i po (K10)",
+        "operationId": "event_log_api_v1_dziennik_get",
+        "parameters": [
+          {
+            "name": "obiekt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Obiekt"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1700,7 +2296,7 @@
         "tags": [
           "publikacja"
         ],
-        "summary": "Statystyki zbioru",
+        "summary": "Statystyki wspólnej listy i mierniki akcji (§10)",
         "operationId": "stats_api_v1_statystyki_get",
         "responses": {
           "200": {
@@ -2018,44 +2614,20 @@
         "properties": {
           "decyzja": {
             "type": "string",
-            "pattern": "^(zatwierdz|odrzuc|scal)$",
-            "title": "Decyzja"
-          },
-          "id_aed_docelowy": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id Aed Docelowy",
-            "description": "dla „scal”: istniejący AED; domyślnie najbliższy w promieniu 30 m"
+            "title": "Decyzja",
+            "description": "dostawca: przyjete | odrzucone; administrator: zaproszenie | odrzucone"
           },
           "uzasadnienie": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 1000
               },
               {
                 "type": "null"
               }
             ],
             "title": "Uzasadnienie"
-          },
-          "rekord": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rekord",
-            "description": "Pola rekordu uzupełnione przez moderatora (adres, dostęp…)"
           }
         },
         "type": "object",
@@ -2105,9 +2677,21 @@
           },
           "rola": {
             "type": "string",
-            "pattern": "^(dysponent|moderator)$",
+            "pattern": "^(dysponent|administrator)$",
             "title": "Rola",
             "default": "dysponent"
+          },
+          "regon": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{9}(\\d{5})?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regon"
           }
         },
         "type": "object",
@@ -2152,6 +2736,72 @@
         },
         "type": "object",
         "title": "MappingIn"
+      },
+      "OrgIn": {
+        "properties": {
+          "czestotliwosc": {
+            "type": "string",
+            "pattern": "^(daily|weekly|monthly|quarterly|everyHalfYear|yearly)$",
+            "title": "Czestotliwosc",
+            "default": "monthly"
+          },
+          "licencja": {
+            "type": "string",
+            "pattern": "^(CC0-1.0|CC-BY-4.0)$",
+            "title": "Licencja",
+            "default": "CC0-1.0"
+          },
+          "csv_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Csv Url",
+            "description": "adres https, pod którym opublikujecie plik CSV (dla XML harmonizatora)"
+          },
+          "odpowiedzialnosc": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Odpowiedzialnosc"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "regon": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{9}(\\d{5})?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regon"
+          }
+        },
+        "type": "object",
+        "title": "OrgIn"
       },
       "Potwierdzenie": {
         "properties": {
@@ -2265,6 +2915,24 @@
             "minLength": 3,
             "title": "Opis"
           },
+          "id_aed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id Aed",
+            "description": "AED, którego dotyczy zgłoszenie (z karty AED); brak = urządzenie spoza listy (P7)"
+          },
+          "typ": {
+            "type": "string",
+            "title": "Typ",
+            "description": "brak | awaria | brak_dostepu | bledne_polozenie | inne | nowe (urządzenie spoza listy)",
+            "default": "nowe"
+          },
           "nazwa_obiektu": {
             "anyOf": [
               {
@@ -2324,6 +2992,19 @@
               }
             ],
             "title": "Instrukcja Dostepu"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email",
+            "description": "opcjonalny, tylko do odpowiedzi; usuwany po zamknięciu zgłoszenia (RODO)"
           }
         },
         "type": "object",

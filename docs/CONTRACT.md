@@ -1,6 +1,7 @@
-# CONTRACT v1.3 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
+# CONTRACT v2.0 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
 
 > Wspólny plik: edytuje tylko Team Leader. Zamrożenie: sob 15:00 (po konsultacji na stoisku danych). Zmiany wyłącznie przez CR (tabela na końcu).
+> **Od v2.0 obowiązuje model ról i odpowiedzialności: `docs/MODEL_ROL.md`.** Dane o AED publikuje wyłącznie właściciel urządzenia (dostawca) na własnym koncie w dane.gov.pl; wspólna lista łączy zbiory dostawców bez zmian; administrator (MC) nie wprowadza danych; OSM to tylko warstwa pomocnicza „Do sprawdzenia”.
 > Źródło prawdy dla danych: `docs/schema/` (JSON Schema, słownik danych, słowniki wartości, CSVW, przykład XML importu) i `deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx`. Wszystkie te pliki powstały z jednej definicji, więc są spójne.
 
 ## 1. Zasady
@@ -32,7 +33,7 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 | `numer_budynku` | wymagane | tekst | maks. 10 znaków |
 | `numer_lokalu` | opcjonalne | tekst | maks. 10 znaków |
 | `kod_pocztowy` | wymagane | tekst | ^\d{2}-\d{3}$ |
-| `teryt_terc` | zalecane | tekst | ^\d{6}$ |
+| `teryt_terc` | zalecane (na wspólnej liście wymagane) | tekst | ^\d{7}$ – kod TERYT gminy, 7 cyfr |
 | `teryt_simc` | zalecane | tekst | ^\d{7}$ |
 | `szerokosc_geograficzna` | wymagane | liczba dziesiętna | 49.000000…54.900000 |
 | `dlugosc_geograficzna` | wymagane | liczba dziesiętna | 14.100000…24.200000 |
@@ -64,55 +65,53 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 
 **Kompletność** = odsetek wypełnionych pól wymaganych i zalecanych (0–100), liczona przy każdym zapisie.
 
-## 3. Zasoby towarzyszące
+## 3. Zasoby
 
-- `aed_pochodzenie.csv`: `id_aed, kod_zrodla, id_w_zrodle, licencja_zrodla, data_pobrania, rekord_nadrzedny` – jeden wiersz na parę rekord–źródło. Dzięki temu w rekordzie AED każde pole ma jedną wartość.
-- `zrodla.csv` – **zakres referencyjny źródeł** (wymóg „ze wskazaniem ich referencyjnego zakresu”): `kod_zrodla, nazwa, typ_zrodla, format, licencja, czestotliwosc_aktualizacji, liczba_rekordow, rekordy_wlaczone, pokrycie_pol_wymaganych_proc, pokrycie_pol_zalecanych_proc, obszar`.
-- `slownik_danych.csv` i `aed.csvw.json` (metadane CSVW – droga do poziomu 4 otwartości).
-- Rekordy z licencją ODbL-1.0 (OpenStreetMap) trafiają do **osobnego zasobu** `aed_osm_odbl.csv` z uznaniem autorstwa i nie mieszają się z zasobem `aed.csv` (CC0-1.0 / CC-BY-4.0). Na mapie pokazujemy obie warstwy z atrybucją „© autorzy OpenStreetMap”.
+- **Zbiór dostawcy** (publikuje dostawca na swoim koncie w dane.gov.pl): `aed-<dostawca>.csv` (44 pola wzorca, UTF-8, przecinek, wiersz nagłówka), `aed_harvester.xml` (schemat 1.13), słownik pól jako `supplements`. Wymagania: `docs/MODEL_ROL.md` §6 (słowo kluczowe `wspolna-lista-aed`, `teryt_terc` w każdym rekordzie, `regions/terytIdent`, `responsibilities`, `updateFrequency` od daily do yearly, adresy https, tylko urządzenia dostawcy, nigdy dane OSM).
+- **Wspólna lista** (`GET /eksport/{plik}`) to kompilacja zbiorów dostawców, nie zbiór: `aed.csv` = 44 pola + `dostawca, dostawca_regon, zbior_id, zbior_url, zasob_url, data_danych, licencja_zbioru, mozliwy_duplikat`; `aed.geojson`, `aed.jsonld`; `aed_pochodzenie.csv` (rekord → dostawca, zbiór, zasób, data danych, aktualność zbioru); `zrodla.csv` (zbiory dostawców); `slownik_danych.csv`, `aed.csvw.json`. Lista nie ma własnego pliku XML ani metadanych DCAT – nie ma dostawcy.
+- **Warstwa pomocnicza OSM** (ODbL) – tylko na mapie, z atrybucją „© współtwórcy OpenStreetMap”; nie trafia do listy, eksportu ani zbiorów dostawców.
 
-## 4. Przetwarzanie: import → mapowanie → normalizacja → walidacja → deduplikacja → publikacja
+## 4. Przepływ danych (MODEL_ROL.md §5)
 
-1. **Import:** CSV (wykrywanie separatora, kodowania i przecinka dziesiętnego), XLSX, JSON, GeoJSON; formularz pojedynczego AED; zgłoszenie obywatela; konektory: OpenStreetMap (eksport AED OSM Polska, CSV/GeoJSON), wyszukiwarka API dane.gov.pl (zbiory z frazą AED/defibrylator).
-2. **Mapowanie kolumn:** automatyczna propozycja na podstawie nazw i przykładowych wartości, poprawiana przez użytkownika. Wzór raportu: `data/sample/raport_walidacji_przyklad.json`.
-3. **Normalizacja:** `TAK/NIE`, `tak/nie`, `1/0` → `true/false`; przecinek dziesiętny → kropka; adres w jednym polu → cecha, ulica, numer, kod, miejscowość; zapisy godzin („pn-pt 8-16”, „całodobowo”) → składnia opening_hours (`Mo-Fr 08:00-16:00`, `24/7`); OSM `access`: `yes` → publiczny, `customers`/`permissive` → ograniczony, `private`/`no` → prywatny; `indoor` → `wewnatrz_budynku`.
-4. **Walidacja:** JSON Schema (`docs/schema/aed.schema.json`), współrzędne w granicach Polski, kod pocztowy, słowniki, daty. Wynik dla każdego wiersza: błąd, ostrzeżenie albo poprawny, z propozycją poprawki.
-5. **Deduplikacja:** ten sam AED, gdy odległość ≤ 5 m albo odległość ≤ 30 m i podobieństwo nazwy lub adresu ≥ 0,6. Priorytet źródeł: dysponent > dane_gov_pl > osm > zgloszenie_obywatela. Scalanie pole po polu: wartość z najwyższego priorytetu, przy remisie najnowsza. Rekord dostaje stały `id_aed` przy pierwszym włączeniu; pochodzenie trafia do `aed_pochodzenie.csv`.
-6. **Zgłoszenia obywateli** mają status `do_weryfikacji` i nie trafiają do zbioru, dopóki nie rozpatrzy ich moderator albo dysponent (CR-TL-2). **Moderator** rozpatruje każde zgłoszenie. **Dysponent** – tylko dotyczące AED, których jest dysponentem (`dysponent_nazwa` rekordu = organizacja konta; w wersji demo `DEMO_DYSPONENT_NAZWA` w `.env`): `scal` i `odrzuc`, gdy zgłoszenie dotyczy jego AED (wskazany `id_aed_docelowy` albo najbliższy AED w promieniu 30 m), `zatwierdz` – gdy nowy rekord ma jego `dysponent_nazwa` (uzupełniane automatycznie). W kolejce `GET /zgloszenia` dysponent widzi tylko zgłoszenia dotyczące swoich AED. Inaczej 403 `brak_uprawnien`.
+1. **Kreator dostawcy (P2):** formularz pojedynczego AED albo plik (CSV, XLSX, JSON, GeoJSON) → mapowanie kolumn → normalizacja (`TAK/NIE` → `true/false`, przecinek → kropka, adres w jednym polu → pola, „pn-pt 8-16” → `Mo-Fr 08:00-16:00`) → walidacja ze wzorcem; `teryt_terc` uzupełniany z położenia (PRG). Wynik trafia do **kopii roboczej** dostawcy, nie na listę.
+2. **Pliki do publikacji (P3, K11):** `POST /moje-aed/pakiet` → ZIP (CSV, XML harmonizatora, słownik, metadane, instrukcja). Dostawca publikuje je sam na swoim koncie w dane.gov.pl; aplikacja nie ma funkcji „Opublikuj”.
+3. **Agregacja (P5):** zbiory oznaczone `wspolna-lista-aed` (prototyp: 3 fikcyjnych dostawców w `data/dostawcy/`, w kształcie odpowiedzi API 1.4) → walidacja zbioru i rekordów → lista. Rekord niezgodny ze wzorcem nie trafia na mapę; dostawca dostaje raport. Lista niczego nie poprawia i **nie scala** rekordów różnych dostawców; rekordy ≤ 25 m od siebie dostają `mozliwe_duplikaty`, oba zostają, obaj dostawcy dostają powiadomienie (P8). Zbiory AED w dane.gov.pl bez słowa kluczowego i 44 pól → raport `poza_lista` (zaproszenie do wzorca). Agregacja: co noc (`AED_ODSWIEZANIE`), przy starcie i na żądanie administratora.
+4. **Aktualność (§7, K9):** rekord „do weryfikacji” (`stan_danych = nieaktualne`), gdy `data_weryfikacji` > 12 mies. albo brak; zbiór „nieaktualny” (`zbior_nieaktualny`), gdy minął okres z `updateFrequency` + 30 dni (P9: przypomnienie dla dostawcy).
+5. **Zgłoszenia mieszkańców (P6, P7):** z `id_aed` rekordu listy → kolejka i powiadomienie jego dostawcy, który decyduje `przyjete` / `odrzucone`; bez dostawcy (urządzenie spoza listy, punkt OSM) → kolejka administratora: `zaproszenie` / `odrzucone`. Zgłoszenie **nigdy nie zmienia danych**. Opis przechodzi filtr (bez e-maili, telefonów, linków); opcjonalny e-mail zgłaszającego jest usuwany po zamknięciu. Potwierdzenia „jest na miejscu” trafiają do dostawcy i są pokazywane osobno od daty weryfikacji.
+6. **Rozliczalność (§9, K10):** każdy zapis – w dzienniku zdarzeń (kto, kiedy, operacja, obiekt, przed, po), którego nie da się zmienić ani usunąć.
 
-## 5. Endpointy
+## 5. Endpointy (role: MODEL_ROL.md §4; uprawnienia sprawdza serwer przy każdej operacji – zapis zawsze wymaga zalogowania)
 
 | Metoda i ścieżka | Kto | Opis |
 |---|---|---|
-| `GET /aed` | publiczny | filtry: `bbox`, `wojewodztwo`, `gmina`, `dostep`, `dostepne_teraz`, `stan_danych` (§8), `q`, `page`, `per_page` |
-| `GET /aed/punkty?bbox=` | publiczny | lekka warstwa mapy: GeoJSON punktów z `id`, współrzędnymi i `properties` `{dostepny_teraz, stan_danych, osm}`; cała Polska albo `bbox`; gzip i `ETag` (304 przy `If-None-Match`) – CR-TL-2 |
-| `GET /aed/{id_aed}` | publiczny | rekord + pochodzenie + liczba potwierdzeń |
-| `GET /aed/najblizsze?lat=&lon=&limit=5&tylko_dostepne_teraz=` | publiczny | posortowane po `odleglosc_m`; pole `dostepny_teraz` (true/false/null, gdy godzin nie da się zinterpretować) |
-| `POST /import` | dysponent | multipart: plik + `kod_zrodla` + `licencja` → `{import_id, wykryty_format, mapowanie_proponowane}` |
-| `POST /import/{id}/mapowanie` | dysponent | `{mapowanie}` → raport walidacji |
-| `POST /import/{id}/zatwierdz` | dysponent | włączenie poprawnych wierszy → liczby: dodane, zaktualizowane, scalone, odrzucone |
-| `POST /aed`, `PATCH /aed/{id_aed}` | dysponent, moderator | formularz pojedynczego AED; 422 z komunikatami przy polach |
-| `POST /zgloszenia` | publiczny | zgłoszenie obywatela (`lat`, `lon`, `opis`, opcjonalnie `nazwa_obiektu`, `godziny_dostepnosci`, `szafka_zamknieta`, `instrukcja_dostepu`, `zdjecie` – data URI JPEG/PNG/WebP do 1,5 MB) |
-| `GET /zgloszenia`, `POST /zgloszenia/{id}/decyzja` | moderator; dysponent – tylko dla swoich AED (§4 pkt 6) | weryfikacja zgłoszeń |
-| `POST /aed/{id_aed}/potwierdzenia` | publiczny | „Paszport AED” z kodu QR: `{jest_na_miejscu, szafka_dostepna, komentarz}` |
-| `GET /zrodla` | publiczny | zakres referencyjny źródeł (jak `zrodla.csv`) |
-| `POST /zrodla/osm/odswiez`, `POST /zrodla/dane-gov-pl/szukaj` | moderator | konektory |
-| `POST /zrodla/odswiez`, `GET /zrodla/odswiezanie` | moderator / publiczny | odświeżenie OSM i zbiorów AED z dane.gov.pl w tle; automatycznie co noc (`AED_ODSWIEZANIE`, domyślnie 03:30) i przy starcie, gdy w bazie jest tylko próbka OSM |
-| `GET/POST /konta`, `POST /konta/{login}/reset-hasla`, `PATCH /konta/{login}` | moderator | konta instytucji (dysponentów): login, `dysponent_nazwa`, hasło jednorazowe pokazywane raz (PBKDF2), blokowanie |
-| `GET /konta/ja`, `POST /konta/ja/haslo` | dysponent, moderator | kim jestem, zmiana własnego hasła |
-| `GET /zgloszenia/{id}/zdjecie?t=` | podpisany link z kolejki | zdjęcie ze zgłoszenia (tylko dla moderacji) |
-| `GET /eksport/{plik}` | publiczny | `aed.csv`, `aed.geojson`, `aed_osm_odbl.csv`, `aed_pochodzenie.csv`, `zrodla.csv`, `slownik_danych.csv`, `aed.csvw.json`, `dane_gov_pl_import.xml`, `metadane.jsonld` |
-| `GET /szablon.csv`, `GET /szablon.xlsx` | publiczny | pusty szablon zgodny z zakresem danych, dla dysponentów |
-| `GET /statystyki` | publiczny | liczby według województw i źródeł, rozkład kompletności, odsetek zweryfikowanych w ostatnich 12 miesiącach; liczniki `aktualne`, `nieaktualne`, `gminy_bez_danych` (§8) |
-| `GET /pokrycie?wojewodztwo=` | publiczny | GeoJSON granic gmin z polami `teryt`, `gmina`, `liczba_aed`, `aktualne`, `nieaktualne`, `stan` (§8) |
-| `POST /auth/login` | – | konta demo: `dysponent`, `moderator` (hasła w `.env`) |
+| `GET /aed` | publiczny | wspólna lista (domyślnie `warstwa=lista`; `pomocnicza` = OSM, `wszystkie`); filtry: `bbox`, `wojewodztwo` (po położeniu), `gmina`, `dostep`, `dostepne_teraz`, `stan_danych`, `q`, `ids`, `page`, `per_page`; w `meta` rekordu: `warstwa`, `dostawca`, `zbior_url`, `zasob_url`, `data_danych`, `zbior_nieaktualny`, `mozliwe_duplikaty` |
+| `GET /aed/punkty?bbox=&warstwa=` | publiczny | warstwa mapy (domyślnie obie warstwy): `id`, współrzędne, `dostepny_teraz`, `stan_danych`, `warstwa`, `zbior_nieaktualny`, `duplikat`, `dostep`, `wiek_danych_dni`, `mobilny`, `wojewodztwo`, `gmina_teryt`; gzip, `ETag` |
+| `GET /aed/{id_aed}`, `GET /aed/najblizsze` | publiczny | rekord z pochodzeniem i potwierdzeniami; najbliższe (domyślnie z listy) |
+| `GET /miejsca?q=&blisko=` | publiczny | wyszukiwarka miejsc (województwa, gminy, miejscowości, ulice, adresy) |
+| `POST /aed`, `PATCH /aed/{id_aed}` | dostawca – tylko własne AED; administrator 403 | formularz kreatora → kopia robocza (K1, K2) |
+| `POST /import`, `/import/{id}/mapowanie`, `/import/{id}/zatwierdz` | dostawca; administrator 403 | plik → kopia robocza; licencja CC0-1.0 albo CC-BY-4.0 |
+| `GET /moje-aed`, `POST /moje-aed/z-opublikowanego`, `DELETE /moje-aed/{id}` | dostawca | kopia robocza, zgodność ze wzorcem, raport agregacji jego zbioru |
+| `POST /moje-aed/pakiet` | dostawca | „Pobierz pliki do publikacji” (ZIP) – K11 |
+| `GET /moje-aed/powiadomienia` | dostawca | zgłoszenia, potwierdzenia, duplikaty, walidacja, przypomnienia |
+| `POST /zgloszenia` | publiczny | `lat`, `lon`, `opis`, `id_aed`, `typ` (`brak`, `awaria`, `brak_dostepu`, `bledne_polozenie`, `inne`, `nowe`), opcjonalnie `email`, `zdjecie`, `godziny_dostepnosci`, `szafka_zamknieta`, `instrukcja_dostepu` |
+| `GET /zgloszenia`, `POST /zgloszenia/{id}/decyzja` | dostawca – o jego AED; administrator – bez dostawcy | decyzje bez zmiany danych (K7, K8) |
+| `GET /zgloszenia/{id}/zdjecie?t=` | podpisany link z kolejki | zdjęcie ze zgłoszenia |
+| `POST /aed/{id_aed}/potwierdzenia` | publiczny | „Paszport AED”; trafia do dostawcy |
+| `POST /admin/agregacja`, `GET /admin/agregacja` | administrator | agregacja i raport walidacji zbiorów |
+| `GET /admin/luki`, `GET/POST /admin/przypomnienia` | administrator | gminy bez dostawcy (z liczbą punktów OSM – cel akcji); zbiory po terminie |
+| `GET /dziennik` | administrator | dziennik zdarzeń (tylko odczyt) |
+| `GET/POST /konta`, `POST /konta/{login}/reset-hasla`, `PATCH /konta/{login}` | administrator | konta dostawców (organizacja = `dysponent_nazwa`), hasło jednorazowe, blokada |
+| `GET /konta/ja`, `POST /konta/ja/haslo` | zalogowany | kim jestem, zmiana hasła |
+| `GET /zrodla`, `POST /zrodla/odswiez`, `GET /zrodla/odswiezanie`, `POST /zrodla/osm/odswiez`, `POST /zrodla/dane-gov-pl/szukaj` | publiczny / administrator | źródła, odświeżanie (agregacja + OSM), podgląd zbiorów AED w dane.gov.pl (bez importu) |
+| `GET /eksport`, `GET /eksport/{plik}`, `GET /szablon.csv`, `GET /szablon.xlsx` | publiczny | kompilacja listy (§3), szablony dla dostawców |
+| `GET /statystyki`, `GET /pokrycie?wojewodztwo=` | publiczny | mierniki (§10 MODEL_ROL: dostawcy, AED na liście, % gmin z dostawcą, % zweryfikowanych), mapa luk (z liczbą punktów „do sprawdzenia”) |
+| `POST /auth/login` | – | konta testowe `dysponent` (dostawca „Urząd Gminy Przykładowo”), `administrator` (alias `moderator`); konta dostawców zakłada administrator; docelowo login.gov.pl + 2FA |
 
 ## 6. Publikacja w dane.gov.pl
 
-- Pakiet w `deliverables/dataset/` (generuje Model A): CSV poziom 3 (UTF-8, przecinek, CRLF, RFC 4180, jeden wiersz nagłówka), GeoJSON (format przestrzenny poziomu 3–5), API JSON, CSVW, zasoby towarzyszące z sekcji 3.
-- Plik XML importu do automatycznego zasilania portalu: przestrzeń nazw **`urn:otwarte-dane:harvester:1.13`**, schemat portalu https://dane.gov.pl/static/xml/otwarte_dane_latest.xsd (kopia `docs/tech/otwarte_dane_1_13.xsd`); plik `dane_gov_pl_import.xml` przechodzi walidację XSD (`python scripts/check_xml.py`, test). Portal wymaga adresów zasobów `https://` – ustaw `AED_PUBLIC_URL` na publiczny adres z HTTPS (CR-1 rozwiązany).
-- Metadane zbioru także w DCAT-AP-PL (JSON-LD): tytuł i opis pl/en, wydawca, kategoria, słowa kluczowe, licencja, częstotliwość, daty `issued`/`modified`, punkt kontaktowy.
-- Kategoria `HEAL` i warunki ponownego wykorzystania – do potwierdzenia z zespołem dane.gov.pl (CR-2).
+- Publikuje **wyłącznie dostawca**, na swoim koncie w dane.gov.pl: wgrywa pliki z kreatora albo podaje adres https pliku XML harmonizatora (portal pobiera go cyklicznie). Zespół projektu i administrator niczego nie publikują.
+- XML harmonizatora: przestrzeń nazw **`urn:otwarte-dane:harvester:1.13`**, schemat portalu https://dane.gov.pl/static/xml/otwarte_dane_latest.xsd (kopia `docs/tech/otwarte_dane_1_13.xsd`); plik z kreatora przechodzi walidację XSD (test K3, `python scripts/check_xml.py <plik>`). Kategoria `HEAL`.
+- Przykładowe pliki jednego dostawcy: `deliverables/pakiet_dostawcy_przyklad/`.
 
 ## 7. „Dostępne teraz”
 
@@ -138,3 +137,4 @@ Mapa ma dwa tryby. **Dostępność** – jak dotąd (§7, `dostepny_teraz`). **A
 | CR-TL-1 | Team Leader | Mapa w dwóch trybach: „dostępność” i „aktualność danych”; `stan_danych` i `wiek_danych_dni` w `meta`, filtr `stan_danych`, `GET /pokrycie`, liczniki w `/statystyki` (§8) | przyjęta | 1.1 |
 | CR-TL-2 | Team Leader | Zgłoszenia rozpatruje moderator albo dysponent (tylko swoich AED) – spójnie z API (§4 pkt 6, §5); `GET /aed/punkty` (lekka warstwa mapy, gzip, ETag); granice gmin dla 16 województw bez szczelin (§8) | przyjęta | 1.2 |
 | CR-TL-3 | właściciel projektu | Odświeżanie źródeł (noc, start, przycisk), konta instytucji zakładane przez moderatora, zdjęcie i szczegóły w zgłoszeniu, import prawdziwych zbiorów AED samorządów z dane.gov.pl | przyjęta | 1.3 |
+| CR-TL-4 | Team Leader | Model ról i odpowiedzialności (`docs/MODEL_ROL.md`): publikuje tylko dostawca, wspólna lista bez scalania, administrator bez zapisu do danych, OSM jako warstwa pomocnicza, kreator kończy się pobraniem plików, dziennik zdarzeń; `teryt_terc` 7 cyfr | przyjęta | 2.0 |

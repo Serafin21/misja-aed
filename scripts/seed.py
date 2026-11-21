@@ -1,12 +1,10 @@
-"""Seed the database: sample unified records (with stable ids) + OSM layer (cache or sample).
+"""Seed the database: common list from providers' datasets (docs/MODEL_ROL.md) + OSM helper layer (cache or sample).
 
 Usage: python -m scripts.seed [--reset] [--osm sample|full|none] [--dgp auto|none]
 """
 from __future__ import annotations
 
 import argparse
-import csv
-import json
 import sys
 from pathlib import Path
 
@@ -24,53 +22,31 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--reset", action="store_true", help="usuń bazę przed seedem")
     ap.add_argument("--osm", default="auto", choices=["auto", "sample", "full", "none"],
-                    help="auto/full = sieć → cache data/cache → próbka; sample = tylko próbka")
-    ap.add_argument("--dgp", default="none", choices=["auto", "none"],
-                    help="auto = zaimportuj zbiory AED samorządów z dane.gov.pl (sieć; bez sieci pomija)")
+                    help="warstwa pomocnicza „Do sprawdzenia”: auto/full = sieć → cache data/cache → próbka; sample = tylko próbka")
+    ap.add_argument("--lista", default="auto", choices=["auto", "lokalna", "none"],
+                    help="wspólna lista: auto = zbiory dostawców (fikcyjni w data/dostawcy + oznaczone w dane.gov.pl); lokalna = bez sieci")
+    ap.add_argument("--dgp", default=None, choices=["auto", "none"], help="(dawna opcja) = --lista auto/lokalna")
     a = ap.parse_args(argv)
+    if a.dgp:
+        a.lista = "auto" if a.dgp == "auto" else "lokalna"
     if a.reset and db.DB_PATH.exists():
         for suffix in ("", "-wal", "-shm"):
             p = Path(str(db.DB_PATH) + suffix)
             if p.exists():
                 p.unlink()
     st = reset_store(db.connect(db.DB_PATH))
-    prov = {}
-    with open(SAMPLE / "aed_pochodzenie.csv", encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            if r["rekord_nadrzedny"] == "true":
-                prov[r["id_aed"]] = r
-    with open(SAMPLE / "zrodla.csv", encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            if r["kod_zrodla"] == "zgloszenia":
-                continue
-            st.register_source(r["kod_zrodla"], {k: r[k] for k in ("nazwa", "typ_zrodla", "format", "licencja",
-                                                                     "czestotliwosc_aktualizacji", "obszar")})
-    fc = json.loads((SAMPLE / "aed_ujednolicone.geojson").read_text(encoding="utf-8"))
-    n = 0
-    for feat in fc["features"]:
-        rec = dict(feat["properties"])
-        p = prov.get(rec["id_aed"])
-        kod, sid = (p["kod_zrodla"], p["id_w_zrodle"]) if p else ("seed", rec["id_aed"])
-        st.upsert_source(kod, sid, rec, data_pobrania=p["data_pobrania"] if p else None, force_id=rec["id_aed"], commit=False)
-        n += 1
-    st.commit()
-    print(f"Seed: {n} rekordów z aed_ujednolicone.geojson")
+    # model ról (docs/MODEL_ROL.md): the list comes ONLY from providers' datasets; OSM is a separate helper layer
     if a.osm != "none":
-        # auto/full: network -> local cache -> sample fallback (see connectors/osm.py)
         mode = "sample" if a.osm == "sample" else None
         res = osm.refresh(st, mode)
-        print(f"OSM ({res['zrodlo']}): {res}")
-    if a.dgp == "auto":
-        from src.core.connectors import dane_gov_pl
-        try:
-            r = dane_gov_pl.search(st, "defibrylator defibrylatory AED", do_import=True)
-            for i in r["meta"]["importy"]:
-                print(f"dane.gov.pl {i['kod_zrodla']}: {i['status']} "
-                      + (f"(dodane {i['dodane']}, scalone {i['scalone']}, zaktualizowane {i['zaktualizowane']}, odrzucone {i['odrzucone']})"
-                         if i["status"] == "zaimportowano" else i.get("powod", "")))
-        except Exception as e:  # noqa: BLE001
-            print(f"dane.gov.pl: pominięto ({e})")
-    print(f"Razem w bazie: {len(st.records)} AED")
+        print(f"Warstwa pomocnicza OSM ({res['zrodlo']}): {res['dodane'] + res['zaktualizowane']} punktów")
+    if a.lista != "none":
+        from src.core import dostawcy
+        r = dostawcy.agreguj(st, online=None if a.lista == "auto" else False)
+        for z in r["zbiory"]:
+            print(f"Zbiór {z['zbior_id']} ({z.get('dostawca')}): {z['status']}, na liście {z['wlaczone']}, odrzucone {z['odrzucone']}"
+                  + (", NIEAKTUALNY" if z.get("nieaktualny") else ""))
+    print(f"Wspólna lista: {len(st.lista)} AED · warstwa pomocnicza: {len(st.records) - len(st.lista)} punktów")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ COPY scripts scripts
 COPY docs/schema docs/schema
 COPY data/sample data/sample
 COPY data/granice data/granice
+COPY data/dostawcy data/dostawcy
 COPY data/cache data/cache
 ENV AED_DB=/data/aed.sqlite3
 VOLUME /data

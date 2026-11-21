@@ -1,17 +1,15 @@
-# Pakiet publikacji dla dane.gov.pl – zbiór „Defibrylatory AED w Polsce”
+# Wspólna lista AED – kompilacja zbiorów dostawców (przykład)
 
-Wygenerowany przez `python -m scripts.seed --reset --osm full && python -m scripts.publish` (na żywo: `GET /api/v1/eksport/{plik}`). **Wydanie z 21.11.2026:** pełna warstwa OpenStreetMap dla Polski (eksport AED OSM Polska: 18 297 obiektów, 18 057 rekordów w `aed_osm_odbl.*` po deduplikacji i odrzuceniu 22 błędnych) oraz rekordy dysponentów z danych przykładowych (`data/sample/`, rekordy fikcyjne – w `aed.csv`). Rekordy OSM bez `check_date` mają puste `data_weryfikacji` (nie zgadujemy daty) i w API mają `stan_danych = nieaktualne` (CR-TL-1).
+Model ról: `docs/MODEL_ROL.md`. Wspólna lista **nie jest zbiorem danych i nie ma dostawcy** – to widok łączący zbiory AED opublikowane przez ich właścicieli na dane.gov.pl. Za każdy rekord odpowiada wskazany dostawca; warunki ponownego wykorzystywania – jak w zbiorze źródłowym.
 
-| Plik | Zawartość | Licencja |
-|---|---|---|
-| `aed.csv` | rekordy wg wzorcowego zakresu danych (44 pola), CSV poziom 3: UTF-8, przecinek, CRLF, RFC 4180 | CC0-1.0 / CC-BY-4.0 (w każdym rekordzie) |
-| `aed.geojson` | te same rekordy jako punkty WGS 84 | jw. |
-| `aed.jsonld` | te same rekordy jako JSON-LD (schema.org) – poziom 4 | jw. |
-| `aed_osm_odbl.csv`, `aed_osm_odbl.geojson` | rekordy wyłącznie z OpenStreetMap – osobny zasób, © autorzy OpenStreetMap | ODbL-1.0 |
-| `aed_pochodzenie.csv` | pochodzenie: rekord–źródło, rekord nadrzędny | CC0-1.0 |
-| `zrodla.csv` | zakres referencyjny źródeł: liczba rekordów, włączone, pokrycie pól wymaganych i zalecanych; także zbiór referencyjny granic gmin (PRG, GUGiK) z licencją i atrybucją | CC0-1.0 |
-| `slownik_danych.csv`, `aed.csvw.json` | słownik danych i metadane W3C CSVW dla `aed.csv` | CC0-1.0 |
-| `metadane.jsonld` | metadane zbioru DCAT-AP-PL (pl/en) | CC0-1.0 |
-| `dane_gov_pl_import.xml` | plik do automatycznego zasilania portalu (struktura wg instrukcji COI) | – |
+Wygenerowano z prototypu (`python -m scripts.seed --reset --lista lokalna && python -m scripts.publish`; na żywo `GET /api/v1/eksport/{plik}`). **Dostawcy są fikcyjni** (`data/dostawcy/`): Urząd Gminy Przykładowo, Uczelnia Testowa (zbiór po terminie aktualizacji), MPK Przykładowo (jeden rekord odrzucony przez walidację, jeden „do weryfikacji”, jeden możliwy duplikat z AED uczelni – oba pozostają).
 
-Sprawdzenie: `python scripts/check_csv.py deliverables/dataset/*.csv`. Zgodność punkt po punkcie: `docs/tech/COMPLIANCE.md`.
+| Plik | Zawartość |
+|---|---|
+| `aed.csv` | 44 pola wzorca AED + pochodzenie: `dostawca, dostawca_regon, zbior_id, zbior_url, zasob_url, data_danych, licencja_zbioru, mozliwy_duplikat` (UTF-8, przecinek, CRLF) |
+| `aed.geojson`, `aed.jsonld` | te same rekordy jako punkty WGS 84 i dane powiązane (schema.org) |
+| `aed_pochodzenie.csv` | rekord → dostawca, zbiór, zasób, data danych, aktualność zbioru |
+| `zrodla.csv` | zbiory dostawców składające się na listę |
+| `slownik_danych.csv`, `aed.csvw.json` | słownik pól i metadane CSVW |
+
+Danych z OpenStreetMap tu nie ma (ODbL; na mapie tylko jako warstwa „Do sprawdzenia”). Pliki, które **dostawca** publikuje na swoim koncie: `deliverables/pakiet_dostawcy_przyklad/` (CSV + XML harmonizatora 1.13 + słownik + metadane + instrukcja), sprawdzenie: `python scripts/check_xml.py`.

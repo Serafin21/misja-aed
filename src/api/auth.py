@@ -20,8 +20,11 @@ from fastapi import Header, HTTPException
 SECRET = os.environ.get("AED_SECRET", "zmien-mnie-w-env")
 DEMO = {
     "dysponent": os.environ.get("DEMO_DYSPONENT_PASSWORD", "dysponent-demo"),
+    "administrator": os.environ.get("DEMO_ADMINISTRATOR_PASSWORD", "administrator-demo"),
+    # older demo login, same role as "administrator"
     "moderator": os.environ.get("DEMO_MODERATOR_PASSWORD", "moderator-demo"),
 }
+DEMO_ROLE = {"dysponent": "dysponent", "administrator": "administrator", "moderator": "administrator"}
 ACCOUNTS = DEMO  # backwards compatibility
 # TL decision: a provider (dysponent) may decide on citizen reports only for AED it operates.
 DYSPONENT_NAZWA = os.environ.get("DEMO_DYSPONENT_NAZWA", "Urząd Gminy Przykładowo")
@@ -87,7 +90,7 @@ def check_login(login: str, password: str) -> str | None:
 
 def user_for(login: str) -> User | None:
     if login in DEMO:
-        return User(login, login, DYSPONENT_NAZWA if login == "dysponent" else None)
+        return User(DEMO_ROLE[login], login, DYSPONENT_NAZWA if login == "dysponent" else None)
     a = account(login)
     if a and a["aktywne"]:
         return User(a["rola"], login, a.get("dysponent_nazwa"))
@@ -111,7 +114,7 @@ AUTH_MODE = os.environ.get("AED_AUTH_MODE", "demo")
 
 def require(*roles: str):
     def dep(authorization: str | None = Header(default=None)) -> User:
-        if not authorization and AUTH_MODE == "demo":
+        if not authorization and AUTH_MODE == "demo" and "anonim_demo" in roles:
             return User("demo", "demo")
         user = role_from(authorization)
         if user is None:
