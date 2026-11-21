@@ -303,3 +303,25 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Sprawdzone: `tsc -b`, `vite build`, przejście w przeglądarce (Playwright): wniosek → 403 przed zatwierdzeniem → zatwierdzenie → logowanie instytucji → zgłoszenie (lokalizacja → adres Rynek Główny 1; adres Floriańska 3 → pinezka i kod 31-019) → do poprawy → poprawa → zatwierdzenie → AED w „Moje AED”.
 - CR: – · Znane błędy: – · Użycie AI (jedna linia): pasek, wniosek o konto, „Zgłoś AED” i kolejki administratora z Claude.
 - Następny krok: test czytnikiem ekranu nowych formularzy; teksty README/SUBMISSION o zaufanych kontach.
+
+## HANDOFF #26
+
+- Czas: sob 22:50
+- Kontekst: CR-TL-8 (TL 21:34). A był już w main, b/ux-docs też (169a16c) – praca od świeżego main. Część CR-TL-8 zrobiła druga sesja w #25 (wniosek o konto, „Zgłoś AED” dla zalogowanej instytucji, kolejki administratora); tu reszta. (TL pisał „HANDOFF #24” – numer był zajęty.)
+- Zrobione:
+  1. **Nazwa i nagłówek:** „Mapa danych AED”; w nagłówku logo akcji (`LogoMark`, 16 kwadratów) → link do `/akcja`, nazwa → strona główna; pasek biały ~64 px, cienka linia, bez podpisu; przycisk „Menu” poniżej 1100 px (5 pozycji z logo nie mieszczą się węziej).
+  2. **Bez 112 jako przycisku/linku:** usunięte z nagłówka (już w #25), strony głównej, karty AED, „Znajdź AED” (komponent `Emergency` usunięty), pierwszej pomocy (duży przycisk); style `.btn-call`, `.emergency` usunięte. W krokach pierwszej pomocy: „Nie reaguje? Zadzwoń pod 112 i włącz tryb głośnomówiący.” Zostały tylko teksty informacyjne (np. podpowiedź „kod podaje dyspozytor 112”, „W nagłym wypadku dzwoń pod numer 112” na stronie Kontakt) – bez linków `tel:`.
+  3. **Menu:** Zgłoś AED · Znajdź AED · Akcja „AED w danych” · Pierwsza pomoc · O projekcie (+ pozycje roli po zalogowaniu). **`/akcja`** od nowa: duże logo, „Dane prosto z serca”, „Masz AED? Udostępnij je na dane.gov.pl”, przyciski „Zgłoś AED swojej instytucji” i „Dla instytucji: jak to działa” (`/dysponenci`), adresaci, 3 korzyści, 3 kroki, materiały: logo PNG/SVG/PDF i księga znaku (kopie w `src/ui/public/akcja/`), plakat A4 i odznaka „Nasze AED jest w danych” (SVG generowane w przeglądarce z tego samego serca).
+  4. **Zgłoś AED:** bez logowania ekran z dwiema opcjami („Zaloguj się kontem instytucji” → formularz logowania na miejscu; „Załóż zaufane konto” → `/wniosek-o-konto`). Formularz: podpowiedzi miejscowości i ulicy z `GET /miejsca` (`<datalist>`), przycisk z ikoną „Użyj mojej lokalizacji” (hook) → adres z `/miejsca/odwrotnie`, koło dokładności, pinezka do przeciągnięcia (już była), godziny jako „Całą dobę / W określonych godzinach”, jaśniejszy komunikat o obowiązkowym zdjęciu, „Popraw i wyślij ponownie”. **Stary kreator `AedWizard`** (używany na `/dysponenci`): bez „Pomiń”, bez „Nie wiem” (godziny i szafka obowiązkowe), bez „Wpisz współrzędne ręcznie”.
+  5. **Administrator `/zatwierdzanie`:** zakładki (wzorzec WAI-ARIA tabs: strzałki, Home/End) „Zgłoszenia AED do zatwierdzenia” i „Wnioski o konta”; przy zgłoszeniu mini-mapa z pinezką (bez przeciągania).
+  6. **Znajdź AED:** od 1024 px dwie kolumny (lista 40 % / mapa 60 %, mapa `sticky`); węziej mapa na górze (50 vh), lista pod nią; mapa widoczna od razu.
+  7. **`lib/useGeolocation.ts`:** `watchPosition` (`enableHighAccuracy`, `maximumAge: 0`), najlepszy odczyt w ciągu 20 s albo przy ≤ 30 m; komunikat „dokładność ±X m”, koło dokładności (`MapView` prop `accuracy`); > 1 km: „Lokalizacja przybliżona – wpisz adres”; odmowa zgody; brak HTTPS (`isSecureContext`). Użyty w „Znajdź AED” i „Zgłoś AED”. README: uwaga o https/localhost dla demo na telefonie.
+  8. **Pierwsza pomoc:** usunięte sekcje od „Drgawki” do końca (Drgawki, Dziecko, Oddycha normalnie?, Po wszystkim); źródło wytycznych zostaje.
+  9. Zgłoszenie problemu z karty AED bez zmian (bez logowania).
+  10. Teksty: nazwa „Mapa danych AED” w README, SUBMISSION, pitch; SUBMISSION „Co zostało zrobione” – zaufane konta i „Zgłoś AED” z zatwierdzeniem; README ścieżki 3–4; prezentacja slajd 4; scenariusz demo 1:05–2:00.
+- Sprawdzone: składnia TS wszystkich zmienionych plików. **Build i test klawiaturą NIE uruchomione w tej sesji** (brak dostępu do npm) – do zrobienia: `npm run build`, potem w przeglądarce Tab/Shift+Tab/strzałki na `/zglos-aed` (wybór, formularz), `/zatwierdzanie` (zakładki), `/akcja`, `/znajdz` na 375, 768, 1024, 1440 px.
+- Scalenie do main: **wstrzymane do zielonego buildu.**
+- CR do A: – (wszystkie endpointy są w CONTRACT v2.2).
+- Znane błędy / ryzyka: na telefonie mapa jest wizualnie nad listą, a w kodzie po niej (kolejność czytnika: najpierw wyszukiwarka) – celowo, żeby fokus zaczynał się od przycisku.
+- Użycie AI (jedna linia): zmiany interfejsu CR-TL-8 z Claude (Model B); wymagania – TL.
+- Następny krok: build u B → scalenie do main → zrzuty 01–06.

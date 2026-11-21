@@ -1,4 +1,4 @@
-# Mapa AED – wspólna lista AED w dane.gov.pl
+# Mapa danych AED – wspólna lista AED w dane.gov.pl
 
 Prototyp na HackNation 2026, zadanie Ministerstwa Cyfryzacji „Misja AED – dane na ratunek”. Dane o każdym AED publikuje na dane.gov.pl jego właściciel, na własnym koncie dostawcy, a portal łączy zbiory wielu dostawców we wspólną listę. Przygotowaliśmy wzorzec danych (44 pola) i kreator, który z formularza lub pliku tworzy komplet plików do publikacji, w tym XML zgodny ze schematem harvestera dane.gov.pl 1.13. Wspólna lista nie jest nowym zbiorem: każdy rekord pokazuje dostawcę, link do zbioru i datę danych, a zgłoszenia mieszkańców trafiają do tego dostawcy.
 
@@ -48,7 +48,9 @@ npm install
 npm run dev
 ```
 
-Otwórz http://localhost:5173. Gdy API nie odpowiada, aplikacja sama przełącza się na dane przykładowe z `data/sample/` i pokazuje baner „Tryb demonstracyjny”.
+Otwórz http://localhost:5173.
+
+**Demo na telefonie:** przeglądarka podaje lokalizację („Pokaż najbliższe AED”, „Użyj mojej lokalizacji”) tylko na stronie `https://` albo `localhost`. Adres w sieci lokalnej (np. `http://192.168.0.10:5173`) nie dostanie lokalizacji – wtedy aplikacja prosi o wpisanie adresu. Na telefonie użyj adresu https (np. tunelu HTTPS albo wdrożenia z certyfikatem) albo pokaż lokalizację na komputerze przez `localhost`. Gdy API nie odpowiada, aplikacja sama przełącza się na dane przykładowe z `data/sample/` i pokazuje baner „Tryb demonstracyjny”.
 
 ## Dla zespołu
 
@@ -58,8 +60,8 @@ Jak każdy uruchamia Claude Code na tym repo ze swojego konta: [`docs/user/claud
 
 1. **Mieszkaniec.** „Znajdź AED” → najbliższe AED → karta: dostawca danych, link do zbioru, data danych i data weryfikacji; instrukcja dostępu przy zamkniętej szafce.
 2. **Zgłoszenie.** Na karcie AED „Zgłoś problem z tym AED” (np. szafka zamknięta) → informacja, do którego dostawcy trafi uwaga. Dane na liście się nie zmieniają (K7).
-3. **Dostawca.** `/logowanie` kontem `dysponent` → Moje AED → dodaj AED albo wgraj plik → raport ze wzorcem → „Pobierz pliki do publikacji” (CSV, XML harvestera 1.13, słownik, instrukcja). Publikację na swoim koncie w dane.gov.pl wykonuje dostawca (K11).
-4. **Administrator.** `/logowanie` kontem `administrator` → Panel administratora → raport agregacji (zbiory na liście i poza nią), luki w gminach, zgłoszenia bez dostawcy. Administrator nie ma przycisków do edycji AED (K2).
+3. **Instytucja.** Menu „Zgłoś AED” → bez logowania wybór: „Zaloguj się kontem instytucji” (konto `dysponent`) albo „Załóż zaufane konto” (wniosek czeka na administratora) → formularz: adres z podpowiedziami albo „Użyj mojej lokalizacji”, pinezka, godziny, szafka, **obowiązkowe zdjęcie** → „Moje zgłoszenia” ze stanem. Po zatwierdzeniu: Moje AED → „Pobierz pliki do publikacji” (CSV, XML harvestera 1.13, słownik, instrukcja). Publikację na swoim koncie w dane.gov.pl wykonuje instytucja (K11).
+4. **Administrator.** `/logowanie` kontem `administrator` → „Zgłoszenia AED” (zakładki: zgłoszenia AED ze zdjęciem i mini-mapą – Zatwierdź / Do poprawy z komentarzem; wnioski o konta – Zatwierdź / Odrzuć z uzasadnieniem) → Panel administratora → raport agregacji (zbiory na liście i poza nią), luki w gminach, zgłoszenia bez dostawcy. Administrator nie ma przycisków do edycji AED (K2).
 5. **Warstwa „Do sprawdzenia”.** Mapa → warstwa OpenStreetMap: punkty bez dostawcy i bez daty, odróżnione od listy, z atrybucją ODbL (K5).
 6. **Programista.** Stopka → „Eksport listy” (kompilacja zbiorów dostawców z identyfikatorem dostawcy i zbioru w każdym rekordzie) i „Dostawcy”.
 
