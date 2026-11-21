@@ -505,3 +505,7 @@ thead th { background: var(--color-surface); }
 .e2__geo { margin: var(--space-s) 0 0; }
 /* Home: small link to the campaign brand book */
 .brandbook-link { margin-top: var(--space-l, 2rem); font-size: 1rem; }
+/* Responsive fix (320 px): the single-column E2 grid grew to the fieldset's min-content width (368 px) */
+@media (max-width: 1099px) { .e2 { grid-template-columns: minmax(0, 1fr); } }
+.e2 > *, .e2__filters { min-width: 0; }
+fieldset.mode-switch, .e2__filters fieldset { min-width: 0; }

@@ -143,13 +143,13 @@ export function App() {
           </nav>
         </div>
       </header>
-      <div className="prototype-bar" role="note">
+      <aside className="prototype-bar" aria-label="Informacja o prototypie">
         <div className="container"><p>Prototyp zespołu HackNation 2026 – nie jest serwisem administracji publicznej</p></div>
-      </div>
+      </aside>
       {mock && (
-        <div className="demo-banner" role="note">
+        <aside className="demo-banner" aria-label="Tryb demonstracyjny">
           <div className="container">Tryb demonstracyjny: dane przykładowe (fikcyjne) z pliku <code>data/sample</code>. Nie używaj ich w prawdziwej sytuacji.</div>
-        </div>
+        </aside>
       )}
       <main id="main" className="container" tabIndex={-1}>
         <Routes />

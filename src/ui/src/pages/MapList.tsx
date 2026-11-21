@@ -176,7 +176,7 @@ export function MapList() {
               <span className="facet__label">{o.label}</span>
               <span className="facet__hint">{o.hint}</span>
             </label>
-            <span className="facet__count" aria-label={`${cnt ? fmt(cnt[o.v]) : '–'} AED`}>{cnt ? fmt(cnt[o.v]) : '–'}</span>
+            <span className="facet__count">{cnt ? fmt(cnt[o.v]) : '–'}<span className="visually-hidden"> AED</span></span>
           </div>
         );
       })}
