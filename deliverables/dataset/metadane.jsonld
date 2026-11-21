@@ -91,7 +91,7 @@
     "@type": "xsd:date"
   },
   "dct:modified": {
-    "@value": "2026-11-21T14:54",
+    "@value": "2026-11-21T16:35",
     "@type": "xsd:dateTime"
   },
   "dct:language": {

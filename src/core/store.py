@@ -26,11 +26,13 @@ class Store:
         self.by_key: dict[tuple[str, str], str] = {}  # (kod_zrodla, id_w_zrodle) -> id_aed
         self.master: dict[str, str] = {}  # id_aed -> kod_zrodla of master
         self.grid = dedup.GridIndex()
+        self.version = 0  # bumped on every change of records (ETag of GET /aed/punkty)
         self.load()
 
     # ---------- loading ----------
     def load(self):
         with self.lock:
+            self.version += 1
             self.records.clear(); self.sources.clear(); self.by_key.clear(); self.master.clear()
             self.grid = dedup.GridIndex()
             for row in self.conn.execute("SELECT kod_zrodla, id_w_zrodle, id_aed, licencja_zrodla, data_pobrania, dane FROM pochodzenie"):
@@ -111,6 +113,7 @@ class Store:
 
     def _remerge(self, id_aed: str):
         merged, master = dedup.merge(id_aed, self.sources[id_aed])
+        self.version += 1
         self.records[id_aed] = merged
         self.master[id_aed] = master
         self.grid.add(id_aed, merged["szerokosc_geograficzna"], merged["dlugosc_geograficzna"])
@@ -190,17 +193,19 @@ class Store:
             meta.setdefault("zgloszenia", {"nazwa": "Zgłoszenia obywateli", "typ_zrodla": "obywatel",
                                            "format": "formularz", "licencja": "CC0-1.0",
                                            "czestotliwosc_aktualizacji": "na bieżąco", "obszar": "Polska"})
-        # reference datasets (not AED records): municipality boundaries from PRG used by GET /pokrycie (CR-TL-1)
+        # reference dataset (not AED records): municipality boundaries from PRG used by GET /pokrycie (CR-TL-1)
         from . import coverage
-        for woj, path in coverage.boundary_files().items():
-            md = coverage.gminy(woj).get("metadata", {})
-            kod_prg = f"prg-gugik:gminy-{woj}"
-            meta[kod_prg] = {
-                "nazwa": f"Granice gmin – {woj} (PRG, GUGiK; uproszczone). {md.get('atrybucja', '')}",
+        files = coverage.boundary_files()
+        if files:
+            mds = [coverage.gminy(w).get("metadata", {}) for w in files]
+            n_gmin = sum(md.get("liczba_gmin", len(coverage.gminy(w)["features"])) for md, w in zip(mds, files))
+            meta["prg-gugik:gminy"] = {
+                "nazwa": f"Granice gmin (PRG, GUGiK; uproszczone z zachowaniem topologii). {mds[0].get('atrybucja', '')}",
                 "typ_zrodla": "referencyjne", "format": "GeoJSON (z WFS GML PRG)",
                 "licencja": "PZGiK – bez opłat i ograniczeń (art. 40a ust. 2 pkt 1 Pgik)",
-                "czestotliwosc_aktualizacji": "irregular", "obszar": f"województwo {woj}",
-                "liczba_obiektow": md.get("liczba_gmin", len(coverage.gminy(woj)["features"]))} | meta.get(kod_prg, {})
+                "czestotliwosc_aktualizacji": "irregular",
+                "obszar": "Polska" if len(files) == 16 else "województwa: " + ", ".join(files),
+                "liczba_obiektow": n_gmin} | meta.get("prg-gugik:gminy", {})
         out = []
         for kod in sorted(set(meta) | set(rows)):
             m = meta.get(kod, {})

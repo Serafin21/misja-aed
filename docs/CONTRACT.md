@@ -1,4 +1,4 @@
-# CONTRACT v1.1 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
+# CONTRACT v1.2 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
 
 > Wspólny plik: edytuje tylko Team Leader. Zamrożenie: sob 15:00 (po konsultacji na stoisku danych). Zmiany wyłącznie przez CR (tabela na końcu).
 > Źródło prawdy dla danych: `docs/schema/` (JSON Schema, słownik danych, słowniki wartości, CSVW, przykład XML importu) i `deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx`. Wszystkie te pliki powstały z jednej definicji, więc są spójne.
@@ -78,13 +78,14 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 3. **Normalizacja:** `TAK/NIE`, `tak/nie`, `1/0` → `true/false`; przecinek dziesiętny → kropka; adres w jednym polu → cecha, ulica, numer, kod, miejscowość; zapisy godzin („pn-pt 8-16”, „całodobowo”) → składnia opening_hours (`Mo-Fr 08:00-16:00`, `24/7`); OSM `access`: `yes` → publiczny, `customers`/`permissive` → ograniczony, `private`/`no` → prywatny; `indoor` → `wewnatrz_budynku`.
 4. **Walidacja:** JSON Schema (`docs/schema/aed.schema.json`), współrzędne w granicach Polski, kod pocztowy, słowniki, daty. Wynik dla każdego wiersza: błąd, ostrzeżenie albo poprawny, z propozycją poprawki.
 5. **Deduplikacja:** ten sam AED, gdy odległość ≤ 5 m albo odległość ≤ 30 m i podobieństwo nazwy lub adresu ≥ 0,6. Priorytet źródeł: dysponent > dane_gov_pl > osm > zgloszenie_obywatela. Scalanie pole po polu: wartość z najwyższego priorytetu, przy remisie najnowsza. Rekord dostaje stały `id_aed` przy pierwszym włączeniu; pochodzenie trafia do `aed_pochodzenie.csv`.
-6. **Zgłoszenia obywateli** mają status `do_weryfikacji` i nie trafiają do zbioru, dopóki nie zatwierdzi ich moderator albo dysponent.
+6. **Zgłoszenia obywateli** mają status `do_weryfikacji` i nie trafiają do zbioru, dopóki nie rozpatrzy ich moderator albo dysponent (CR-TL-2). **Moderator** rozpatruje każde zgłoszenie. **Dysponent** – tylko dotyczące AED, których jest dysponentem (`dysponent_nazwa` rekordu = organizacja konta; w wersji demo `DEMO_DYSPONENT_NAZWA` w `.env`): `scal` i `odrzuc`, gdy zgłoszenie dotyczy jego AED (wskazany `id_aed_docelowy` albo najbliższy AED w promieniu 30 m), `zatwierdz` – gdy nowy rekord ma jego `dysponent_nazwa` (uzupełniane automatycznie). W kolejce `GET /zgloszenia` dysponent widzi tylko zgłoszenia dotyczące swoich AED. Inaczej 403 `brak_uprawnien`.
 
 ## 5. Endpointy
 
 | Metoda i ścieżka | Kto | Opis |
 |---|---|---|
 | `GET /aed` | publiczny | filtry: `bbox`, `wojewodztwo`, `gmina`, `dostep`, `dostepne_teraz`, `stan_danych` (§8), `q`, `page`, `per_page` |
+| `GET /aed/punkty?bbox=` | publiczny | lekka warstwa mapy: GeoJSON punktów z `id`, współrzędnymi i `properties` `{dostepny_teraz, stan_danych, osm}`; cała Polska albo `bbox`; gzip i `ETag` (304 przy `If-None-Match`) – CR-TL-2 |
 | `GET /aed/{id_aed}` | publiczny | rekord + pochodzenie + liczba potwierdzeń |
 | `GET /aed/najblizsze?lat=&lon=&limit=5&tylko_dostepne_teraz=` | publiczny | posortowane po `odleglosc_m`; pole `dostepny_teraz` (true/false/null, gdy godzin nie da się zinterpretować) |
 | `POST /import` | dysponent | multipart: plik + `kod_zrodla` + `licencja` → `{import_id, wykryty_format, mapowanie_proponowane}` |
@@ -92,7 +93,7 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 | `POST /import/{id}/zatwierdz` | dysponent | włączenie poprawnych wierszy → liczby: dodane, zaktualizowane, scalone, odrzucone |
 | `POST /aed`, `PATCH /aed/{id_aed}` | dysponent, moderator | formularz pojedynczego AED; 422 z komunikatami przy polach |
 | `POST /zgloszenia` | publiczny | zgłoszenie obywatela (`lat`, `lon`, `opis`, opcjonalnie zdjęcie) |
-| `GET /zgloszenia`, `POST /zgloszenia/{id}/decyzja` | moderator | weryfikacja zgłoszeń |
+| `GET /zgloszenia`, `POST /zgloszenia/{id}/decyzja` | moderator; dysponent – tylko dla swoich AED (§4 pkt 6) | weryfikacja zgłoszeń |
 | `POST /aed/{id_aed}/potwierdzenia` | publiczny | „Paszport AED” z kodu QR: `{jest_na_miejscu, szafka_dostepna, komentarz}` |
 | `GET /zrodla` | publiczny | zakres referencyjny źródeł (jak `zrodla.csv`) |
 | `POST /zrodla/osm/odswiez`, `POST /zrodla/dane-gov-pl/szukaj` | moderator | konektory |
@@ -121,8 +122,8 @@ Mapa ma dwa tryby. **Dostępność** – jak dotąd (§7, `dostepny_teraz`). **A
 - Brakującej daty weryfikacji nie zastępujemy dzisiejszą (np. rekord OSM bez `check_date` ma puste `data_weryfikacji`).
 - `GET /aed?stan_danych=aktualne|nieaktualne` – filtr; inna wartość → 422.
 - `GET /pokrycie?wojewodztwo=` (domyślnie `kujawsko-pomorskie`) → `FeatureCollection` (`application/geo+json`) granic gmin; w `properties`: `teryt` (TERC, 7 cyfr), `gmina`, `wojewodztwo`, `rodzaj`, `liczba_aed`, `aktualne`, `nieaktualne`, `stan` = `brak_danych` (0 AED) / `nieaktualne` (co najmniej jeden AED nieaktualny) / `aktualne` (wszystkie aktualne). `meta`: `liczba_gmin`, `gminy_wg_stanu`, `prog_aktualnosci_dni`, `atrybucja`. Brak granic dla województwa → 404 `brak_granic`. AED przypisujemy do gminy po położeniu (punkt w wielokącie), nie po polu `gmina`.
-- Granice: Państwowy Rejestr Granic (GUGiK, usługa WFS), uproszczone, w `data/granice/`; na demo tylko województwo kujawsko-pomorskie (144 gminy). Licencja i atrybucja („Źródło: Państwowy Rejestr Granic – Główny Urząd Geodezji i Kartografii”) w `zrodla.csv` jako źródło referencyjne `prg-gugik:gminy-…`.
-- `GET /statystyki` ma dodatkowo `aktualne`, `nieaktualne` (liczby rekordów) i `gminy_bez_danych` (suma po województwach z granicami; rozbicie w `meta.gminy_liczone_dla`).
+- Granice: Państwowy Rejestr Granic (GUGiK, usługa WFS) dla **wszystkich 16 województw** (2479 gmin), w `data/granice/` (plik na województwo). Uproszczone **z zachowaniem topologii**: wspólny odcinek granicy dwóch gmin jest upraszczany raz i identyczny w obu – bez szczelin i nakładek. AED poza wszystkimi wielokątami (np. na nabrzeżu) trafia do najbliższej gminy, jeśli jej granica jest w promieniu 1 km. Licencja i atrybucja („Źródło: Państwowy Rejestr Granic – Główny Urząd Geodezji i Kartografii”) w `zrodla.csv` jako źródło referencyjne `prg-gugik:gminy`.
+- `GET /statystyki` ma dodatkowo `aktualne`, `nieaktualne` (liczby rekordów), `gminy_bez_danych` (cała Polska; rozbicie w `meta.gminy_liczone_dla`) i `wg_wojewodztw_polozenie` (województwo z położenia AED, bo rekordy OSM zwykle nie mają adresu).
 
 ## Rejestr zmian (CR)
 
@@ -131,3 +132,4 @@ Mapa ma dwa tryby. **Dostępność** – jak dotąd (§7, `dostepny_teraz`). **A
 | CR-1 | Team Leader | Schemat XSD i przestrzeń nazw pliku XML importu | do potwierdzenia na stoisku danych | – |
 | CR-2 | Team Leader | Kategoria zbioru i warunki ponownego wykorzystania | do potwierdzenia na stoisku danych | – |
 | CR-TL-1 | Team Leader | Mapa w dwóch trybach: „dostępność” i „aktualność danych”; `stan_danych` i `wiek_danych_dni` w `meta`, filtr `stan_danych`, `GET /pokrycie`, liczniki w `/statystyki` (§8) | przyjęta | 1.1 |
+| CR-TL-2 | Team Leader | Zgłoszenia rozpatruje moderator albo dysponent (tylko swoich AED) – spójnie z API (§4 pkt 6, §5); `GET /aed/punkty` (lekka warstwa mapy, gzip, ETag); granice gmin dla 16 województw bez szczelin (§8) | przyjęta | 1.2 |
