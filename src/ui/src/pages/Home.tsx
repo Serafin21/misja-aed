@@ -3,8 +3,8 @@ import { Link, usePageTitle } from '../router';
 
 const TILES = [
   { to: '/znajdz', title: 'Znajdź najbliższe AED', text: 'Pokażemy defibrylatory w pobliżu i powiemy, czy są teraz dostępne.' },
-  { to: '/zglos', title: 'Zgłoś AED, które widzisz', text: 'Widzisz defibrylator, którego nie ma na mapie? Daj nam znać w 4 krokach.' },
-  { to: '/dysponenci', title: 'Dodaj AED swojej instytucji', text: 'Urząd, szkoła, firma: wgraj listę z pliku albo wpisz AED ręcznie.' },
+  { to: '/pierwsza-pomoc', title: 'Pierwsza pomoc', text: 'Co zrobić, gdy ktoś stracił przytomność: kroki i jak użyć AED.' },
+  { to: '/dysponenci', title: 'Dodaj AED swojej instytucji', text: 'Urząd, szkoła, firma: załóż konto, zgłoś AED i opublikuj dane w dane.gov.pl.' },
 ];
 
 export function Home() {

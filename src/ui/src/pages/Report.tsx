@@ -1,17 +1,33 @@
-// E4 – Zgłoś AED (resident): one question per screen, 4 steps. No personal data; goes to moderation.
-// Hours, cabinet and an optional photo go as separate fields (HANDOFF A #8); the description also says them in words.
+// E4 – Zgłoś problem z AED (resident, from the AED card): goes to the provider of the record, or to the administrator for
+// helper-layer points. New AED are reported only by logged-in institutions (pages/ZglosAed.tsx, MODEL_ROL v1.3).
 import { useState, type FormEvent } from 'react';
 import { getAed, reportAed, type TypZgloszenia } from '../api/client';
 import { useAsync } from '../lib/useAsync';
-import { AedWizard, citizenDescription, emptyDraft, type AedDraft } from '../components/AedWizard';
 import { PhotoField } from '../components/PhotoField';
-import { hoursToOpeningHours } from '../lib/hoursBuilder';
-import { ErrorBox, Icon } from '../components/ui';
-import { Link, useQueryParam, usePageTitle } from '../router';
+import { Icon } from '../components/ui';
+import { Link, navigate, useQueryParam, usePageTitle } from '../router';
+import { useSession } from '../components/Auth';
 
 export function Report() {
   const aedId = useQueryParam('aed');
-  return aedId ? <ProblemReport id={aedId} /> : <NewAedReport />;
+  return aedId ? <ProblemReport id={aedId} /> : <NewAedInfo />;
+}
+
+/** MODEL_ROL v1.3: new AED are reported only by logged-in institutions; residents report problems from an AED card. */
+function NewAedInfo() {
+  usePageTitle('Zgłoś AED');
+  const s = useSession();
+  if (s?.rola === 'dysponent') { navigate('/zglos-aed', true); return null; }
+  return (
+    <>
+      <h1 id="page-title">Zgłoś AED</h1>
+      <p className="lead">Nowe defibrylatory zgłaszają instytucje, które za nie odpowiadają (właściciel, zarządca, podmiot sprawdzający AED na miejscu) – po zalogowaniu. Dzięki temu każde AED na mapie ma kogoś, kto dba o aktualność danych.</p>
+      <ul>
+        <li><strong>Widzisz problem z AED na mapie?</strong> Otwórz jego kartę w <Link to="/znajdz">Znajdź AED</Link> i wybierz „Zgłoś problem” – bez logowania.</li>
+        <li><strong>Reprezentujesz instytucję?</strong> <Link to="/logowanie">Zaloguj się</Link> albo <Link to="/wniosek-o-konto">złóż wniosek o konto</Link>.</li>
+      </ul>
+    </>
+  );
 }
 
 const TYPY: { v: Exclude<TypZgloszenia, 'nowe'>; l: string }[] = [
@@ -80,59 +96,6 @@ function ProblemReport({ id }: { id: string }) {
         <p className="form-actions"><button type="submit" className="btn btn--primary" disabled={busy || !a}>{busy ? 'Wysyłam…' : 'Wyślij zgłoszenie'}</button>
           <Link to={`/aed/${id}`}>Anuluj</Link></p>
       </form>
-    </>
-  );
-}
-
-/** New AED not on the list (P7): goes to the administrator, who invites the owner – it is never added for them. */
-function NewAedReport() {
-  usePageTitle('Zgłoś AED');
-  const aedId = null as string | null;
-  const [draft, setDraft] = useState<AedDraft>(() => ({ ...emptyDraft(), opis: aedId ? `Problem z AED ${aedId}: ` : '' }));
-  const [step, setStep] = useState(1);
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
-  const [fail, setFail] = useState<Error | null>(null);
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [email, setEmail] = useState('');
-
-  async function send() {
-    setBusy(true); setFail(null);
-    try {
-      const oh = hoursToOpeningHours(draft.hours);
-      await reportAed(draft.lat!, draft.lon!, citizenDescription(draft), {
-        ...(oh ? { godziny_dostepnosci: oh } : {}),
-        ...(draft.cabinet === 'tak' ? { szafka_zamknieta: true, ...(draft.access.trim() ? { instrukcja_dostepu: draft.access.trim() } : {}) } : {}),
-        ...(draft.cabinet === 'nie' ? { szafka_zamknieta: false } : {}),
-        ...(photo ? { zdjecie: photo } : {}),
-        typ: 'nowe', ...(email.trim() ? { email: email.trim() } : {}),
-      });
-      setDone(true);
-    } catch (ex) { setFail(ex as Error); } finally { setBusy(false); }
-  }
-
-  if (done) {
-    return (
-      <>
-        <h1 id="page-title">Dziękujemy!</h1>
-        <div className="callout callout--ok" role="status">
-          <p className="callout__title"><Icon name="check" />Dziękujemy! Tego AED nie ma na wspólnej liście – zaprosimy jego właściciela do opublikowania danych.</p>
-        </div>
-        <p className="form-actions">
-          <button type="button" className="btn btn--primary" onClick={() => { setDraft(emptyDraft()); setPhoto(null); setStep(1); setDone(false); }}>Zgłoś kolejne AED</button>
-          <Link to="/">Wróć na stronę główną</Link>
-        </p>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <h1 id="page-title">Zgłoś AED, które widzisz</h1>
-      <p className="lead">Widzisz defibrylator, którego nie ma na mapie? Odpowiedz na 4 krótkie pytania. Nie podawaj imienia, nazwiska ani telefonu.</p>
-      <AedWizard variant="citizen" draft={draft} setDraft={setDraft} step={step} setStep={setStep} onSubmit={send}
-        submitLabel="Wyślij zgłoszenie" busy={busy} failure={fail && <ErrorBox error={fail} />}
-        beforeSubmit={<><PhotoField value={photo} onChange={setPhoto} /><EmailField value={email} onChange={setEmail} /></>} />
     </>
   );
 }

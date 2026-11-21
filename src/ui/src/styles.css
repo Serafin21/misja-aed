@@ -446,3 +446,16 @@ thead th { background: var(--color-surface); }
 .inline-form .field--full { flex-basis: 100%; border: 0; padding: 0; margin: 0; min-width: 0; }
 .inline-form .field--full legend { font-weight: var(--font-weight-semibold); margin-bottom: var(--space-s); padding: 0; }
 .big-choices .hint { font-weight: var(--font-weight-regular); }
+
+/* CR-TL-8: "Zgłoś AED" (institution) and the administrator's approval queue */
+.big-choices--row { display: flex; flex-wrap: wrap; gap: var(--space-s); }
+.big-choices--row label { flex: 0 1 10rem; }
+.submission-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space); }
+.submission { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: var(--space); align-items: start; }
+.submission h3 { margin-top: 0; }
+.submission__photo img { width: 100%; height: auto; border-radius: var(--radius); border: var(--border-width) solid var(--color-border); display: block; }
+.submission__facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-xs, .25rem) var(--space-m); margin: var(--space-s) 0; }
+.submission__facts dt { font-weight: var(--font-weight-semibold); }
+.submission__facts dd { margin: 0; overflow-wrap: anywhere; }
+.submission__decide textarea { width: 100%; }
+@media (max-width: 700px) { .submission { grid-template-columns: 1fr; } }

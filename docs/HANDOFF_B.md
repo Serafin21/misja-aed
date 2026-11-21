@@ -289,3 +289,17 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: –
 - Użycie AI (jedna linia): zmiany tekstów i pól według decyzji TL z Claude (Model B).
 - Następny krok: build u B, zrzuty 01–06 po scaleniu A, test a11y.
+
+## HANDOFF #25
+
+- Czas: nd 00:10
+- Zrobione (decyzja właściciela projektu + API z HANDOFF A #10/#11, MODEL_ROL v1.3):
+  - **Górny pasek:** dla wszystkich tylko „Znajdź AED”, „Pierwsza pomoc”, „O projekcie” (bez „Zgłoś AED”, „Dla instytucji” i przycisku „Dzwoń 112” w nagłówku; 112 zostaje na stronie głównej i w „Pierwszej pomocy”). „Dla instytucji” przeniesione do stopki („Dla specjalistów”), logowanie – jak dotąd w stopce. Po zalogowaniu: instytucja – „Zgłoś AED” i „Moje AED”; administrator – „Zgłoszenia AED” i „Panel administratora”; plus „Wyloguj”.
+  - **Wniosek o konto** `/wniosek-o-konto` (`pages/WniosekKonto.tsx`): nazwa, REGON, podstawa publikacji, służbowy e-mail, telefon, login, hasło ×2 → `POST /konta/wnioski`; link ze strony logowania. Logowanie przed zatwierdzeniem pokazuje „Konto czeka na zatwierdzenie przez administratora”.
+  - **Zgłoś AED** `/zglos-aed` (`pages/ZglosAed.tsx`, tylko zalogowana instytucja): adres (miejscowość, ulica, numer, kod) + „Znajdź adres na mapie” (`GET /miejsca`) i „Użyj mojej lokalizacji” (`GET /miejsca/odwrotnie` wypełnia adres), pinezka do przesunięcia, opis miejsca, w budynku tak/nie, dostęp, całą dobę tak/nie + godziny, szafka zamknięta tak/nie (bez „nie wiem”) + jak otworzyć, **zdjęcie wymagane** (`PhotoField` z `required`). Poniżej „Moje zgłoszenia”: stan, komentarz administratora, kto i kiedy; „Popraw” przy „do poprawy” (zdjęcie trzeba dołączyć ponownie) → `PUT`.
+  - **Administrator:** `/zatwierdzanie` (`Approvals` w `pages/Admin.tsx`) i dwie nowe sekcje panelu (`components/AdminQueues.tsx`): „Zgłoszenia AED do zatwierdzenia” (zdjęcie, nadawca, adres, link do położenia na mapie, przyciski Zatwierdź / Odeślij do poprawy z komentarzem – bez pól edycji danych) i „Wnioski o konto instytucji” (Zatwierdź / Odrzuć z uzasadnieniem). Zakładanie konta instytucji przez administratora zostaje w panelu. Status zbioru „przejściowy” w raporcie łączenia.
+  - `/zglos` bez `?aed=` – wyjaśnienie: nowe AED zgłasza instytucja po zalogowaniu; mieszkańcy zgłaszają problem z karty AED (formularz mieszkańca dla nowego AED usunięty). Strona główna: kafelek „Pierwsza pomoc” zamiast „Zgłoś AED, które widzisz”.
+- Jak uruchomić / zobaczyć: API z `a/core` + `npm run dev` → `/wniosek-o-konto`, `/logowanie` (administrator / administrator-demo), `/zatwierdzanie`, `/zglos-aed`.
+- Sprawdzone: `tsc -b`, `vite build`, przejście w przeglądarce (Playwright): wniosek → 403 przed zatwierdzeniem → zatwierdzenie → logowanie instytucji → zgłoszenie (lokalizacja → adres Rynek Główny 1; adres Floriańska 3 → pinezka i kod 31-019) → do poprawy → poprawa → zatwierdzenie → AED w „Moje AED”.
+- CR: – · Znane błędy: – · Użycie AI (jedna linia): pasek, wniosek o konto, „Zgłoś AED” i kolejki administratora z Claude.
+- Następny krok: test czytnikiem ekranu nowych formularzy; teksty README/SUBMISSION o zaufanych kontach.
