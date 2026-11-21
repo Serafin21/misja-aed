@@ -122,6 +122,7 @@ export function Licenses() {
       <ul>
         <li><strong>Zbiór AED</strong> (<code>aed.csv</code>, <code>aed.geojson</code>, <code>aed.jsonld</code>) – licencja podana w każdym rekordzie: CC0 1.0 albo CC BY 4.0, zgodnie z wyborem dysponenta.</li>
         <li><strong>OpenStreetMap</strong> – dane AED i mapa: © autorzy OpenStreetMap, licencja Open Database License (ODbL 1.0). Dane z OpenStreetMap publikujemy wyłącznie w osobnych zasobach <code>aed_osm_odbl.*</code>. <ExternalLink href="https://www.openstreetmap.org/copyright">Prawa autorskie OpenStreetMap</ExternalLink></li>
+        <li><strong>Zdjęcie AED na stronie „Pierwsza pomoc”</strong> – autor: WrS.tm.pl, Wikimedia Commons, CC0 1.0 (domena publiczna). <ExternalLink href="https://commons.wikimedia.org/wiki/File:Automated_external_defibrillator_(AED)_Automatyczny_defibrylator_zewn%C4%99trzny,_Tomasz%C3%B3w_Mazowiecki,_Poland.jpg">Strona zdjęcia</ExternalLink></li>
         <li><strong>Granice gmin</strong> – Źródło: Państwowy Rejestr Granic – Główny Urząd Geodezji i Kartografii; dane udostępniane bez opłat.</li>
       </ul>
       <h2>Oprogramowanie w przeglądarce</h2>

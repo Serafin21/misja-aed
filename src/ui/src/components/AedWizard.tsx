@@ -46,9 +46,11 @@ export function draftToRecord(d: AedDraft): Record<string, unknown> {
 
 const TITLES = ['Gdzie jest AED?', 'Kiedy można z niego skorzystać?', 'Czy szafka jest zamknięta?', 'Sprawdź i wyślij'];
 
-export function AedWizard({ variant, draft, setDraft, step, setStep, onSubmit, submitLabel, busy, failure, backFromFirst }: {
+export function AedWizard({ variant, draft, setDraft, step, setStep, onSubmit, submitLabel, busy, failure, backFromFirst, beforeSubmit }: {
   variant: Variant; draft: AedDraft; setDraft: (d: AedDraft) => void; step: number; setStep: (n: number) => void;
   onSubmit: () => void; submitLabel: string; busy?: boolean; failure?: ReactNode; backFromFirst?: () => void;
+  /** extra content on the summary step, above the submit button (E4: optional photo) */
+  beforeSubmit?: ReactNode;
 }) {
   const head = useRef<HTMLHeadingElement>(null);
   const first = useRef(true);
@@ -64,7 +66,7 @@ export function AedWizard({ variant, draft, setDraft, step, setStep, onSubmit, s
       {step === 1 && <StepWhere variant={variant} d={draft} set={set} next={() => setStep(2)} back={backFromFirst} />}
       {step === 2 && <StepHours variant={variant} d={draft} set={set} back={() => setStep(1)} next={() => setStep(3)} />}
       {step === 3 && <StepCabinet d={draft} set={set} back={() => setStep(2)} next={() => setStep(4)} />}
-      {step === 4 && <StepSummary variant={variant} d={draft} goto={setStep} back={() => setStep(3)} submit={onSubmit} label={submitLabel} busy={busy} failure={failure} />}
+      {step === 4 && <StepSummary variant={variant} d={draft} goto={setStep} back={() => setStep(3)} submit={onSubmit} label={submitLabel} busy={busy} failure={failure} extra={beforeSubmit} />}
     </section>
   );
 }
@@ -241,8 +243,9 @@ function StepCabinet({ d, set, back, next }: { d: AedDraft; set: (p: Partial<Aed
   );
 }
 
-function StepSummary({ variant, d, goto, back, submit, label, busy, failure }: {
+function StepSummary({ variant, d, goto, back, submit, label, busy, failure, extra }: {
   variant: Variant; d: AedDraft; goto: (n: number) => void; back: () => void; submit: () => void; label: string; busy?: boolean; failure?: ReactNode;
+  extra?: ReactNode;
 }) {
   const inst = variant === 'institution';
   const rows: { k: string; v: string; step: number }[] = [
@@ -262,6 +265,7 @@ function StepSummary({ variant, d, goto, back, submit, label, busy, failure }: {
           </div>
         ))}
       </dl>
+      {extra}
       {failure}
       <Nav back={back} nextLabel={busy ? 'Wysyłam…' : label} busy={busy} />
     </form>

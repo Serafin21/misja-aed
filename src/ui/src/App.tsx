@@ -9,6 +9,7 @@ import { MapList } from './pages/MapList';
 import { Campaign } from './pages/Campaign';
 import { Dataset } from './pages/Dataset';
 import { Moderation } from './pages/Moderation';
+import { Admin, MyAccount } from './pages/Admin';
 import { Nearest } from './pages/Nearest';
 import { Home } from './pages/Home';
 import { FirstAid } from './pages/FirstAid';
@@ -29,7 +30,7 @@ const NAV = [
 // Breadcrumb labels for pages outside the menu
 const PAGE_LABELS: Record<string, string> = {
   '/mapa': 'Mapa i lista AED', '/dane': 'Zbiór danych', '/zrodla': 'Źródła danych', '/akcja': 'Akcja „AED w danych”',
-  '/moderacja': 'Moderacja zgłoszeń',
+  '/moderacja': 'Moderacja zgłoszeń', '/panel': 'Panel moderatora', '/konto': 'Moje konto',
 };
 
 // Footer subpages (not E1–E9; routes for E1–E9 unchanged)
@@ -86,6 +87,8 @@ function Routes() {
   if (path === '/zrodla') return <Sources />;
   if (path === '/akcja') return <Campaign />;
   if (path === '/moderacja') return <Moderation />;
+  if (path === '/panel') return <Admin />;
+  if (path === '/konto') return <MyAccount />;
   const info = INFO_PAGES[path];
   if (info) { const Page = info.el; return <Page />; }
   return <NotFound />;
@@ -159,6 +162,8 @@ export function App() {
                 <li><Link to="/dane">Zbiór danych i API</Link></li>
                 <li><Link to="/zrodla">Źródła danych</Link></li>
                 <li><Link to="/moderacja">Moderacja zgłoszeń</Link></li>
+                <li><Link to="/panel">Panel moderatora</Link></li>
+                <li><Link to="/konto">Moje konto (instytucja)</Link></li>
                 <li><Link to="/licencje">Licencje i atrybucje</Link></li>
                 <li><ExternalLink href={REPO}>Kod źródłowy</ExternalLink></li>
               </ul>

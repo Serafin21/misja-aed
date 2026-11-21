@@ -7,11 +7,12 @@ import { ErrorSummary, Req, RequiredNote, useValidation } from '../components/fo
 import { date, dictValues, label } from '../lib/format';
 import { fieldLabel } from '../lib/fields';
 import { useAsync } from '../lib/useAsync';
-import { usePageTitle } from '../router';
+import { Link, usePageTitle } from '../router';
 
 const VERB = { zatwierdz: 'zatwierdzono i dodano do zbioru', odrzuc: 'odrzucono', scal: 'scalono z istniejącym AED' } as const;
 
-type Report = { id: string; lat: number; lon: number; opis: string; czas: string; status: string; nazwa_obiektu?: string | null };
+type Report = { id: string; lat: number; lon: number; opis: string; czas: string; status: string; nazwa_obiektu?: string | null;
+  zdjecie_url?: string | null; godziny_dostepnosci?: string | null; szafka_zamknieta?: boolean | null; instrukcja_dostepu?: string | null };
 
 export function Moderation() {
   usePageTitle('Moderacja zgłoszeń');
@@ -19,6 +20,7 @@ export function Moderation() {
     <>
       <h1 id="page-title">Moderacja zgłoszeń</h1>
       <p className="lead">Zgłoszenia obywateli czekają tutaj, zanim trafią do zbioru. Przed zatwierdzeniem uzupełnij adres i godziny – bez nich rekord nie spełnia wzorcowego zakresu danych.</p>
+      <p>Odświeżanie źródeł, zbiory z dane.gov.pl i konta instytucji: <Link to="/panel">Panel moderatora</Link>.</p>
       <RequireLogin role="moderator">
         <Queue />
       </RequireLogin>
@@ -50,6 +52,19 @@ function Queue() {
             <li key={r.id} className="aed-item">
               <h2 className="aed-item__title">Zgłoszenie {r.id}</h2>
               <p>{r.opis}</p>
+              {(r.godziny_dostepnosci || r.szafka_zamknieta !== null && r.szafka_zamknieta !== undefined) && (
+                <p className="hint">
+                  {r.godziny_dostepnosci && <>Godziny podane w zgłoszeniu: <code>{r.godziny_dostepnosci}</code>. </>}
+                  {r.szafka_zamknieta === true && <>Szafka zamknięta{r.instrukcja_dostepu ? ` – ${r.instrukcja_dostepu}` : ''}. </>}
+                  {r.szafka_zamknieta === false && <>Szafka otwarta. </>}
+                  Przy zatwierdzeniu trafią do rekordu.
+                </p>
+              )}
+              {r.zdjecie_url && (
+                <p><a href={r.zdjecie_url} target="_blank" rel="noopener noreferrer">
+                  <img className="report-photo" src={r.zdjecie_url} alt={`Zdjęcie ze zgłoszenia ${r.id} (otwiera się w nowym oknie)`} loading="lazy" />
+                </a></p>
+              )}
               <p className="hint">Zgłoszono {date(r.czas)} · punkt {r.lat.toFixed(5)}, {r.lon.toFixed(5)} · <ExternalLink href={`https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lon}#map=19/${r.lat}/${r.lon}`}>pokaż na mapie</ExternalLink></p>
               {open === r.id ? (
                 <ApproveForm report={r} onCancel={() => setOpen(null)}

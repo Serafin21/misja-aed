@@ -204,3 +204,48 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: –
 - Użycie AI (jedna linia): wyszukiwarka i integracja z mapą z Claude.
 - Następny krok: test czytnikiem ekranu podpowiedzi.
+
+## HANDOFF #18
+
+- Czas: sob 18:15
+- Zrobione: **E10 Pierwsza pomoc – nowe ilustracje** (uwaga człowieka B: piktogramy były zbyt uproszczone). Zamiast 4 ikon jest 9 własnych scenek SVG, po jednej przy każdym kroku dla dorosłego: bezpieczeństwo, „Halo?” i dłonie na ramionach, telefon 112, sprawdzanie oddechu, wysłanie drugiej osoby po AED, uciskanie (proste ręce, dłonie jedna na drugiej), elektrody na gołej klatce (pod prawym obojczykiem i pod lewą pachą) z kablami do AED, „nikt nie dotyka” podczas analizy, uciskanie dalej. Postacie mają głowę, tułów, ręce i nogi, a dłonie są w kształcie owalu (bez rysowania palców). Rysunki są ozdobne (`aria-hidden`), bo wszystko mówi tekst kroku; tekst bez zmian. Kolory z nowych zmiennych `--aid-*` w tokens.css. Na ekranie poniżej 640 px obrazek jest nad tekstem kroku.
+- Jak uruchomić / zobaczyć: `npm run dev` → `/pierwsza-pomoc`.
+- Założenia: rysunki własne, narysowane od zera, wzorowane tylko na ogólnym układzie „krok + obrazek”; bez grafik ERC/PRR ani producentów (np. AEDMAX).
+- CR: –
+- Znane błędy: niesprawdzone jeszcze w przeglądarce u człowieka B.
+- **Treść i rysunki „Pierwszej pomocy” do sprawdzenia przez ratownika lub mentora** (zwłaszcza położenie elektrod).
+- Użycie AI (jedna linia): ilustracje SVG z Claude (Model B), podgląd sprawdzony na wyrenderowanych obrazkach.
+- Następny krok: test w przeglądarce (klawiatura, 320 px).
+
+## HANDOFF #19
+
+- Czas: sob 18:20
+- Zrobione: **E10 Pierwsza pomoc – same kroki słowne + jedno zdjęcie ze źródłem** (decyzja człowieka B, zastępuje ilustracje z #18). Usunięte rysunki SVG (`components/aidScenes.ts`, zmienne `--aid-*`). Kroki tylko tekstem (bez zmian treści). Jedno zdjęcie z boku (na szerokim ekranie po prawej, na wąskim nad krokami): szafka AED w Tomaszowie Mazowieckim, autor WrS.tm.pl, Wikimedia Commons, **CC0 1.0** – podpis ze źródłem i linkiem pod zdjęciem, wpis na stronie „Licencje i atrybucje”, opis alternatywny. Plik: `src/ui/public/img/aed-tomaszow-mazowiecki.jpg` (miniatura 1280 px z Commons); gdy pliku brak, zdjęcie z podpisem się ukrywa.
+- Jak uruchomić / zobaczyć: `npm run dev` → `/pierwsza-pomoc`.
+- Założenia: CC0 = domena publiczna, zgodne z zasadą licencji projektu (bez obowiązku podawania autora – podajemy i tak).
+- CR do TL: dopisać zdjęcie (CC0) do listy zasobów w `docs/` przy przeglądzie licencji.
+- Znane błędy: –
+- **Treść „Pierwszej pomocy” do sprawdzenia przez ratownika lub mentora.**
+- Użycie AI (jedna linia): wyszukanie zdjęcia na wolnej licencji i zmiana strony z Claude (Model B); wybór zdjęcia sprawdzony przez Claude na stronie pliku w Commons.
+- Następny krok: test w przeglądarce.
+
+## HANDOFF #20
+
+- Czas: sob 18:30
+- Zrobione: **SUBMISSION.md gotowy do wstępnego zgłoszenia (DRAFT 20:00)**. Sprawdzony z treścią zadania i regulaminem. Zaktualizowane „Co zostało zrobione” (backend, żywe API, pełne OSM, prosta strona, księga znaku – już nie „w toku”), dodane ograniczenia (dane instytucji przykładowe, kafelki OSM, 22 odrzucone rekordy wg docs/tech/LICZBY.md), pola demo/prezentacja jako „w wersji finalnej”, dodatkowe materiały ze ścieżkami. Usunięte odwołanie do nieistniejącego `tools/hn.py`.
+- Sprawdzone przez Claude (nie przez człowieka): 44 pola w XLSX, logotyp JPG/PNG/PDF/SVG i księga PDF są w repo, liczby z LICZBY.md.
+- Brakuje: **nazwa zespołu** (decyzja człowieka). Zdjęcie `src/ui/public/img/aed-tomaszow-mazowiecki.jpg` **nie jest w repo** – strona ukrywa wtedy zdjęcie; do dodania przez człowieka B.
+- Uwaga: LICZBY.md (16:37) ma 18 033 / 3 148, a stan z żywego API podany przez B to 18 040 / 3 155 – przed prezentacją jedno źródło (ponowne `python -m scripts.liczby`, strefa A/TL).
+- Użycie AI (jedna linia): aktualizacja tekstu zgłoszenia i sprawdzenie zgodności z wymaganiami formalnymi – Claude (Model B); zatwierdza i wysyła człowiek B.
+- Następny krok: nazwa zespołu → wysłanie DRAFT ok. 19:30; potem test w przeglądarce.
+
+## HANDOFF #21
+
+- Czas: sob 22:45
+- Zrobione (API: HANDOFF A #8): **Panel moderatora `/panel`** (`pages/Admin.tsx`, w stopce „Dla specjalistów”, link z `/moderacja`): (1) aktualizacja danych – harmonogram, ostatnie/następne odświeżenie, wynik, przycisk „Odśwież teraz” (w tle, stan co 3 s); (2) zbiory AED na dane.gov.pl – wyszukiwanie, tabela (zbiór z linkiem, instytucja, licencja), „Zaimportuj znalezione zbiory” z wynikiem na wiersz; (3) konta instytucji – zakładanie (login, nazwa instytucji jak w danych, e-mail), hasło jednorazowe pokazane raz, „Nowe hasło”, „Zablokuj/Odblokuj”, liczba AED instytucji. **Moje konto `/konto`** – zmiana hasła. **Logowanie**: pole loginu edytowalne (konto instytucji albo demo), w nagłówku nazwa instytucji. **Zgłoszenie (E4)**: pole „Zdjęcie AED (nieobowiązkowe)” na ostatnim kroku (`components/PhotoField.tsx`: przeglądarka zmniejsza do 1600 px JPEG i usuwa metadane, w tym GPS; podgląd, „Usuń zdjęcie”; `capture=environment` na telefonie); godziny, szafka i instrukcja idą osobnymi polami (CR #16 pkt 1 zrealizowany po stronie A). **Moderacja (E9)**: zdjęcie ze zgłoszenia (podpisany link, otwiera się w nowym oknie) i podane godziny/szafka.
+- Jak uruchomić / zobaczyć: API z `a/core` + `npm run dev` → `/panel` (moderator / moderator-demo), `/zglos`, `/moderacja`, `/konto`.
+- Założenia: panel działa tylko z API (bez trybu przykładowego).
+- CR: –
+- Znane błędy: –
+- Użycie AI (jedna linia): panel moderatora, zdjęcie w zgłoszeniu i logowanie instytucji z Claude.
+- Następny krok: test czytnikiem ekranu panelu i pola zdjęcia.

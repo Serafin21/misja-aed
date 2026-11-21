@@ -1,6 +1,6 @@
 // E10 – Pierwsza pomoc. Text given by the team VERBATIM (do not add medical advice here).
-// Illustrations: own simple SVG pictograms (not ERC/PRR graphics). Content to be checked by a rescuer or mentor.
-import { Icon } from '../components/ui';
+// Steps in words only; one side photo of a real AED (CC0, Wikimedia Commons, source in the caption). Content to be checked by a rescuer or mentor.
+import { ExternalLink, Icon } from '../components/ui';
 import { usePageTitle } from '../router';
 
 const ADULT_STEPS = [
@@ -15,42 +15,24 @@ const ADULT_STEPS = [
   'Nie przerywaj, dopóki nie przejmą ratownicy albo poszkodowany nie zacznie się ruszać i normalnie oddychać.',
 ];
 
-/** Simple own pictograms; colours come from CSS (currentColor). Decorative – the text says everything. */
-function Pictogram({ kind }: { kind: 'phone' | 'hands' | 'aed' | 'stop' }) {
-  const common = { viewBox: '0 0 120 120', 'aria-hidden': true as const, focusable: 'false' as const, className: 'aid-svg' };
-  if (kind === 'phone') {
-    return (
-      <svg {...common}>
-        <rect x="35" y="10" width="50" height="100" rx="8" fill="none" stroke="currentColor" strokeWidth="5" />
-        <line x1="50" y1="98" x2="70" y2="98" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-        <text x="60" y="66" textAnchor="middle" fontSize="26" fontWeight="700" fill="currentColor">112</text>
-      </svg>
-    );
-  }
-  if (kind === 'hands') {
-    return (
-      <svg {...common}>
-        <path d="M20 105c5-30 20-45 40-45s35 15 40 45" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-        <rect x="42" y="38" width="36" height="18" rx="9" fill="currentColor" />
-        <rect x="42" y="24" width="36" height="18" rx="9" fill="none" stroke="currentColor" strokeWidth="5" />
-        <path d="M60 4v14M52 12l8 8 8-8" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  if (kind === 'aed') {
-    return (
-      <svg {...common}>
-        <rect x="15" y="25" width="90" height="70" rx="10" fill="none" stroke="currentColor" strokeWidth="5" />
-        <path d="M60 80s-22-13-22-28a11 11 0 0 1 22-4 11 11 0 0 1 22 4c0 15-22 28-22 28z" fill="currentColor" />
-        <path d="M63 44l-9 14h7l-3 12 10-16h-7z" fill="var(--color-bg)" />
-      </svg>
-    );
-  }
+const PHOTO_PAGE = 'https://commons.wikimedia.org/wiki/File:Automated_external_defibrillator_(AED)_Automatyczny_defibrylator_zewn%C4%99trzny,_Tomasz%C3%B3w_Mazowiecki,_Poland.jpg';
+
+/** Side photo (CC0, Wikimedia Commons). Hidden when the file is missing. */
+function AedPhoto() {
   return (
-    <svg {...common}>
-      <circle cx="60" cy="60" r="48" fill="none" stroke="currentColor" strokeWidth="5" />
-      <path d="M45 85V50a5 5 0 0 1 10 0v18V38a5 5 0 0 1 10 0v30V42a5 5 0 0 1 10 0v26l3-10a5 5 0 0 1 9 3l-6 20c-3 9-9 14-18 14H58c-7 0-13-4-13-10z" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
-    </svg>
+    <figure className="aid-photo">
+      <img
+        src="/img/aed-tomaszow-mazowiecki.jpg"
+        width={800}
+        height={450}
+        alt="Zielona okrągła szafka z AED zawieszona na drewnianej ścianie przy chodniku. Na szafce biały znak: serce z błyskawicą."
+        onError={(e) => { (e.currentTarget.closest('figure') as HTMLElement | null)?.setAttribute('hidden', ''); }}
+      />
+      <figcaption>
+        Tak może wyglądać AED w miejscu publicznym (Tomaszów Mazowiecki).
+        Zdjęcie: WrS.tm.pl, <ExternalLink href={PHOTO_PAGE}>Wikimedia Commons</ExternalLink>, CC0 (domena publiczna).
+      </figcaption>
+    </figure>
   );
 }
 
@@ -62,12 +44,7 @@ export function FirstAid() {
       <p className="firstaid__call"><a href="tel:112" className="btn-call btn-call--big"><Icon name="phone" />Dzwoń 112</a></p>
       <p className="lead">Każdy może pomóc. Każdy może użyć AED, także bez szkolenia. Urządzenie mówi, co robić, i samo sprawdza, czy potrzebne jest wyładowanie. Uciskając klatkę piersiową, nie wyrządzisz poważnej krzywdy.</p>
 
-      <div className="aid-figure">
-        <figure><Pictogram kind="phone" /><figcaption>Zadzwoń pod 112</figcaption></figure>
-        <figure><Pictogram kind="hands" /><figcaption>Uciskaj klatkę piersiową</figcaption></figure>
-        <figure><Pictogram kind="aed" /><figcaption>Włącz AED</figcaption></figure>
-        <figure><Pictogram kind="stop" /><figcaption>Nie dotykaj podczas analizy</figcaption></figure>
-      </div>
+      <AedPhoto />
 
       <h2>Dorosły – krok po kroku</h2>
       <ol className="steps-aid">
