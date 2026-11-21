@@ -2,8 +2,8 @@
 // Three groups (OR inside a group, AND between groups) + area. Empty group = no restriction.
 import type { AedPoint } from '../api/types';
 
-export type Dostepnosc = 'teraz' | 'zamkniete' | 'uprawnieni' | 'nieznane';
-export type Aktualnosc = 'aktualne' | 'stare' | 'brak_daty' | 'zbior_nieaktualny';
+export type Dostepnosc = 'teraz' | 'zamkniete' | 'nieznane';
+export type Aktualnosc = 'aktualne' | 'stare' | 'brak_daty';
 export type Zrodlo = 'dysponent' | 'osm';
 
 export interface PointFilters {
@@ -20,31 +20,28 @@ export interface PointFilters {
 export const EMPTY: PointFilters = { dostepnosc: [], aktualnosc: [], zrodlo: [], mobilne: true, wojewodztwo: '', gmina: '', gminaNazwa: '' };
 
 export const DOSTEPNOSC: { v: Dostepnosc; label: string; hint: string }[] = [
-  { v: 'teraz', label: 'Dostępne teraz', hint: 'otwarte o tej godzinie' },
-  { v: 'zamkniete', label: 'Teraz zamknięte', hint: 'poza godzinami albo niesprawne' },
-  { v: 'nieznane', label: 'Godziny nieznane', hint: 'sprawdź na miejscu' },
-  { v: 'uprawnieni', label: 'Tylko dla uprawnionych', hint: 'np. pracownicy, OSP' },
+  { v: 'teraz', label: 'Otwarte teraz', hint: 'można skorzystać o tej godzinie' },
+  { v: 'zamkniete', label: 'Zamknięte teraz', hint: 'poza godzinami, niesprawne albo tylko dla uprawnionych' },
+  { v: 'nieznane', label: 'Godziny nieokreślone', hint: 'brak godzin w danych – sprawdź na miejscu' },
 ];
 
 export const AKTUALNOSC: { v: Aktualnosc; label: string; hint: string }[] = [
-  { v: 'aktualne', label: 'Aktualne', hint: 'sprawdzone w ostatnich 12 mies.' },
-  { v: 'stare', label: 'Do weryfikacji', hint: 'sprawdzone ponad rok temu' },
-  { v: 'brak_daty', label: 'Bez daty sprawdzenia', hint: 'nie wiadomo, kiedy sprawdzono' },
-  { v: 'zbior_nieaktualny', label: 'Zbiór dostawcy po terminie', hint: 'dostawca nie zaktualizował zbioru na czas' },
+  { v: 'aktualne', label: 'W ostatnim roku', hint: 'dane sprawdzone w ciągu 12 miesięcy' },
+  { v: 'stare', label: 'Ponad rok temu', hint: 'dane mogą być nieaktualne' },
+  { v: 'brak_daty', label: 'Brak daty', hint: 'nie wiadomo, kiedy sprawdzono' },
 ];
 
 export const ZRODLO: { v: Zrodlo; label: string; hint: string }[] = [
-  { v: 'dysponent', label: 'Wspólna lista', hint: 'dane właścicieli AED z dane.gov.pl' },
-  { v: 'osm', label: 'Do sprawdzenia', hint: 'OpenStreetMap – niepotwierdzone przez właściciela' },
+  { v: 'dysponent', label: 'Potwierdzone przez właściciela', hint: 'dane instytucji odpowiedzialnych za AED' },
+  { v: 'osm', label: 'Do sprawdzenia', hint: 'z OpenStreetMap, niepotwierdzone' },
 ];
 
 export function dostepnosc(p: AedPoint): Dostepnosc {
-  if (p.dostep === 'prywatny') return 'uprawnieni';
+  if (p.dostep === 'prywatny') return 'zamkniete'; // not for bystanders
   return p.dostepny_teraz === true ? 'teraz' : p.dostepny_teraz === false ? 'zamkniete' : 'nieznane';
 }
 
 export function aktualnosc(p: AedPoint): Aktualnosc {
-  if (p.zbior_nieaktualny) return 'zbior_nieaktualny'; // MODEL_ROL §7: dataset out of date ≠ record to verify
   if (p.stan_danych === 'aktualne') return 'aktualne';
   return p.wiek_danych_dni === null ? 'brak_daty' : 'stare'; // undefined (older API) counts as "stare"
 }

@@ -101,6 +101,8 @@ export interface AedPoint {
   dostep?: Dostep | null; wiek_danych_dni?: number | null; mobilny?: boolean; wojewodztwo?: string | null;
   /** docs/MODEL_ROL.md: 'lista' or helper layer 'pomocnicza' (= osm); dataset past its update date; possible duplicate */
   warstwa?: 'lista' | 'pomocnicza'; zbior_nieaktualny?: boolean; duplikat?: boolean; zgodnosc?: 'wzorzec' | 'przejsciowy';
+  /** name of the object (HANDOFF A #12) – alphabetical list */
+  nazwa?: string | null;
   /** TERYT of the gmina the AED lies in (HANDOFF A #7) */
   gmina_teryt?: string | null;
 }

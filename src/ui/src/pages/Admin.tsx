@@ -1,19 +1,20 @@
-// Panel administratora (/panel) – docs/MODEL_ROL.md §4: the administrator manages the SYSTEM, not the data:
-// aggregation of providers' datasets, gaps (where to send the campaign), reports without a provider, reminders,
-// provider accounts and the event log. There is no way to add, edit or delete AED here (K2).
+// Panel administratora (/panel) – owner's decision 22.11 (MODEL_ROL v1.4): the administrator manages institutions and
+// their accounts (data, login, password), every AED (edit, delete, assign to an institution), the aggregation of providers'
+// datasets, gaps, residents' reports without an institution, reminders, the event log and data refresh.
+// Approvals (new AED, changes, account requests) are on the page "Zgłoszenia AED".
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  aggregationReport, changeMyPassword, createAccount, eventLog, lateDatasets, listAccounts, listGaps, refreshNow, refreshStatus,
-  resetPassword, runAggregation, sendReminders, setAccountActive, type Konto, type RaportZbioru, type StanOdswiezania,
+  adminAedAssign, adminAedDelete, adminAedEdit, adminAedList, aggregationReport, createAccount, deleteAccount, eventLog, getAed,
+  lateDatasets, listAccounts, listGaps, refreshNow, refreshStatus, runAggregation, sendReminders, updateAccount,
+  type AedAdmin, type Konto, type RaportZbioru, type StanOdswiezania,
 } from '../api/client';
-import { RequireLogin } from '../components/Auth';
+import { RequireLogin, SessionBar } from '../components/Auth';
 import { ReportsQueue } from '../components/ReportsQueue';
-import { AccountRequests, AedSubmissionsQueue } from '../components/AdminQueues';
 import { ErrorBox, ExternalLink, Loading } from '../components/ui';
 import { dictValues } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { Link, usePageTitle } from '../router';
-import type { PodstawaPublikacji } from '../api/types';
+import { PODSTAWA_LABEL, type Aed, type PodstawaPublikacji } from '../api/types';
 
 const n = (x: number | undefined) => (x ?? 0).toLocaleString('pl-PL');
 const when = (t: string | null | undefined) => (t ? t.replace('T', ', ') : '—');
@@ -23,44 +24,28 @@ export function Admin() {
   return (
     <>
       <h1 id="page-title">Panel administratora</h1>
-      <p className="lead">Administrator prowadzi konta dostawców, wzór danych, łączenie zbiorów i akcję promocyjną. <strong>Nie dodaje, nie poprawia i nie usuwa danych o AED</strong> – za nie odpowiadają ich właściciele.</p>
       <RequireLogin role="administrator">
+        <SessionBar />
+        <p className="lead">Instytucje i ich konta, wszystkie AED (edycja, usuwanie, przypisanie do instytucji) i narzędzia list. Nowe AED, zmiany i wnioski o konto zatwierdzasz w <Link to="/zgloszenia-aed">Zgłoszenia AED</Link>.</p>
         <nav aria-label="Sekcje panelu" className="toc">
           <ul>
-            <li><a href="#h-zgl-aed">Zgłoszenia AED</a></li><li><a href="#h-req">Wnioski o konto</a></li>
-            <li><a href="#h-agg">Wspólna lista</a></li><li><a href="#h-gaps">Luki</a></li><li><a href="#h-rep">Zgłoszenia bez dostawcy</a></li>
-            <li><a href="#h-late">Przypomnienia</a></li><li><a href="#h-acc">Konta dostawców</a></li><li><a href="#h-log">Dziennik zdarzeń</a></li>
-            <li><a href="#h-refresh">Odświeżanie</a></li>
+            <li><a href="#h-acc">Instytucje i konta</a></li><li><a href="#h-all">Wszystkie AED</a></li>
+            <li><a href="#h-rep">Zgłoszenia mieszkańców</a></li><li><a href="#h-agg">Zbiory w dane.gov.pl</a></li><li><a href="#h-gaps">Luki</a></li>
+            <li><a href="#h-late">Przypomnienia</a></li><li><a href="#h-log">Dziennik zdarzeń</a></li><li><a href="#h-refresh">Odświeżanie</a></li>
           </ul>
         </nav>
-        <AedSubmissionsQueue />
-        <AccountRequests />
-        <Aggregation />
-        <Gaps />
+        <Accounts />
+        <AllAed />
         <section className="admin-section" aria-labelledby="h-rep">
-          <h2 id="h-rep">Zgłoszenia urządzeń bez dostawcy</h2>
-          <p>Mieszkańcy zgłaszają AED spoza wspólnej listy (także punkty „do sprawdzenia” z OpenStreetMap). Administrator nie publikuje ich – zaprasza właściciela do publikacji danych.</p>
+          <h2 id="h-rep">Zgłoszenia mieszkańców o AED bez instytucji</h2>
+          <p>Problemy zgłoszone przez mieszkańców przy AED, które nie są przypisane do żadnej instytucji (np. punkty „do sprawdzenia” z OpenStreetMap).</p>
           <ReportsQueue mode="administrator" />
         </section>
+        <Aggregation />
+        <Gaps />
         <Late />
-        <Accounts />
         <Log />
         <Refresh />
-      </RequireLogin>
-    </>
-  );
-}
-
-/** Top menu "Zgłoszenia AED" (administrator): approvals only – AED reported by institutions and account requests. */
-export function Approvals() {
-  usePageTitle('Zgłoszenia AED do zatwierdzenia');
-  return (
-    <>
-      <h1 id="page-title">Zgłoszenia AED do zatwierdzenia</h1>
-      <p className="lead">Tu zatwierdzasz AED zgłoszone przez instytucje i wnioski instytucji o konto. Pozostałe narzędzia są w <Link to="/panel">panelu administratora</Link>.</p>
-      <RequireLogin role="administrator">
-        <AedSubmissionsQueue />
-        <AccountRequests />
       </RequireLogin>
     </>
   );
@@ -230,129 +215,308 @@ function Refresh() {
 // ---------- provider accounts ----------
 // CR-TL-6: the basis on which the provider may publish (shown on the AED card as meta.dostawca_podstawa)
 const PODSTAWY: [PodstawaPublikacji, string, string][] = [
-  ['wlasciciel', 'Właściciel AED', 'urządzenie należy do tej instytucji'],
-  ['zarzadca', 'Zarządca z umową', 'zarządza urządzeniem na podstawie umowy z właścicielem'],
-  ['weryfikujacy', 'Podmiot weryfikujący', 'np. fundacja, która sprawdziła AED na miejscu'],
+  ['wlasciciel', 'Właściciel AED', 'instytucja jest właścicielem urządzenia'],
+  ['zarzadca', 'Zarządca z umową', 'zarządza AED na podstawie umowy z właścicielem'],
+  ['weryfikujacy', 'Podmiot weryfikujący', 'np. fundacja, która sprawdza AED na miejscu'],
 ];
 
+// ---------- institutions and their accounts: create, find, edit everything (also login and password), block, delete ----------
 function Accounts() {
   const st = useAsync(() => listAccounts(), []);
-  const empty = { login: '', dysponent_nazwa: '', dostawca_podstawa: '' as PodstawaPublikacji | '', email: '' };
+  const empty = { login: '', dysponent_nazwa: '', dostawca_podstawa: '' as PodstawaPublikacji | '', email: '', telefon: '', regon: '' };
   const [form, setForm] = useState(empty);
-  const [secret, setSecret] = useState<{ login: string; haslo: string; nowe: boolean } | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [secret, setSecret] = useState<{ login: string; haslo: string } | null>(null);
   const [err, setErr] = useState<Error | null>(null);
+  const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState('');
+  const [stan, setStan] = useState('');
+  const [edit, setEdit] = useState<(Konto & { nowy_login: string; haslo: string }) | null>(null);
 
   async function create(e: FormEvent) {
-    e.preventDefault(); setErr(null); setBusy(true);
+    e.preventDefault(); setErr(null); setBusy(true); setInfo('');
     try {
       if (!form.dostawca_podstawa) throw new Error('Wybierz podstawę publikacji.');
-      const r = await createAccount({ login: form.login.trim().toLowerCase(), dysponent_nazwa: form.dysponent_nazwa.trim(), dostawca_podstawa: form.dostawca_podstawa, ...(form.email.trim() ? { email: form.email.trim() } : {}) });
-      setSecret({ login: r.data.login, haslo: r.haslo_jednorazowe, nowe: true });
-      setForm(empty);
-      st.reload();
+      const r = await createAccount({ login: form.login.trim().toLowerCase(), dysponent_nazwa: form.dysponent_nazwa.trim(), dostawca_podstawa: form.dostawca_podstawa,
+        ...(form.email.trim() ? { email: form.email.trim() } : {}) });
+      const extra = { ...(form.telefon.trim() ? { telefon: form.telefon.trim() } : {}), ...(form.regon.trim() ? { regon: form.regon.trim() } : {}) };
+      if (Object.keys(extra).length) await updateAccount(r.data.login, extra);
+      setSecret({ login: r.data.login, haslo: r.haslo_jednorazowe });
+      setForm(empty); setCreating(false); st.reload();
     } catch (ex) { setErr(ex as Error); } finally { setBusy(false); }
   }
-  async function reset(k: Konto) {
-    if (!window.confirm(`Wygenerować nowe hasło dla ${k.login}? Stare przestanie działać.`)) return;
-    try { const r = await resetPassword(k.login); setSecret({ login: k.login, haslo: r.haslo_jednorazowe, nowe: false }); } catch (ex) { setErr(ex as Error); }
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (!edit) return;
+    setErr(null); setInfo('');
+    const orig = st.data?.find((k) => k.login === edit.login);
+    const ch: Parameters<typeof updateAccount>[1] = {};
+    if (edit.dysponent_nazwa && edit.dysponent_nazwa !== orig?.dysponent_nazwa) ch.dysponent_nazwa = edit.dysponent_nazwa.trim();
+    if ((edit.email ?? '') !== (orig?.email ?? '')) ch.email = edit.email ?? '';
+    if ((edit.telefon ?? '') !== (orig?.telefon ?? '')) ch.telefon = edit.telefon ?? '';
+    if ((edit.regon ?? '') !== (orig?.regon ?? '') && edit.regon) ch.regon = edit.regon;
+    if (edit.dostawca_podstawa && edit.dostawca_podstawa !== orig?.dostawca_podstawa) ch.dostawca_podstawa = edit.dostawca_podstawa;
+    if (edit.nowy_login.trim() && edit.nowy_login.trim().toLowerCase() !== edit.login) ch.nowy_login = edit.nowy_login.trim().toLowerCase();
+    if (edit.haslo) ch.haslo = edit.haslo;
+    try {
+      await updateAccount(edit.login, ch);
+      setInfo(`Zapisano konto ${ch.nowy_login ?? edit.login}${ch.haslo ? ' (nowe hasło ustawione – przekaż je instytucji bezpiecznym kanałem)' : ''}.`);
+      setEdit(null); st.reload();
+    } catch (ex) { setErr(ex as Error); }
   }
   async function toggle(k: Konto) {
-    try { await setAccountActive(k.login, !k.aktywne); st.reload(); } catch (ex) { setErr(ex as Error); }
+    try { await updateAccount(k.login, { aktywne: !k.aktywne }); st.reload(); } catch (ex) { setErr(ex as Error); }
   }
+  async function remove(k: Konto) {
+    if (!window.confirm(`Usunąć konto ${k.login} (${k.dysponent_nazwa})? AED instytucji zostaną na mapie.`)) return;
+    try { await deleteAccount(k.login); setInfo(`Usunięto konto ${k.login}.`); st.reload(); } catch (ex) { setErr(ex as Error); }
+  }
+  const rows = (st.data ?? []).filter((k) => {
+    const t = `${k.login} ${k.dysponent_nazwa ?? ''} ${k.email ?? ''} ${k.regon ?? ''} ${k.telefon ?? ''}`.toLowerCase();
+    if (q && !t.includes(q.toLowerCase())) return false;
+    if (stan === 'aktywne' && !k.aktywne) return false;
+    if (stan === 'zablokowane' && (k.aktywne || k.oczekuje)) return false;
+    if (stan === 'oczekuje' && !k.oczekuje) return false;
+    return true;
+  });
 
   return (
     <section className="admin-section" aria-labelledby="h-acc">
-      <h2 id="h-acc">Konta dostawców</h2>
-      <p>Konto zakładasz po sprawdzeniu, że osoba reprezentuje podmiot, który odpowiada za dane: właściciela AED, zarządcę z umową albo podmiot, który sprawdził AED na miejscu (np. pismo, umowa, e-mail z domeny instytucji). Dostawca przygotowuje i publikuje tylko dane, za które odpowiada, i rozpatruje zgłoszenia o swoich AED. Docelowo: konta portalu dane.gov.pl i logowanie przez login.gov.pl.</p>
+      <h2 id="h-acc">Instytucje i konta</h2>
+      <p>Konta instytucji odpowiedzialnych za AED. Możesz zmienić każdą daną konta – także login i hasło (np. po utracie lub kradzieży hasła), zablokować albo usunąć konto.</p>
       {secret && (
         <div className="callout callout--ok" role="alert">
-          <p className="callout__title">{secret.nowe ? 'Konto założone.' : 'Nowe hasło gotowe.'} Przekaż instytucji login i hasło bezpiecznym kanałem.</p>
+          <p className="callout__title">Konto założone. Przekaż instytucji login i hasło bezpiecznym kanałem.</p>
           <p>Login: <span className="secret">{secret.login}</span> · Hasło: <span className="secret">{secret.haslo}</span></p>
-          <p className="hint">Hasło widać tylko teraz – później można je jedynie zresetować. Instytucja może je zmienić na stronie „Moje konto”.</p>
+          <p className="hint">Hasło widać tylko teraz. Instytucja może je zmienić po zalogowaniu („Zmień hasło”).</p>
           <p><button type="button" className="btn btn--tertiary" onClick={() => setSecret(null)}>Ukryj hasło</button></p>
         </div>
       )}
+      {info && <p className="callout callout--ok" role="status">{info}</p>}
       {err && <ErrorBox error={err} />}
-      <form className="inline-form" onSubmit={create} aria-label="Nowe konto instytucji">
-        <div className="field">
-          <label htmlFor="acc-login">Login</label>
-          <input id="acc-login" required pattern="[a-z0-9][a-z0-9._\-]{2,40}" title="3–41 znaków: małe litery, cyfry, kropka, _ i -" autoCapitalize="none" spellCheck={false}
-            value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} placeholder="np. um.krosno" />
-        </div>
-        <div className="field">
-          <label htmlFor="acc-name">Nazwa instytucji (jak w danych AED)</label>
-          <input id="acc-name" required minLength={3} value={form.dysponent_nazwa} onChange={(e) => setForm({ ...form, dysponent_nazwa: e.target.value })} placeholder="np. Urząd Miasta Krosna" />
-        </div>
-        <fieldset className="field field--full">
-          <legend>Podstawa publikacji</legend>
-          <div className="big-choices">
-            {PODSTAWY.map(([v, l, h]) => (
-              <label key={v}>
-                <input type="radio" name="acc-podstawa" value={v} required checked={form.dostawca_podstawa === v}
-                  onChange={() => setForm({ ...form, dostawca_podstawa: v })} />
-                <span>{l}<span className="hint"> – {h}</span></span>
-              </label>
-            ))}
+      {!creating ? <p><button type="button" className="btn btn--primary" onClick={() => setCreating(true)}>Załóż konto instytucji</button></p> : (
+        <form className="panel" onSubmit={create} aria-labelledby="h-acc-new">
+          <h3 id="h-acc-new">Nowe konto instytucji</h3>
+          <div className="filters__grid">
+            <div className="field"><label htmlFor="acc-name">Nazwa instytucji</label>
+              <input id="acc-name" required minLength={3} value={form.dysponent_nazwa} onChange={(e) => setForm({ ...form, dysponent_nazwa: e.target.value })} placeholder="np. Urząd Miasta Krosna" /></div>
+            <div className="field"><label htmlFor="acc-login">Login</label>
+              <input id="acc-login" required pattern="[a-z0-9][a-z0-9._\-]{2,40}" title="3–41 znaków: małe litery, cyfry, kropka, _ i -" autoCapitalize="none" spellCheck={false}
+                value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} placeholder="np. um.krosno" /></div>
+            <div className="field"><label htmlFor="acc-regon">REGON (nieobowiązkowy)</label>
+              <input id="acc-regon" inputMode="numeric" value={form.regon} onChange={(e) => setForm({ ...form, regon: e.target.value })} /></div>
+            <div className="field"><label htmlFor="acc-mail">E-mail (nieobowiązkowy)</label>
+              <input id="acc-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+            <div className="field"><label htmlFor="acc-tel">Telefon (nieobowiązkowy)</label>
+              <input id="acc-tel" type="tel" value={form.telefon} onChange={(e) => setForm({ ...form, telefon: e.target.value })} /></div>
           </div>
-        </fieldset>
-        <div className="field">
-          <label htmlFor="acc-mail">E-mail kontaktowy (nieobowiązkowy)</label>
-          <input id="acc-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        </div>
-        <button type="submit" className="btn btn--primary" disabled={busy}>{busy ? 'Zakładam…' : 'Załóż konto'}</button>
-      </form>
+          <fieldset className="field">
+            <legend>Podstawa publikacji</legend>
+            <div className="big-choices">
+              {PODSTAWY.map(([v, l, h]) => (
+                <label key={v}><input type="radio" name="acc-podstawa" value={v} required checked={form.dostawca_podstawa === v}
+                  onChange={() => setForm({ ...form, dostawca_podstawa: v })} /><span>{l}<span className="hint"> – {h}</span></span></label>
+              ))}
+            </div>
+          </fieldset>
+          <p className="form-actions">
+            <button type="submit" className="btn btn--primary" disabled={busy}>{busy ? 'Zakładam…' : 'Załóż konto'}</button>
+            <button type="button" className="btn btn--tertiary" onClick={() => setCreating(false)}>Anuluj</button>
+          </p>
+        </form>
+      )}
+      <div className="table-tools">
+        <div className="field"><label htmlFor="acc-q">Szukaj (nazwa, login, REGON, e-mail, telefon)</label>
+          <input id="acc-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="field"><label htmlFor="acc-stan">Stan</label>
+          <select id="acc-stan" value={stan} onChange={(e) => setStan(e.target.value)}>
+            <option value="">wszystkie</option><option value="aktywne">aktywne</option><option value="oczekuje">czekają na zatwierdzenie</option><option value="zablokowane">zablokowane</option>
+          </select></div>
+      </div>
       {st.loading && !st.data && <Loading />}
       {st.error && <ErrorBox error={st.error} onRetry={st.reload} />}
-      {st.data && (st.data.length === 0 ? <p>Nie ma jeszcze kont dostawców (działają konta pokazowe <code>dysponent</code> i <code>administrator</code>).</p> : (
+      {st.data && (rows.length === 0 ? <p>{st.data.length ? 'Brak kont dla tych warunków.' : 'Nie ma jeszcze kont instytucji. Załóż pierwsze albo zatwierdź wniosek w „Zgłoszenia AED”.'}</p> : (
         <table className="admin-table">
-          <thead><tr><th scope="col">Login</th><th scope="col">Instytucja</th><th scope="col">AED w zbiorze</th><th scope="col">Założone</th><th scope="col">Stan</th><th scope="col">Działania</th></tr></thead>
+          <thead><tr><th scope="col">Instytucja</th><th scope="col">Login</th><th scope="col">Kontakt</th><th scope="col">AED</th><th scope="col">Stan</th><th scope="col">Działania</th></tr></thead>
           <tbody>
-            {st.data.map((k) => (
+            {rows.map((k) => (
               <tr key={k.login}>
-                <td><code>{k.login}</code></td>
-                <td>{k.dysponent_nazwa}{k.email && <div className="hint">{k.email}</div>}</td>
+                <td>{k.dysponent_nazwa}<div className="hint">{k.regon ? `REGON ${k.regon} · ` : ''}{k.dostawca_podstawa ? PODSTAWA_LABEL[k.dostawca_podstawa] : ''}</div></td>
+                <td><code>{k.login}</code><div className="hint">od {when(k.utworzono)}</div></td>
+                <td>{k.email ?? '—'}<div className="hint">{k.telefon ?? ''}</div></td>
                 <td>{n(k.liczba_aed)}</td>
-                <td>{when(k.utworzono)}{k.utworzyl && <div className="hint">przez {k.utworzyl}</div>}</td>
-                <td>{k.aktywne ? 'aktywne' : 'zablokowane'}</td>
-                <td>
-                  <button type="button" className="btn btn--secondary btn--small" onClick={() => reset(k)}>Nowe hasło<span className="visually-hidden"> dla {k.login}</span></button>
-                  <button type="button" className={`btn btn--small ${k.aktywne ? 'btn--danger' : 'btn--secondary'}`} onClick={() => toggle(k)}>{k.aktywne ? 'Zablokuj' : 'Odblokuj'}<span className="visually-hidden"> {k.login}</span></button>
+                <td>{k.oczekuje ? 'czeka na zatwierdzenie' : k.aktywne ? 'aktywne' : 'zablokowane'}</td>
+                <td className="table-actions">
+                  <button type="button" className="btn btn--secondary btn--small" onClick={() => setEdit({ ...k, nowy_login: k.login, haslo: '' })}>Edytuj<span className="visually-hidden"> {k.login}</span></button>
+                  {!k.oczekuje && <button type="button" className="btn btn--secondary btn--small" onClick={() => toggle(k)}>{k.aktywne ? 'Zablokuj' : 'Odblokuj'}<span className="visually-hidden"> {k.login}</span></button>}
+                  <button type="button" className="btn btn--danger btn--small" onClick={() => remove(k)}>Usuń<span className="visually-hidden"> {k.login}</span></button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       ))}
+      {edit && (
+        <form className="panel" onSubmit={save} aria-labelledby="h-acc-edit">
+          <h3 id="h-acc-edit">Edytuj konto {edit.login}</h3>
+          <div className="filters__grid">
+            <div className="field"><label htmlFor="ed-name">Nazwa instytucji</label><input id="ed-name" value={edit.dysponent_nazwa ?? ''} onChange={(e) => setEdit({ ...edit, dysponent_nazwa: e.target.value })} /></div>
+            <div className="field"><label htmlFor="ed-login">Login</label><input id="ed-login" autoCapitalize="none" value={edit.nowy_login} onChange={(e) => setEdit({ ...edit, nowy_login: e.target.value })} /></div>
+            <div className="field"><label htmlFor="ed-pass">Nowe hasło (zostaw puste, by nie zmieniać)</label><input id="ed-pass" type="text" autoComplete="off" value={edit.haslo} onChange={(e) => setEdit({ ...edit, haslo: e.target.value })} /></div>
+            <div className="field"><label htmlFor="ed-regon">REGON</label><input id="ed-regon" inputMode="numeric" value={edit.regon ?? ''} onChange={(e) => setEdit({ ...edit, regon: e.target.value })} /></div>
+            <div className="field"><label htmlFor="ed-mail">E-mail</label><input id="ed-mail" type="email" value={edit.email ?? ''} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></div>
+            <div className="field"><label htmlFor="ed-tel">Telefon</label><input id="ed-tel" type="tel" value={edit.telefon ?? ''} onChange={(e) => setEdit({ ...edit, telefon: e.target.value })} /></div>
+            <div className="field"><label htmlFor="ed-pod">Podstawa publikacji</label>
+              <select id="ed-pod" value={edit.dostawca_podstawa ?? ''} onChange={(e) => setEdit({ ...edit, dostawca_podstawa: e.target.value as PodstawaPublikacji })}>
+                <option value="">—</option>{PODSTAWY.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select></div>
+          </div>
+          <p className="hint">Zmiana nazwy instytucji przenosi też jej AED i zgłoszenia na nową nazwę.</p>
+          <p className="form-actions"><button type="submit" className="btn btn--primary">Zapisz zmiany</button>
+            <button type="button" className="btn btn--tertiary" onClick={() => setEdit(null)}>Anuluj</button></p>
+        </form>
+      )}
     </section>
   );
 }
 
-// ---------- own password (used in "Moje AED") ----------
-export function PasswordForm() {
-  const [f, setF] = useState({ stare: '', nowe: '', nowe2: '' });
-  const [msg, setMsg] = useState('');
-  const [err, setErr] = useState('');
-  async function save(e: FormEvent) {
-    e.preventDefault(); setMsg(''); setErr('');
-    if (f.nowe.length < 10) { setErr('Nowe hasło musi mieć co najmniej 10 znaków.'); return; }
-    if (f.nowe !== f.nowe2) { setErr('Nowe hasła się różnią.'); return; }
-    try { await changeMyPassword(f.stare, f.nowe); setMsg('Hasło zmienione.'); setF({ stare: '', nowe: '', nowe2: '' }); }
-    catch (ex) { setErr((ex as Error).message); }
+// ---------- every AED: find, edit any field, delete, assign to an institution ----------
+const EDIT_FIELDS: [keyof Aed, string, 'text' | 'area' | 'bool' | 'num' | 'select', string?][] = [
+  ['nazwa_obiektu', 'Nazwa obiektu', 'text'], ['opis_lokalizacji', 'Jak dojść (opis miejsca)', 'area'], ['ulica', 'Ulica', 'text'],
+  ['numer_budynku', 'Numer budynku', 'text'], ['kod_pocztowy', 'Kod pocztowy', 'text'], ['miejscowosc', 'Miejscowość', 'text'],
+  ['godziny_dostepnosci', 'Godziny (np. pn-pt 8-16 albo 24/7)', 'text'], ['dostep', 'Dostęp', 'select', 'dostep'],
+  ['szafka_zamknieta', 'Szafka zamknięta', 'bool'], ['instrukcja_dostepu', 'Jak otworzyć szafkę', 'area'], ['wewnatrz_budynku', 'W budynku', 'bool'],
+  ['status_urzadzenia', 'Stan urządzenia', 'select', 'status_urzadzenia'], ['data_weryfikacji', 'Data sprawdzenia (RRRR-MM-DD)', 'text'],
+  ['szerokosc_geograficzna', 'Szerokość geograficzna', 'num'], ['dlugosc_geograficzna', 'Długość geograficzna', 'num'],
+  ['dysponent_nazwa', 'Dysponent (nazwa w danych)', 'text'], ['kontakt_telefon', 'Telefon kontaktowy', 'text'], ['uwagi', 'Uwagi', 'area'],
+];
+const WARSTWA: Record<AedAdmin['warstwa'], string> = { lista: 'zbiór instytucji', pomocnicza: 'do sprawdzenia (OSM)', aplikacja: 'dodane w aplikacji' };
+
+function AllAed() {
+  const [q, setQ] = useState('');
+  const [query, setQuery] = useState('');
+  const [warstwa, setWarstwa] = useState('wszystkie');
+  const [org, setOrg] = useState('');
+  const [page, setPage] = useState(1);
+  const list = useAsync(() => adminAedList({ q: query || undefined, warstwa, organizacja: org || undefined, page, per_page: 25 }), [query, warstwa, org, page]);
+  const orgs = useAsync(() => listAccounts().then((a) => [...new Set(a.filter((k) => k.dysponent_nazwa).map((k) => k.dysponent_nazwa!))].sort()), []);
+  const [edit, setEdit] = useState<{ id: string; rec: Aed; org: string; vals: Record<string, string> } | null>(null);
+  const [err, setErr] = useState<Error | null>(null);
+  const [info, setInfo] = useState('');
+
+  async function openEdit(r: AedAdmin) {
+    setErr(null); setInfo('');
+    orgs.reload(); // accounts may have been created since the panel opened
+    const d = await getAed(r.id_aed);
+    if (!d) return;
+    const vals: Record<string, string> = {};
+    for (const [k] of EDIT_FIELDS) { const v = d.aed[k]; vals[k] = v === null || v === undefined ? '' : String(v); }
+    setEdit({ id: r.id_aed, rec: d.aed, org: r.organizacja ?? '', vals });
+    setTimeout(() => document.getElementById('h-aed-edit')?.scrollIntoView({ behavior: 'smooth' }), 0);
   }
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (!edit) return;
+    setErr(null);
+    const pola: Record<string, unknown> = {};
+    for (const [k, , t] of EDIT_FIELDS) {
+      const v = edit.vals[k];
+      const old = edit.rec[k] === null || edit.rec[k] === undefined ? '' : String(edit.rec[k]);
+      if (v === old) continue;
+      pola[k] = v === '' ? null : t === 'bool' ? v === 'true' : t === 'num' ? Number(v.replace(',', '.')) : v;
+    }
+    try {
+      if (Object.keys(pola).length) await adminAedEdit(edit.id, pola);
+      const before = list.data?.data.find((x) => x.id_aed === edit.id)?.organizacja ?? '';
+      if (edit.org !== before) await adminAedAssign(edit.id, edit.org || null);
+      setInfo(`Zapisano zmiany AED „${edit.vals.nazwa_obiektu}”.`); setEdit(null); list.reload();
+    } catch (ex) { setErr(ex as Error); }
+  }
+  async function remove(r: AedAdmin) {
+    if (!window.confirm(`Usunąć AED „${r.nazwa_obiektu}”? Zniknie z mapy (także po odświeżeniu danych).`)) return;
+    try { await adminAedDelete(r.id_aed); setInfo(`Usunięto „${r.nazwa_obiektu}”.`); list.reload(); } catch (ex) { setErr(ex as Error); }
+  }
+  const total = list.data?.meta.count ?? 0;
+  const pages = Math.max(1, Math.ceil(total / 25));
+
   return (
-    <form className="panel" onSubmit={save} aria-labelledby="h-pass" noValidate>
-      <h2 id="h-pass">Zmień hasło</h2>
-      <p className="hint">Konta pokazowe (<code>dysponent</code>, <code>administrator</code>) mają hasło w ustawieniach serwera i nie zmienia się go tutaj.</p>
-      {[['stare', 'Obecne hasło', 'current-password'], ['nowe', 'Nowe hasło (min. 10 znaków)', 'new-password'], ['nowe2', 'Powtórz nowe hasło', 'new-password']].map(([k, l, ac]) => (
-        <div className="field" key={k}>
-          <label htmlFor={`pw-${k}`}>{l}</label>
-          <input id={`pw-${k}`} type="password" autoComplete={ac} value={f[k as keyof typeof f]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />
-        </div>
-      ))}
-      {err && <p className="field-error" role="alert">{err}</p>}
-      <p role="status" className="status-line">{msg}</p>
-      <p className="form-actions"><button type="submit" className="btn btn--primary">Zapisz hasło</button></p>
-    </form>
+    <section className="admin-section" aria-labelledby="h-all">
+      <h2 id="h-all">Wszystkie AED</h2>
+      <p>Każde AED na mapie – możesz zmienić jego dane, usunąć je albo przypisać do instytucji (zobaczy je u siebie i dostanie zgłoszenia mieszkańców). Każda zmiana trafia do dziennika zdarzeń. Nowe AED dodajesz w <Link to="/zgloszenia-aed">Zgłoszenia AED</Link>.</p>
+      {info && <p className="callout callout--ok" role="status">{info}</p>}
+      {err && <ErrorBox error={err} />}
+      <form className="table-tools" onSubmit={(e) => { e.preventDefault(); setPage(1); setQuery(q.trim()); }} role="search">
+        <div className="field"><label htmlFor="all-q">Szukaj (nazwa, miejscowość, ulica, gmina, id)</label>
+          <input id="all-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="field"><label htmlFor="all-w">Źródło</label>
+          <select id="all-w" value={warstwa} onChange={(e) => { setPage(1); setWarstwa(e.target.value); }}>
+            <option value="wszystkie">wszystkie</option><option value="lista">zbiory instytucji</option><option value="aplikacja">dodane w aplikacji</option><option value="pomocnicza">do sprawdzenia (OSM)</option>
+          </select></div>
+        <div className="field"><label htmlFor="all-o">Instytucja</label>
+          <select id="all-o" value={org} onChange={(e) => { setPage(1); setOrg(e.target.value); }}>
+            <option value="">wszystkie</option>{(orgs.data ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+          </select></div>
+        <button type="submit" className="btn btn--secondary">Szukaj</button>
+      </form>
+      {list.loading && !list.data && <Loading />}
+      {list.error && <ErrorBox error={list.error} onRetry={list.reload} />}
+      {list.data && (
+        <>
+          <p className="hint">{n(total)} AED · strona {page} z {n(pages)}</p>
+          <table className="admin-table">
+            <thead><tr><th scope="col">AED</th><th scope="col">Adres</th><th scope="col">Źródło</th><th scope="col">Instytucja</th><th scope="col">Sprawdzone</th><th scope="col">Działania</th></tr></thead>
+            <tbody>
+              {list.data.data.map((r) => (
+                <tr key={r.id_aed}>
+                  <td><Link to={`/aed/${r.id_aed}`}>{r.nazwa_obiektu || 'bez nazwy'}</Link>{r.edytowane && <div className="hint">zmienione przez administratora</div>}</td>
+                  <td>{[r.adres, r.miejscowosc].filter(Boolean).join(', ') || '—'}</td>
+                  <td>{WARSTWA[r.warstwa]}</td>
+                  <td>{r.organizacja ?? '—'}</td>
+                  <td>{r.data_weryfikacji ?? '—'}</td>
+                  <td className="table-actions">
+                    <button type="button" className="btn btn--secondary btn--small" onClick={() => openEdit(r)}>Edytuj<span className="visually-hidden"> {r.nazwa_obiektu}</span></button>
+                    <button type="button" className="btn btn--danger btn--small" onClick={() => remove(r)}>Usuń<span className="visually-hidden"> {r.nazwa_obiektu}</span></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="form-actions">
+            <button type="button" className="btn btn--secondary btn--small" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Poprzednia</button>
+            <button type="button" className="btn btn--secondary btn--small" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>Następna</button>
+          </p>
+        </>
+      )}
+      {edit && (
+        <form className="panel" onSubmit={save} aria-labelledby="h-aed-edit">
+          <h3 id="h-aed-edit">Edytuj AED: {edit.vals.nazwa_obiektu}</h3>
+          <div className="field"><label htmlFor="ae-org">Instytucja odpowiedzialna</label>
+            <select id="ae-org" value={edit.org} onChange={(e) => setEdit({ ...edit, org: e.target.value })}>
+              <option value="">— brak —</option>{[...new Set([...(orgs.data ?? []), ...(edit.org ? [edit.org] : [])])].map((o) => <option key={o} value={o}>{o}</option>)}
+            </select></div>
+          <div className="filters__grid">
+            {EDIT_FIELDS.map(([k, l, t, dict]) => {
+              const id = `ae-${k}`;
+              const v = edit.vals[k];
+              const set = (x: string) => setEdit({ ...edit, vals: { ...edit.vals, [k]: x } });
+              return (
+                <div className={`field${t === 'area' ? ' field--full' : ''}`} key={k}>
+                  <label htmlFor={id}>{l}</label>
+                  {t === 'area' ? <textarea id={id} rows={2} value={v} onChange={(e) => set(e.target.value)} />
+                    : t === 'bool' ? <select id={id} value={v} onChange={(e) => set(e.target.value)}><option value="">brak danych</option><option value="true">tak</option><option value="false">nie</option></select>
+                      : t === 'select' ? <select id={id} value={v} onChange={(e) => set(e.target.value)}><option value="">—</option>{dictValues(dict!).map((o) => <option key={o.wartosc} value={o.wartosc}>{o.wartosc}</option>)}</select>
+                        : <input id={id} type="text" inputMode={t === 'num' ? 'decimal' : undefined} value={v} onChange={(e) => set(e.target.value)} />}
+                </div>
+              );
+            })}
+          </div>
+          <p className="form-actions"><button type="submit" className="btn btn--primary">Zapisz zmiany</button>
+            <button type="button" className="btn btn--tertiary" onClick={() => setEdit(null)}>Anuluj</button></p>
+        </form>
+      )}
+    </section>
   );
 }
+
+

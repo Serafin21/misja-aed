@@ -1,46 +1,10 @@
 import type { AedView } from '../api/types';
-import { address, distance, floor, osmDirections } from '../lib/format';
-import { describeHours } from '../lib/hours';
-import { Link } from '../router';
-import { AvailabilityBadge, DataBadge, ExternalLink, Icon, LockedCabinet } from './ui';
-import type { MapMode } from './MapMode';
+import { AedSummary } from './AedSummary';
 
-export function AedListItem({ aed, from, rank, mode = 'dostepnosc', nearest = false }: { aed: AedView; from?: { lat: number; lon: number } | null; rank?: number; mode?: MapMode; nearest?: boolean }) {
-  const inside = aed.wewnatrz_budynku ? 'wewnątrz budynku' : 'na zewnątrz';
-  // OSM often has "Wewnątrz budynku" as the location description – do not repeat it
-  const where = [aed.opis_lokalizacji, floor(aed.pietro), aed.opis_lokalizacji?.trim().toLowerCase() === inside ? '' : inside].filter(Boolean).join(' · ');
+export function AedListItem({ aed, rank, nearest = false }: { aed: AedView; rank?: number; nearest?: boolean }) {
   return (
     <li className={`aed-item${nearest ? ' aed-item--nearest' : ''}`}>
-      <article aria-labelledby={`t-${aed.id_aed}`}>
-        {nearest && <p className="aed-item__nearest"><Icon name="pin" />Najbliższe AED</p>}
-        <div className="aed-item__head">
-          <h3 id={`t-${aed.id_aed}`} className="aed-item__title">
-            {rank !== undefined && <span className="aed-item__rank">{rank}.</span>}
-            <Link to={`/aed/${aed.id_aed}`}>{aed.nazwa_obiektu}</Link>
-          </h3>
-          {aed.odleglosc_m !== undefined && (
-            <p className="aed-item__dist"><Icon name="pin" /><span><span className="visually-hidden">Odległość: </span>{distance(aed.odleglosc_m)}</span></p>
-          )}
-        </div>
-        <div className="aed-item__badges">
-          {mode === 'dane' ? <><DataBadge aed={aed} /><AvailabilityBadge aed={aed} /></> : <><AvailabilityBadge aed={aed} /><DataBadge aed={aed} /></>}
-          {aed.mobilny && <span className="badge badge--info"><Icon name="car" />Urządzenie w pojeździe</span>}
-          {aed.meta?.warstwa === 'pomocnicza' && <span className="badge badge--helper"><Icon name="question" />Do sprawdzenia – OpenStreetMap</span>}
-          {aed.meta?.zbior_nieaktualny && <span className="badge badge--warn">Zbiór dostawcy po terminie</span>}
-          {aed.meta?.zgodnosc === 'przejsciowy' && <span className="badge badge--transitional">Zbiór przejściowy</span>}
-        </div>
-        <p className="aed-item__addr">{address(aed)}</p>
-        {aed.meta?.dostawca && <p className="hint">Źródło: {aed.meta.dostawca}{aed.meta.licencja_zbioru ? `, ${aed.meta.licencja_zbioru}` : ''}</p>}
-        <p className="aed-item__where">{where}</p>
-        <p className="aed-item__hours"><span className="visually-hidden">Godziny: </span>{describeHours(aed.godziny_dostepnosci).join('; ')}</p>
-        <LockedCabinet aed={aed} compact />
-        <p className="aed-item__actions">
-          <Link to={`/aed/${aed.id_aed}`}>Szczegóły i dojście<span className="visually-hidden">: {aed.nazwa_obiektu}</span></Link>
-          <ExternalLink href={osmDirections(from ?? null, { lat: aed.szerokosc_geograficzna, lon: aed.dlugosc_geograficzna })}>
-            Prowadź pieszo<span className="visually-hidden"> do: {aed.nazwa_obiektu}</span>
-          </ExternalLink>
-        </p>
-      </article>
+      <article aria-labelledby={`t-${aed.id_aed}`}><AedSummary aed={aed} rank={rank} nearest={nearest} /></article>
     </li>
   );
 }

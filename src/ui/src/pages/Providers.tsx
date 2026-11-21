@@ -60,7 +60,7 @@ export function Providers() {
           <ol className="steps">
             <li><strong>Konto dostawcy</strong> w dane.gov.pl (jeśli Wasza instytucja go nie ma) i konto w tym kreatorze – zakłada je administrator po sprawdzeniu instytucji.</li>
             <li><strong>Dodaj AED</strong> – z pliku albo ręcznie. Sprawdzimy dane ze wzorem.</li>
-            <li><strong>Pobierz pliki do publikacji</strong> w „Moje AED” i opublikuj je na koncie instytucji. Po publikacji Wasze AED trafią na wspólną listę.</li>
+            <li><strong>Zgłoś AED</strong> po zalogowaniu (menu „Zgłoszenia AED”). Po zatwierdzeniu przez administratora Wasze AED są od razu na mapie.</li>
           </ol>
           <p className="lead">Wybierz, jak chcesz dodać AED:</p>
           <div className="choice-cards">
