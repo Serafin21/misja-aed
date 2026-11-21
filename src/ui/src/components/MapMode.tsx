@@ -61,7 +61,7 @@ export function MapLegend({ mode, coverage }: { mode: MapMode; coverage?: boolea
         <li><Pin kind="closed" />Teraz zamknięte lub niesprawne (znaczek zegara)</li>
         <li><Pin kind="private" />Tylko dla uprawnionych (znaczek kłódki)</li>
         <li><Pin kind="unknown" />Brak godzin – sprawdź na miejscu</li>
-        <li>Przerywana obwódka: warstwa OpenStreetMap (licencja ODbL)</li>
+        <li>Przerywana obwódka: AED z mapy OpenStreetMap</li>
       </ul>
     );
   }
@@ -74,7 +74,7 @@ export function MapLegend({ mode, coverage }: { mode: MapMode; coverage?: boolea
         <li><span className="swatch swatch--stare" aria-hidden="true" />Gmina z co najmniej jednym nieaktualnym AED</li>
         <li><span className="swatch swatch--swieze" aria-hidden="true" />Gmina, w której wszystkie AED mają aktualne dane</li>
       </>}
-      <li>Przerywana obwódka pinezki: warstwa OpenStreetMap (licencja ODbL)</li>
+      <li>Przerywana obwódka pinezki: AED z mapy OpenStreetMap</li>
     </ul>
   );
 }
@@ -112,7 +112,7 @@ export function CoverageList({ coverage, collapsed = false }: { coverage: Pokryc
   return (
     <section aria-labelledby="cov-title" className="coverage-list">
       <h3 id="cov-title">{title}</h3>
-      <p>Tu warto szukać dysponentów, którzy jeszcze nie udostępnili danych.</p>
+      <p>W tych gminach warto zachęcić instytucje, żeby dodały swoje AED.</p>
       {body}
     </section>
   );

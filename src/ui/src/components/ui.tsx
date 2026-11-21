@@ -33,7 +33,7 @@ export function LockedCabinet({ aed, compact = false }: { aed: AedView; compact?
   return (
     <div className={`callout callout--warn${compact ? ' callout--compact' : ''}`} role="note">
       <p className="callout__title"><Icon name="lock" />Szafka jest zamknięta</p>
-      <p>{aed.instrukcja_dostepu ?? 'Instrukcja dostępu nie została podana. Zapytaj obsługę obiektu.'}</p>
+      <p>{aed.instrukcja_dostepu ?? 'Nie wiemy, jak otworzyć szafkę. Zapytaj obsługę budynku albo dyspozytora 112.'}</p>
     </div>
   );
 }

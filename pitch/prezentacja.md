@@ -60,23 +60,26 @@ Architektura: FastAPI (Python) + React; uruchomienie `docker compose up --build`
 ## Slajd 4 – Kroki użytkownika
 
 **Mieszkaniec lub świadek zdarzenia (telefon)**
-1. Dotyka „Pokaż najbliższe AED” albo wpisuje miejscowość.
+1. Na stronie głównej wybiera „Znajdź najbliższe AED”, dotyka „Pokaż najbliższe AED” albo wpisuje miejscowość.
 2. Widzi 5 najbliższych AED z odległością; filtr „Tylko dostępne teraz” jest włączony.
 3. Otwiera kartę AED: na górze informacja o zamkniętej szafce i instrukcja dostępu, niżej adres, godziny, „Prowadź pieszo”.
-4. Przy urządzeniu skanuje kod QR „Paszport AED” i potwierdza, że AED jest na miejscu. Brak AED na mapie → „Zgłoś AED”.
+4. Przy urządzeniu skanuje kod QR „Paszport AED” i potwierdza, że AED jest na miejscu. Brak AED na mapie → „Zgłoś AED”: 4 pytania, jedno na ekranie (miejsce, godziny z list, szafka, sprawdzenie).
+5. „Pierwsza pomoc” – jak użyć AED krok po kroku i przycisk „Dzwoń 112”.
 
 **Dysponent (urząd, szkoła, firma)**
-1. Pobiera szablon (CSV, XLSX) albo bierze własny plik.
-2. Loguje się, wpisuje nazwę i rodzaj dysponenta, wgrywa plik.
-3. Sprawdza dopasowanie kolumn.
-4. Czyta raport: wiersz, pole, co poprawiliśmy, czego brakuje, które AED już są w zbiorze.
-5. Zatwierdza i pobiera odznakę akcji.
+1. Wybiera „Mam listę AED w pliku” albo „Wpiszę AED ręcznie”.
+2. Plik: pobiera wzór w Excelu, przeciąga plik, widzi pasek postępu i tylko nierozpoznane kolumny.
+3. Wynik w trzech grupach: „Gotowe”, „Do poprawy”, „Może już jest na mapie”.
+4. „Opublikuj gotowe teraz, resztę poprawię później” → odznaka akcji.
+5. Ręcznie: ten sam kreator co dla mieszkańca + dane instytucji, lista, jedna publikacja; szkic zapisuje się na urządzeniu.
 
 **Moderator**
 1. Loguje się do panelu.
 2. Przy zgłoszeniu obywatela uzupełnia adres i godziny, zatwierdza, scala z istniejącym AED albo odrzuca. (API pozwala też dysponentowi rozpatrywać zgłoszenia dotyczące jego AED.)
 
-[ZRZUT: E1 najbliższe AED na telefonie – http://localhost/ (390 px)]
+[ZRZUT: strona główna z trzema kaflami – http://localhost/ (390 px)]
+[ZRZUT: E1 najbliższe AED na telefonie – http://localhost/znajdz (390 px)]
+[ZRZUT: E10 Pierwsza pomoc – http://localhost/pierwsza-pomoc]
 [ZRZUT: E3 karta AED z zamkniętą szafką – http://localhost/aed/{id}]
 [ZRZUT: E5 raport walidacji – http://localhost/dysponenci (krok 4)]
 [ZRZUT: E9 formularz zatwierdzenia zgłoszenia – http://localhost/moderacja]

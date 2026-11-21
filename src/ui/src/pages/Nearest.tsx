@@ -7,7 +7,7 @@ import { AedListItem } from '../components/AedListItem';
 import { MapView } from '../components/MapView';
 import { CoverageList, MapLegend, MapModeSwitch, useCoverage, useMapMode } from '../components/MapMode';
 import { Emergency, ErrorBox, Loading } from '../components/ui';
-import { usePageTitle } from '../router';
+import { Link, usePageTitle } from '../router';
 
 type Pos = { lat: number; lon: number; label: string };
 
@@ -103,6 +103,7 @@ export function Nearest() {
             <button type="button" className="linklike" onClick={() => load(DEMO)}>Użyj punktu w centrum Warszawy</button>
           </p>
         )}
+        <p><Link to="/mapa">Zobacz wszystkie AED na mapie</Link></p>
       </section>
 
       <div role="status" aria-live="polite" className="status-line">{busy ?? msg ?? ''}</div>
@@ -119,6 +120,7 @@ export function Nearest() {
             </div>
           </div>
           <p className="hint">Od: {pos.label}. Odległość w linii prostej.</p>
+          <p className="firstaid-bar"><span>Nie wiesz, jak użyć AED?</span><Link to="/pierwsza-pomoc">Pierwsza pomoc: jak użyć AED</Link></p>
           <div className="split">
             <ol className="aed-list" aria-label="Lista najbliższych AED">
               {items.map((a, i) => <AedListItem key={a.id_aed} aed={a} from={pos} rank={i + 1} mode={mode} />)}

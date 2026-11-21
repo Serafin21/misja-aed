@@ -122,3 +122,16 @@ export function mockApprove(r: RaportWalidacji): Promise<WynikImportu> {
   const scalone = r.duplikaty.length;
   return delay({ dodane: Math.max(0, r.poprawne - scalone), zaktualizowane: 0, scalone, odrzucone: r.bledy }, 300);
 }
+
+export function mockImportInfo(fileName: string) {
+  const r = raport as RaportWalidacji;
+  return delay({
+    import_id: `demo-${fileName}`, liczba_wierszy: r.wiersze, kolumny: Object.keys(r.mapowanie),
+    mapowanie_proponowane: { ...r.mapowanie, 'Uwagi wewnętrzne': '' },
+    podglad: [{ 'Uwagi wewnętrzne': 'przegląd w marcu' }],
+  }, 400);
+}
+
+export function mockCreateAed() {
+  return delay({ id_aed: `AED-PL-DEMO${Math.floor(Math.random() * 1e6)}` }, 250);
+}

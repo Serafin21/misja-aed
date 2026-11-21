@@ -138,7 +138,9 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     g.clearLayers();
     if (user) L.circleMarker([user.lat, user.lon], { radius: 9, color: '#0F3B2B', weight: 3, fillColor: '#2f6fe0', fillOpacity: 0.9 }).bindTooltip('Twoja lokalizacja').addTo(g);
     if (picked) {
-      L.marker([picked.lat, picked.lon], { icon: L.divIcon({ className: 'pick-marker', html: '<span aria-hidden="true"></span>', iconSize: [30, 30], iconAnchor: [15, 28] }), title: 'Wybrany punkt', alt: 'Wybrany punkt', keyboard: false }).addTo(g);
+      // draggable when the page lets the user pick a point (E4, E5 manual) – move the pin to the exact spot
+      const pm = L.marker([picked.lat, picked.lon], { icon: L.divIcon({ className: 'pick-marker', html: '<span aria-hidden="true"></span>', iconSize: [30, 30], iconAnchor: [15, 28] }), title: 'Wybrane miejsce – możesz przesunąć pinezkę', keyboard: false, draggable: !!pickRef.current }).addTo(g);
+      pm.on('dragend', () => { const ll = pm.getLatLng(); pickRef.current?.({ lat: +ll.lat.toFixed(6), lon: +ll.lng.toFixed(6) }); });
       map.current?.setView([picked.lat, picked.lon], Math.max(map.current.getZoom(), 16));
     }
   }, [user, picked]);

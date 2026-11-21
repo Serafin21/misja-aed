@@ -34,7 +34,7 @@ export function QrSticker({ id, name }: { id: string; name: string }) {
   const href = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(sticker)}`;
   return (
     <details className="details">
-      <summary>Dla dysponenta: naklejka „Paszport AED” z kodem QR</summary>
+      <summary>Dla właściciela AED: naklejka „Paszport AED” z kodem QR</summary>
       <p>Wydrukuj i naklej na szafkę. Kod QR prowadzi do tej karty: <code>{url}</code></p>
       <img src={href} alt={`Naklejka Paszport AED dla „${name}” z kodem QR prowadzącym do karty urządzenia`} width={W / 1.5} height={H / 1.5} className="sticker" />
       <p><a className="btn btn--secondary" href={href} download={`paszport_${id}.svg`}>Pobierz naklejkę (SVG)</a></p>

@@ -20,7 +20,7 @@ export function AedCard({ id }: { id: string }) {
     return (
       <>
         <h1>Nie znaleziono AED</h1>
-        <p>W zbiorze nie ma urządzenia o identyfikatorze <code>{id}</code>. Mogło zostać usunięte albo scalone z innym rekordem.</p>
+        <p>W zbiorze nie ma urządzenia o identyfikatorze <code>{id}</code>. Mogło zostać usunięte albo połączone z innym AED.</p>
         <p><Link to="/">Szukaj najbliższego AED</Link></p>
       </>
     );
@@ -34,7 +34,6 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
   const osm = a.licencja === 'ODbL-1.0';
   return (
     <article className="card-page" aria-labelledby="page-title">
-      <p className="breadcrumbs"><Link to="/mapa">Mapa i lista</Link> <span aria-hidden="true">›</span> Karta AED</p>
       <header className="card-page__head">
         <h1 id="page-title">{a.nazwa_obiektu}</h1>
         <div className="aed-item__badges">
@@ -46,6 +45,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
       </header>
 
       <LockedCabinet aed={a} />
+      <p className="firstaid-bar"><span>W nagłym wypadku dzwoń 112.</span><Link to="/pierwsza-pomoc">Jak użyć AED?</Link></p>
       {!a.szafka_zamknieta && a.instrukcja_dostepu && (
         <div className="callout callout--info" role="note"><p className="callout__title">Jak się dostać</p><p>{a.instrukcja_dostepu}</p></div>
       )}
@@ -92,7 +92,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
           </dl>
         </section>
         <section aria-labelledby="h-owner" className="panel">
-          <h2 id="h-owner">Dysponent</h2>
+          <h2 id="h-owner">Właściciel AED (instytucja)</h2>
           <dl className="facts">
             <dt>Nazwa</dt><dd>{a.dysponent_nazwa}</dd>
             <dt>Rodzaj</dt><dd>{label('dysponent_typ', a.dysponent_typ)}</dd>
@@ -106,15 +106,17 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
       <QrSticker id={a.id_aed} name={a.nazwa_obiektu} />
 
       <section aria-labelledby="h-src" className="panel">
-        <h2 id="h-src">Źródło danych i licencja</h2>
-        <p>
-          Źródło główne: {label('zrodlo_danych', a.zrodlo_danych)}. Licencja: <strong>{a.licencja}</strong>
+        <h2 id="h-src">Skąd są te dane</h2>
+        <p>Dane pochodzą z: {label('zrodlo_danych', a.zrodlo_danych)}{osm && <> (© autorzy OpenStreetMap)</>}.</p>
+        <details className="details">
+        <summary>Dla specjalistów</summary>
+        <p>Licencja: <strong>{a.licencja}</strong>
           {osm && <> – dane © autorzy OpenStreetMap, udostępniane na licencji ODbL w osobnym zasobie</>}.
         </p>
         {d.pochodzenie.length > 0 && (
           <div className="table-wrap" tabIndex={0} role="region" aria-labelledby="cap-prov">
             <table>
-              <caption id="cap-prov">Źródła, z których zbudowano ten rekord</caption>
+              <caption id="cap-prov">Źródła, z których pochodzą dane o tym AED</caption>
               <thead><tr><th scope="col">Źródło</th><th scope="col">Identyfikator w źródle</th><th scope="col">Licencja</th><th scope="col">Pobrano</th><th scope="col">Rola</th></tr></thead>
               <tbody>
                 {d.pochodzenie.map((p) => (
@@ -128,6 +130,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
           </div>
         )}
         <p className="hint">Identyfikator: <code>{a.id_aed}</code></p>
+        </details>
       </section>
       <Emergency />
     </article>
@@ -152,7 +155,7 @@ function Passport({ id, name, onDone }: { id: string; name: string; onDone: () =
     setBusy(true);
     try {
       await confirmAed(id, { jest_na_miejscu: here === 'tak', szafka_dostepna: cab === '' || cab === 'nie_wiem' ? null : cab === 'tak', komentarz: comment.trim() });
-      setSent(here === 'tak' ? 'Dziękujemy! Potwierdzenie zapisane – dzięki Tobie dane są aktualne.' : 'Dziękujemy! Zgłoszenie trafi do dysponenta i moderatora.');
+      setSent(here === 'tak' ? 'Dziękujemy! Potwierdzenie zapisane – dzięki Tobie dane są aktualne.' : 'Dziękujemy! Przekażemy informację właścicielowi AED.');
       onDone();
     } catch (ex) {
       const body = ex instanceof HttpError ? ex.body : null;
