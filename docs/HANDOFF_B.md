@@ -303,3 +303,13 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Sprawdzone: `tsc -b`, `vite build`, przejście w przeglądarce (Playwright): wniosek → 403 przed zatwierdzeniem → zatwierdzenie → logowanie instytucji → zgłoszenie (lokalizacja → adres Rynek Główny 1; adres Floriańska 3 → pinezka i kod 31-019) → do poprawy → poprawa → zatwierdzenie → AED w „Moje AED”.
 - CR: – · Znane błędy: – · Użycie AI (jedna linia): pasek, wniosek o konto, „Zgłoś AED” i kolejki administratora z Claude.
 - Następny krok: test czytnikiem ekranu nowych formularzy; teksty README/SUBMISSION o zaufanych kontach.
+
+## HANDOFF #26
+
+- Czas: nd 00:40
+- Zrobione (prośba właściciela projektu): **„Znajdź AED” = jeden ekran z mapą i listą** (`/znajdz`; `/mapa` prowadzi tu samo; `pages/Nearest.tsx` usunięty – jego funkcje są w `pages/MapList.tsx`).
+  - Na górze pasek „Gdzie jesteś?” (wyszukiwarka miejsc) i duży przycisk **„Najbliższe AED ode mnie”** (lokalizacja urządzenia).
+  - Po wybraniu adresu, ulicy lub miejscowości albo po lokalizacji: mapa przybliża się tak, by było widać to miejsce i 3 najbliższe AED; najbliższe AED ma na mapie duży czerwony znacznik z podpisem **„Najbliższe AED · 60 m”** (`highlight` w `MapView`), a lista pokazuje **5 najbliższych** z odległością i numerem, pierwsze z ramką i etykietą „Najbliższe AED”; przycisk „Pokaż 5 kolejnych najbliższych”. Pasek „Najbliższe od: … · Usuń”. Filtry działają także na listę najbliższych. Gmina i województwo – jak dotąd (granice i liczby), lista według środka mapy.
+  - Przejrzystość: krótszy wstęp, przełącznik „Co pokazać na mapie” w kolumnie filtrów, liczba AED w jednym wierszu z przełącznikiem widoku, „Aktualność danych” i „Skąd są dane” schowane pod „Więcej filtrów”, cały ekran na pełną szerokość. Lista nie pokazuje już samego przycisku „Pokaż kolejne” w czasie wczytywania.
+- Sprawdzone: `tsc -b`, przeglądarka – „Kraków, Floriańska 3” → 5 najbliższych, znacznik „Najbliższe AED · 60 m”, rozwinięcie do 10; lokalizacja → „Najbliższe AED · 40 m”; widok telefonu.
+- CR: – · Znane błędy: – · Użycie AI: ekran „Znajdź AED” z Claude.

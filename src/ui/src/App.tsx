@@ -12,7 +12,6 @@ import { Admin } from './pages/Admin';
 import { MyAed } from './pages/MyAed';
 import { LoginPage, ROLE_HOME, useSession } from './components/Auth';
 import { logout } from './api/client';
-import { Nearest } from './pages/Nearest';
 import { Home } from './pages/Home';
 import { FirstAid } from './pages/FirstAid';
 import { Providers } from './pages/Providers';
@@ -61,7 +60,7 @@ function Breadcrumbs({ path }: { path: string }) {
   const nav = NAV.find((n) => n.to === path);
   const trail: { label: string; to?: string }[] = [];
   if (matchPath('/aed/:id', path)) trail.push({ label: 'Znajdź AED', to: '/znajdz' }, { label: 'AED' });
-  else if (path === '/mapa') trail.push({ label: 'Znajdź AED', to: '/znajdz' }, { label: PAGE_LABELS[path] });
+  else if (path === '/mapa') trail.push({ label: 'Znajdź AED' });
   else if (nav) trail.push({ label: nav.label });
   else if (INFO_PAGES[path]) trail.push({ label: INFO_PAGES[path].title });
   else if (PAGE_LABELS[path]) trail.push({ label: PAGE_LABELS[path] });
@@ -86,8 +85,7 @@ function NotFound() {
 function Routes() {
   const { path } = useLocation();
   if (path === '/') return <Home />;
-  if (path === '/znajdz') return <Nearest />;
-  if (path === '/mapa') return <MapList />;
+  if (path === '/znajdz' || path === '/mapa') return <MapList />;
   const card = matchPath('/aed/:id', path);
   if (card) return <AedCard id={card.id} />;
   if (path === '/zglos') return <Report />;

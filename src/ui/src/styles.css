@@ -387,7 +387,7 @@ thead th { background: var(--color-surface); }
 }
 @media (min-width: 1100px) {
   /* E2 uses the full screen width (up to 1680px): filters | list | map */
-  .e2 { width: min(1680px, calc(100vw - 2 * var(--space))); margin-left: calc(50% - min(840px, 50vw - var(--space))); }
+  .e2-page { width: min(1680px, calc(100vw - 2 * var(--space))); margin-left: calc(50% - min(840px, 50vw - var(--space))); }
   .e2__bar .mode-switch__opts { display: flex; flex-wrap: wrap; gap: var(--space-s); }
 }
 .e2__bar .mode-switch { flex: 1 1 32rem; }
@@ -459,3 +459,32 @@ thead th { background: var(--color-surface); }
 .submission__facts dd { margin: 0; overflow-wrap: anywhere; }
 .submission__decide textarea { width: 100%; }
 @media (max-width: 700px) { .submission { grid-template-columns: 1fr; } }
+
+/* "Znajdź AED": search row on top, the nearest AED marked on the map and in the list */
+.e2__search { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-s) var(--space); margin: 0 0 var(--space-m); padding: var(--space); background: var(--color-surface); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); }
+.e2__search-box { flex: 1 1 26rem; min-width: 0; }
+.e2__search-box .field { margin-bottom: 0; }
+.e2__search-box input { width: 100%; font-size: 1.125rem; }
+.e2__locate { flex: 0 1 auto; padding-top: 1.9rem; }
+.e2__locate .hint:empty { display: none; }
+.btn--locate { display: inline-flex; align-items: center; gap: var(--space-s); min-height: 52px; font-size: 1.0625rem; }
+.e2__filters-title { font-size: 1.25rem; margin: 0 0 var(--space-m); }
+.facet-more { margin-bottom: var(--space); }
+.facet-more > summary { cursor: pointer; font-weight: var(--font-weight-bold); color: var(--color-action); padding: var(--space-s) 0; min-height: 44px; display: flex; align-items: center; }
+.facet-more[open] > summary { margin-bottom: var(--space-s); }
+.aed-item--nearest { border: 3px solid var(--color-error); box-shadow: 0 2px 8px rgba(0, 0, 0, .12); }
+.aed-item__nearest { display: inline-flex; align-items: center; gap: .35rem; margin: 0 0 var(--space-s); padding: .15rem var(--space-s); border-radius: var(--radius); background: var(--color-error); color: #fff; font-weight: var(--font-weight-bold); }
+.aed-item__nearest svg { fill: currentColor; }
+.nearest-marker { background: transparent; border: 0; }
+.nearest-marker span { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #C8102E; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); color: #fff; font-size: 20px; }
+.leaflet-tooltip.nearest-label { background: #C8102E; color: #fff; border: 0; font-weight: 700; font-size: 15px; padding: 4px 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, .35); }
+.leaflet-tooltip.nearest-label::before { border-top-color: #C8102E; }
+@media (max-width: 700px) { .e2__locate { padding-top: 0; flex-basis: 100%; } .btn--locate { width: 100%; justify-content: center; } }
+.nearest-marker b { transform: rotate(45deg); }
+
+.e2__lead { margin-bottom: var(--space-m); }
+.e2__bar { justify-content: space-between; align-items: center; margin-bottom: var(--space-s); }
+.e2__bar .status-line { margin: 0; }
+.e2__filters .mode-switch { margin: 0 0 var(--space); }
+.e2__filters .mode-switch__opts { display: grid; gap: var(--space-s); }
+.e2-page .area-chip { margin: 0 0 var(--space-m); }

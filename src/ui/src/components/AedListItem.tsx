@@ -5,13 +5,14 @@ import { Link } from '../router';
 import { AvailabilityBadge, DataBadge, ExternalLink, Icon, LockedCabinet } from './ui';
 import type { MapMode } from './MapMode';
 
-export function AedListItem({ aed, from, rank, mode = 'dostepnosc' }: { aed: AedView; from?: { lat: number; lon: number } | null; rank?: number; mode?: MapMode }) {
+export function AedListItem({ aed, from, rank, mode = 'dostepnosc', nearest = false }: { aed: AedView; from?: { lat: number; lon: number } | null; rank?: number; mode?: MapMode; nearest?: boolean }) {
   const inside = aed.wewnatrz_budynku ? 'wewnątrz budynku' : 'na zewnątrz';
   // OSM often has "Wewnątrz budynku" as the location description – do not repeat it
   const where = [aed.opis_lokalizacji, floor(aed.pietro), aed.opis_lokalizacji?.trim().toLowerCase() === inside ? '' : inside].filter(Boolean).join(' · ');
   return (
-    <li className="aed-item">
+    <li className={`aed-item${nearest ? ' aed-item--nearest' : ''}`}>
       <article aria-labelledby={`t-${aed.id_aed}`}>
+        {nearest && <p className="aed-item__nearest"><Icon name="pin" />Najbliższe AED</p>}
         <div className="aed-item__head">
           <h3 id={`t-${aed.id_aed}`} className="aed-item__title">
             {rank !== undefined && <span className="aed-item__rank">{rank}.</span>}
