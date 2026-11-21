@@ -1,4 +1,4 @@
-# CONTRACT v1.0 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
+# CONTRACT v1.1 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
 
 > Wspólny plik: edytuje tylko Team Leader. Zamrożenie: sob 15:00 (po konsultacji na stoisku danych). Zmiany wyłącznie przez CR (tabela na końcu).
 > Źródło prawdy dla danych: `docs/schema/` (JSON Schema, słownik danych, słowniki wartości, CSVW, przykład XML importu) i `deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx`. Wszystkie te pliki powstały z jednej definicji, więc są spójne.
@@ -84,7 +84,7 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 
 | Metoda i ścieżka | Kto | Opis |
 |---|---|---|
-| `GET /aed` | publiczny | filtry: `bbox`, `wojewodztwo`, `gmina`, `dostep`, `dostepne_teraz`, `q`, `page`, `per_page` |
+| `GET /aed` | publiczny | filtry: `bbox`, `wojewodztwo`, `gmina`, `dostep`, `dostepne_teraz`, `stan_danych` (§8), `q`, `page`, `per_page` |
 | `GET /aed/{id_aed}` | publiczny | rekord + pochodzenie + liczba potwierdzeń |
 | `GET /aed/najblizsze?lat=&lon=&limit=5&tylko_dostepne_teraz=` | publiczny | posortowane po `odleglosc_m`; pole `dostepny_teraz` (true/false/null, gdy godzin nie da się zinterpretować) |
 | `POST /import` | dysponent | multipart: plik + `kod_zrodla` + `licencja` → `{import_id, wykryty_format, mapowanie_proponowane}` |
@@ -98,7 +98,8 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 | `POST /zrodla/osm/odswiez`, `POST /zrodla/dane-gov-pl/szukaj` | moderator | konektory |
 | `GET /eksport/{plik}` | publiczny | `aed.csv`, `aed.geojson`, `aed_osm_odbl.csv`, `aed_pochodzenie.csv`, `zrodla.csv`, `slownik_danych.csv`, `aed.csvw.json`, `dane_gov_pl_import.xml`, `metadane.jsonld` |
 | `GET /szablon.csv`, `GET /szablon.xlsx` | publiczny | pusty szablon zgodny z zakresem danych, dla dysponentów |
-| `GET /statystyki` | publiczny | liczby według województw i źródeł, rozkład kompletności, odsetek zweryfikowanych w ostatnich 12 miesiącach |
+| `GET /statystyki` | publiczny | liczby według województw i źródeł, rozkład kompletności, odsetek zweryfikowanych w ostatnich 12 miesiącach; liczniki `aktualne`, `nieaktualne`, `gminy_bez_danych` (§8) |
+| `GET /pokrycie?wojewodztwo=` | publiczny | GeoJSON granic gmin z polami `teryt`, `gmina`, `liczba_aed`, `aktualne`, `nieaktualne`, `stan` (§8) |
 | `POST /auth/login` | – | konta demo: `dysponent`, `moderator` (hasła w `.env`) |
 
 ## 6. Publikacja w dane.gov.pl
@@ -112,9 +113,21 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 
 Serwer interpretuje podzbiór składni opening_hours: `24/7`; dni `Mo Tu We Th Fr Sa Su` z zakresami (`Mo-Fr`); kilka reguł rozdzielonych `;`; przedziały `HH:MM-HH:MM`; `off`. Inny zapis → `dostepny_teraz: null` i komunikat „Sprawdź godziny na miejscu”. Rekord z `dostep = prywatny` nigdy nie jest „dostępny teraz” dla publiczności; z `mobilny = true` – pokazujemy z oznaczeniem „urządzenie w pojeździe”.
 
+## 8. Mapa: tryby „dostępność” i „aktualność danych” (CR-TL-1)
+
+Mapa ma dwa tryby. **Dostępność** – jak dotąd (§7, `dostepny_teraz`). **Aktualność danych** – pokazuje, gdzie dane są świeże, stare albo ich brak.
+
+- Każdy rekord ma w `meta`: `stan_danych` = `aktualne`, gdy `data_weryfikacji` jest nie starsza niż **365 dni** (liczone w strefie Europe/Warsaw; dokładnie 365 dni = jeszcze `aktualne`), w przeciwnym razie `nieaktualne` – **także przy braku lub nieczytelnej dacie**. Do tego `meta.wiek_danych_dni` (liczba całkowita albo `null`, gdy daty brak).
+- Brakującej daty weryfikacji nie zastępujemy dzisiejszą (np. rekord OSM bez `check_date` ma puste `data_weryfikacji`).
+- `GET /aed?stan_danych=aktualne|nieaktualne` – filtr; inna wartość → 422.
+- `GET /pokrycie?wojewodztwo=` (domyślnie `kujawsko-pomorskie`) → `FeatureCollection` (`application/geo+json`) granic gmin; w `properties`: `teryt` (TERC, 7 cyfr), `gmina`, `wojewodztwo`, `rodzaj`, `liczba_aed`, `aktualne`, `nieaktualne`, `stan` = `brak_danych` (0 AED) / `nieaktualne` (co najmniej jeden AED nieaktualny) / `aktualne` (wszystkie aktualne). `meta`: `liczba_gmin`, `gminy_wg_stanu`, `prog_aktualnosci_dni`, `atrybucja`. Brak granic dla województwa → 404 `brak_granic`. AED przypisujemy do gminy po położeniu (punkt w wielokącie), nie po polu `gmina`.
+- Granice: Państwowy Rejestr Granic (GUGiK, usługa WFS), uproszczone, w `data/granice/`; na demo tylko województwo kujawsko-pomorskie (144 gminy). Licencja i atrybucja („Źródło: Państwowy Rejestr Granic – Główny Urząd Geodezji i Kartografii”) w `zrodla.csv` jako źródło referencyjne `prg-gugik:gminy-…`.
+- `GET /statystyki` ma dodatkowo `aktualne`, `nieaktualne` (liczby rekordów) i `gminy_bez_danych` (suma po województwach z granicami; rozbicie w `meta.gminy_liczone_dla`).
+
 ## Rejestr zmian (CR)
 
 | CR | Kto prosi | Zmiana | Decyzja | Wersja |
 |---|---|---|---|---|
 | CR-1 | Team Leader | Schemat XSD i przestrzeń nazw pliku XML importu | do potwierdzenia na stoisku danych | – |
 | CR-2 | Team Leader | Kategoria zbioru i warunki ponownego wykorzystania | do potwierdzenia na stoisku danych | – |
+| CR-TL-1 | Team Leader | Mapa w dwóch trybach: „dostępność” i „aktualność danych”; `stan_danych` i `wiek_danych_dni` w `meta`, filtr `stan_danych`, `GET /pokrycie`, liczniki w `/statystyki` (§8) | przyjęta | 1.1 |

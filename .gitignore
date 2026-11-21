@@ -1,0 +1,23 @@
+# Python – pliki tworzone automatycznie przy uruchomieniu
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# Lokalna baza danych i pamięć podręczna pobrań (odtwarzane: python -m scripts.seed)
+data/*.sqlite3
+data/*.sqlite3-*
+data/cache/*
+!data/cache/.gitkeep
+
+# Sekrety i ustawienia lokalne
+.env
+.claude/settings.local.json
+
+# System i edytory
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

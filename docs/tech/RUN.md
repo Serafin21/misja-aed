@@ -23,6 +23,8 @@ uvicorn src.api.main:app --reload                       # http://localhost:8000/
 | `python -m scripts.publish` | pakiet dla dane.gov.pl → `deliverables/dataset/` |
 | `python scripts/check_csv.py deliverables/dataset/*.csv` | sprawdzenie CSV wg Standardu technicznego |
 | `python -m scripts.seed --reset --osm sample` | szybki start tylko na próbce (bez sieci) |
+| `python -m scripts.seed --reset --osm full` | pełna warstwa OSM dla Polski (ok. 18 tys. AED, 12 s; plik zostaje w `data/cache/`) |
+| `python -m scripts.build_granice --woj 04` | granice gmin z PRG (GUGiK) → `data/granice/` (inne województwo: kod TERYT, np. `14`) |
 | `python scripts/export_openapi.py` | `docs/tech/openapi.json` |
 | `python scripts/check_licenses.py` | licencje zależności |
 
@@ -38,3 +40,4 @@ uvicorn src.api.main:app --reload                       # http://localhost:8000/
 - Wyszukiwanie miejscowości (bez geokodowania): `GET /api/v1/miejsca?q=krak`.
 - Moderacja: `GET /api/v1/zgloszenia` (z `meta.mozliwy_duplikat`), `POST /zgloszenia/{id}/decyzja` z `zatwierdz` (wymaga `rekord` z adresem), `odrzuc` albo `scal`.
 - Strona zbioru: `GET /api/v1/eksport`, `GET /api/v1/zrodla`, `GET /api/v1/statystyki`.
+- Mapa w trybie „aktualność danych” (CR-TL-1): `GET /api/v1/pokrycie?wojewodztwo=kujawsko-pomorskie` (GeoJSON gmin; kolor wg `properties.stan`: `brak_danych` / `nieaktualne` / `aktualne`), punkty: `meta.stan_danych` i `meta.wiek_danych_dni` w każdym rekordzie, filtr `GET /api/v1/aed?stan_danych=nieaktualne`.
