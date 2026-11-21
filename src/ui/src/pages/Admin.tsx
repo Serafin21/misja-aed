@@ -1,7 +1,7 @@
 // Panel administratora (/panel) – docs/MODEL_ROL.md §4: the administrator manages the SYSTEM, not the data:
 // aggregation of providers' datasets, gaps (where to send the campaign), reports without a provider, reminders,
 // provider accounts and the event log. There is no way to add, edit or delete AED here (K2).
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import {
   aggregationReport, changeMyPassword, createAccount, eventLog, lateDatasets, listAccounts, listGaps, refreshNow, refreshStatus,
   resetPassword, runAggregation, sendReminders, setAccountActive, type Konto, type RaportZbioru, type StanOdswiezania,
@@ -59,9 +59,38 @@ export function Approvals() {
       <h1 id="page-title">Zgłoszenia AED do zatwierdzenia</h1>
       <p className="lead">Tu zatwierdzasz AED zgłoszone przez instytucje i wnioski instytucji o konto. Pozostałe narzędzia są w <Link to="/panel">panelu administratora</Link>.</p>
       <RequireLogin role="administrator">
-        <AedSubmissionsQueue />
-        <AccountRequests />
+        <ApprovalTabs />
       </RequireLogin>
+    </>
+  );
+}
+
+/** CR-TL-8 p. 5: two tabs (WAI-ARIA tabs pattern: arrows move between tabs, Tab goes into the panel). */
+const TABS = [
+  { id: 'aed', label: 'Zgłoszenia AED do zatwierdzenia', el: AedSubmissionsQueue },
+  { id: 'konta', label: 'Wnioski o konta', el: AccountRequests },
+] as const;
+function ApprovalTabs() {
+  const [cur, setCur] = useState(0);
+  function key(e: KeyboardEvent<HTMLButtonElement>) {
+    const n = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    const to = e.key === 'Home' ? 0 : e.key === 'End' ? TABS.length - 1 : n ? (cur + n + TABS.length) % TABS.length : -1;
+    if (to < 0) return;
+    e.preventDefault(); setCur(to);
+    document.getElementById(`tab-${TABS[to].id}`)?.focus();
+  }
+  const Panel = TABS[cur].el;
+  return (
+    <>
+      <div role="tablist" aria-label="Do zatwierdzenia" className="tabs">
+        {TABS.map((t, i) => (
+          <button key={t.id} id={`tab-${t.id}`} type="button" role="tab" aria-selected={i === cur} aria-controls={`panel-${t.id}`}
+            tabIndex={i === cur ? 0 : -1} className="tabs__tab" onClick={() => setCur(i)} onKeyDown={key}>{t.label}</button>
+        ))}
+      </div>
+      <div role="tabpanel" id={`panel-${TABS[cur].id}`} aria-labelledby={`tab-${TABS[cur].id}`} tabIndex={0} className="tabs__panel">
+        <Panel />
+      </div>
     </>
   );
 }

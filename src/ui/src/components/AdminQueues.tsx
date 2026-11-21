@@ -6,6 +6,7 @@ import {
 } from '../api/client';
 import { PODSTAWA_LABEL } from '../api/types';
 import { useAsync } from '../lib/useAsync';
+import { MapView } from './MapView';
 import { ErrorBox, ExternalLink, Loading } from './ui';
 
 const when = (t: string | null | undefined) => (t ? t.replace('T', ', ') : '—');
@@ -108,6 +109,8 @@ export function AedSubmissionsQueue() {
                   {z.kto && <><dt>Decyzja</dt><dd>{z.decyzja === 'zatwierdz' ? 'zatwierdzone' : 'do poprawy'}{z.komentarz ? ` – ${z.komentarz}` : ''} ({z.kto}, {when(z.kiedy)})</dd></>}
                   {z.historia.length > 0 && <><dt>Wcześniej</dt><dd>{z.historia.map((h, i) => <div key={i}>do poprawy: {h.komentarz} ({h.kto}, {when(h.kiedy)})</div>)}</dd></>}
                 </dl>
+                <MapView items={[]} picked={{ lat: z.szerokosc, lon: z.dlugosc }} height={200} cluster={false} wheelZoom={false}
+                  label={`Mini-mapa: położenie zgłoszonego AED „${z.nazwa_obiektu}”`} />
                 {z.status === 'oczekuje' && (
                   <div className="submission__decide">
                     <label htmlFor={`kom-${z.id}`}>Komentarz dla instytucji (wymagany przy odesłaniu do poprawy)</label>
