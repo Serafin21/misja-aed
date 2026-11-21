@@ -1,5 +1,7 @@
-// E2 – Mapa i lista. Whole Poland from GET /aed/punkty; filters work instantly in the browser (with counts);
-// the list next to the map shows the AED visible on the map, nearest to its centre first (accessible equivalent of the map).
+// "Znajdź AED" (E1 + E2 in one screen). Whole Poland from GET /aed/punkty; filters work instantly in the browser (with counts).
+// Search a place or use the device location → the map zooms there, the nearest AED gets a big "Najbliższe AED" pin and the
+// list shows the 5 nearest (with distance), expandable by 5. Without a reference point the list shows the AED visible on the
+// map, nearest to its centre first (accessible equivalent of the map).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type L from 'leaflet';
 import { listAedByIds, listPoints, searchAedIds } from '../api/client';
@@ -8,8 +10,8 @@ import { AedListItem } from '../components/AedListItem';
 import { MapView, type GoTo } from '../components/MapView';
 import { PlaceSearch, type Wybor } from '../components/PlaceSearch';
 import { CoverageList, MapLegend, MapModeSwitch, useCoverage, useMapMode, withMode } from '../components/MapMode';
-import { ErrorBox, Loading } from '../components/ui';
-import { dictValues, haversine } from '../lib/format';
+import { ErrorBox, Icon, Loading } from '../components/ui';
+import { dictValues, distance, haversine } from '../lib/format';
 import {
   AKTUALNOSC, applyFilters, counts, DOSTEPNOSC, EMPTY, readFilters, writeFilters, ZRODLO,
   type Aktualnosc, type Dostepnosc, type PointFilters, type Zrodlo,
@@ -18,6 +20,13 @@ import { useAsync } from '../lib/useAsync';
 import { currentSearch, toHref, usePageTitle } from '../router';
 
 const PAGE = 30;
+const NEAR = 5;
+type Ref = { lat: number; lon: number; label: string; gps: boolean };
+const GEO_ERR: Record<number, string> = {
+  1: 'Nie mamy zgody na lokalizację. Wpisz adres albo miejscowość w polu „Gdzie jesteś?”.',
+  2: 'Nie udało się ustalić lokalizacji. Wpisz adres albo miejscowość.',
+  3: 'Ustalanie lokalizacji trwa zbyt długo. Wpisz adres albo miejscowość.',
+};
 const NO_ITEMS: AedView[] = [];
 type View = { bounds: L.LatLngBounds; center: L.LatLng; zoom: number };
 type Full = PointFilters & { q: string };
@@ -29,7 +38,7 @@ function toggle<T>(arr: T[], v: T): T[] {
 const fmt = (n: number) => n.toLocaleString('pl-PL');
 
 export function MapList() {
-  usePageTitle('Mapa i lista AED');
+  usePageTitle('Znajdź AED');
   const [f, setF] = useState<Full>(() => readFilters(currentSearch()));
   const [goTo, setGoTo] = useState<GoTo | null>(null);
   const [searchKey, setSearchKey] = useState(0); // new key = empty search box
@@ -37,11 +46,14 @@ export function MapList() {
   const [mode, setMode] = useMapMode();
   const [mapView, setMapView] = useState<View | null>(null);
   const [limit, setLimit] = useState(PAGE);
+  const [ref, setRef] = useState<Ref | null>(null);
+  const [nearN, setNearN] = useState(NEAR);
+  const [geoMsg, setGeoMsg] = useState('');
 
   const apply = (next: Full) => {
     setF(next);
     const s = writeFilters(next, withMode(new URLSearchParams())).toString();
-    history.replaceState({}, '', toHref(`/mapa${s ? `?${s}` : ''}`));
+    history.replaceState({}, '', toHref(`/znajdz${s ? `?${s}` : ''}`));
   };
   const setGroup = <K extends 'dostepnosc' | 'aktualnosc' | 'zrodlo'>(k: K, v: Full[K][number]) =>
     apply({ ...f, [k]: toggle(f[k] as string[], v as string) } as Full);
@@ -69,8 +81,31 @@ export function MapList() {
 
   useEffect(() => setLimit(PAGE), [visible]);
 
+  // nearest to the searched place / the user (with the filters), independent of what the map shows
+  const nearest = useMemo(() => {
+    if (!ref || !filtered) return null;
+    return filtered
+      .map((p) => ({ p, d: haversine(ref.lat, ref.lon, p.lat, p.lon) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 200);
+  }, [ref, filtered]);
+  const dist = useMemo(() => new Map((nearest ?? []).map((x) => [x.p.id_aed, x.d])), [nearest]);
+  const first = nearest?.[0];
+
+  // new reference point: show it together with the 3 nearest AED
+  const refKey = ref ? `${ref.lat},${ref.lon}` : '';
+  useEffect(() => {
+    if (!ref || !nearest) return;
+    const near = nearest.slice(0, 3).filter((x) => x.d < 30000).map((x) => x.p);
+    const lats = [ref.lat, ...near.map((p) => p.lat)], lons = [ref.lon, ...near.map((p) => p.lon)];
+    setGoTo({ key: `ref:${refKey}:${near[0]?.id_aed ?? ''}`, lat: ref.lat, lon: ref.lon, zoom: 17, label: ref.gps ? undefined : ref.label,
+      bbox: near.length ? [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)] : null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refKey, first?.p.id_aed]);
+
   // full records for the list (debounced, so dragging the map does not fire dozens of requests)
-  const ids = useMemo(() => (visible ?? []).slice(0, limit).map((p) => p.id_aed), [visible, limit]);
+  const ids = useMemo(() => (nearest ? nearest.slice(0, nearN).map((x) => x.p.id_aed) : (visible ?? []).slice(0, limit).map((p) => p.id_aed)),
+    [nearest, nearN, visible, limit]);
   const [items, setItems] = useState<AedView[] | null>(null);
   const [itemsErr, setItemsErr] = useState<Error | null>(null);
   const reqId = useRef(0);
@@ -96,22 +131,36 @@ export function MapList() {
   const cov = useCoverage(covWoj ? mode : 'dostepnosc', covWoj);
 
   const active = f.dostepnosc.length + f.aktualnosc.length + f.zrodlo.length + (f.wojewodztwo ? 1 : 0) + (f.q ? 1 : 0) + (f.gmina ? 1 : 0) + (f.mobilne ? 0 : 1);
-  const clear = () => { setGoTo(null); setSearchKey((k) => k + 1); apply({ ...EMPTY, q: '' }); };
+  const clear = () => { setGoTo(null); setRef(null); setSearchKey((k) => k + 1); apply({ ...EMPTY, q: '' }); };
+  const setPoint = (r: Ref | null) => { setRef(r); setNearN(NEAR); };
+
+  function locate() {
+    setGeoMsg('');
+    if (!('geolocation' in navigator)) { setGeoMsg('Ta przeglądarka nie podaje lokalizacji. Wpisz adres albo miejscowość.'); return; }
+    setGeoMsg('Ustalam Twoją lokalizację…');
+    navigator.geolocation.getCurrentPosition(
+      (g) => { setGeoMsg(''); setSearchKey((k) => k + 1); setPoint({ lat: +g.coords.latitude.toFixed(6), lon: +g.coords.longitude.toFixed(6), label: 'Twoja lokalizacja', gps: true }); },
+      (e) => setGeoMsg(GEO_ERR[e.code] ?? GEO_ERR[2]),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
+  }
 
   // search: voivodeship / gmina → filter to its boundaries and zoom; locality, street, address → zoom and mark
   const onPlace = (w: Wybor) => {
-    if (w.typ === 'tekst') { setGoTo(null); apply({ ...f, q: w.nazwa, gmina: '', gminaNazwa: '' }); return; }
+    if (w.typ === 'tekst') { setGoTo(null); setPoint(null); apply({ ...f, q: w.nazwa, gmina: '', gminaNazwa: '' }); return; }
     const key = `${w.typ}:${w.nazwa}:${Date.now()}`;
     if (w.typ === 'wojewodztwo') {
+      setPoint(null);
       apply({ ...f, q: '', wojewodztwo: w.nazwa, gmina: '', gminaNazwa: '' });
       setGoTo({ key, lat: w.lat, lon: w.lon, bbox: w.bbox });
     } else if (w.typ === 'gmina') {
+      setPoint(null);
       apply({ ...f, q: '', wojewodztwo: '', gmina: w.teryt ?? '', gminaNazwa: w.nazwa });
       setGoTo({ key, lat: w.lat, lon: w.lon, bbox: w.bbox });
     } else {
       // keep area filters only if the place is inside them – otherwise the map would show nothing
       apply({ ...f, q: '', gmina: '', gminaNazwa: '', wojewodztwo: w.wojewodztwo && w.wojewodztwo === f.wojewodztwo ? f.wojewodztwo : '' });
-      setGoTo({ key, lat: w.lat, lon: w.lon, bbox: w.bbox, zoom: w.typ === 'miejscowosc' ? 14 : w.typ === 'ulica' ? 17 : 17, label: w.nazwa });
+      setPoint({ lat: w.lat, lon: w.lon, label: w.nazwa, gps: false }); // map: the place and its nearest AED (effect above)
     }
   };
 
@@ -134,25 +183,39 @@ export function MapList() {
     </fieldset>
   );
 
+  const withDist = (a: AedView): AedView => (dist.has(a.id_aed) ? { ...a, odleglosc_m: dist.get(a.id_aed) } : a);
+  const listItems = items ? items.map(withDist) : null;
+  const highlight = first && first.d < 50000 ? { id: first.p.id_aed, lat: first.p.lat, lon: first.p.lon, label: `Najbliższe AED · ${distance(first.d)}` } : null;
+  const waitingForList = (ids.length > 0 && (!items || items.length === 0)) || (items !== null && ids.length > 0 && items[0]?.id_aed !== ids[0] && !itemsErr);
+
   return (
-    <>
-      <h1 id="page-title">Mapa i lista AED</h1>
-      <p className="lead">Wspólna lista AED: dane publikują właściciele urządzeń w dane.gov.pl. Szare punkty „do sprawdzenia” pochodzą z OpenStreetMap i nie są potwierdzone przez właściciela. Przybliżaj mapę kółkiem myszy albo przyciskami +/−. Lista obok pokazuje AED widoczne na mapie – najbliższe środka mapy na górze.</p>
+    <div className="e2-page">
+      <h1 id="page-title">Znajdź AED</h1>
+      <p className="lead e2__lead">Wpisz, gdzie jesteś, albo użyj lokalizacji – pokażemy najbliższe defibrylatory. W nagłym wypadku dzwoń <a href="tel:112">112</a>.</p>
+
+      <div className="e2__search" role="search" aria-label="Gdzie jesteś?">
+        <div className="e2__search-box">
+          <PlaceSearch key={searchKey} label="Gdzie jesteś?" placeholder="miasto, ulica i numer, gmina" textOption
+            hint="Np. Kraków, Floriańska 3 · Wieliczka · mazowieckie"
+            near={mapView && mapView.zoom >= 11 ? { lat: mapView.center.lat, lon: mapView.center.lng } : null}
+            initial={f.q || f.gminaNazwa} onSelect={onPlace} />
+        </div>
+        <div className="e2__locate">
+          <button type="button" className="btn btn--primary btn--locate" onClick={locate}><Icon name="locate" />Najbliższe AED ode mnie</button>
+          <p role="status" className="hint">{geoMsg}</p>
+        </div>
+      </div>
+      {(f.gmina || f.q || ref) && (
+        <p className="area-chip">
+          <span>{ref ? <>Najbliższe od: <strong>{ref.label}</strong></> : f.gmina ? <>Gmina: <strong>{f.gminaNazwa}</strong></> : <>Nazwa AED zawiera: <strong>„{f.q}”</strong></>}</span>
+          <button type="button" className="btn btn--tertiary btn--small" onClick={() => { setSearchKey((k) => k + 1); setPoint(null); apply({ ...f, gmina: '', gminaNazwa: '', q: '' }); }}>Usuń</button>
+        </p>
+      )}
 
       <div className="e2">
-        <aside className="e2__filters" aria-label="Filtry">
-          <div className="facet facet--text" role="search">
-            <PlaceSearch key={searchKey} label="Szukaj miejsca" placeholder="miasto, gmina, ulica, adres" textOption
-              hint="Np. Kraków · Wieliczka · Kraków, Floriańska · Kraków, Floriańska 3 · mazowieckie"
-              near={mapView && mapView.zoom >= 11 ? { lat: mapView.center.lat, lon: mapView.center.lng } : null}
-              initial={f.q || f.gminaNazwa} onSelect={onPlace} />
-            {(f.gmina || f.q) && (
-              <p className="area-chip">
-                <span>{f.gmina ? <>Gmina: <strong>{f.gminaNazwa}</strong></> : <>Nazwa AED zawiera: <strong>„{f.q}”</strong></>}</span>
-                <button type="button" className="btn btn--tertiary btn--small" onClick={() => { setSearchKey((k) => k + 1); apply({ ...f, gmina: '', gminaNazwa: '', q: '' }); }}>Usuń</button>
-              </p>
-            )}
-          </div>
+        <aside className="e2__filters" aria-labelledby="filters-title">
+          <MapModeSwitch mode={mode} onChange={setMode} idPrefix="e2-mode" />
+          <h2 id="filters-title" className="e2__filters-title">Filtry</h2>
           <div className="field">
             <label htmlFor="f-woj">Województwo</label>
             <select id="f-woj" value={f.wojewodztwo} onChange={(e) => apply({ ...f, wojewodztwo: e.target.value, gmina: '', gminaNazwa: '' })}>
@@ -161,19 +224,26 @@ export function MapList() {
             </select>
           </div>
           {group<Dostepnosc>('Dostępność', 'dostepnosc', DOSTEPNOSC, facet?.dostepnosc)}
-          {group<Aktualnosc>('Aktualność danych', 'aktualnosc', AKTUALNOSC, facet?.aktualnosc)}
-          {group<Zrodlo>('Warstwa', 'zrodlo', ZRODLO, facet?.zrodlo)}
+          <details className="facet-more" open={f.aktualnosc.length > 0 || f.zrodlo.length > 0}>
+            <summary>Więcej filtrów{f.aktualnosc.length + f.zrodlo.length ? ` (${f.aktualnosc.length + f.zrodlo.length})` : ''}</summary>
+            {group<Aktualnosc>('Aktualność danych', 'aktualnosc', AKTUALNOSC, facet?.aktualnosc)}
+            {group<Zrodlo>('Skąd są dane', 'zrodlo', ZRODLO, facet?.zrodlo)}
+          </details>
           <div className="switch">
             <input id="f-mob" type="checkbox" checked={f.mobilne} onChange={(e) => apply({ ...f, mobilne: e.target.checked })} />
             <label htmlFor="f-mob">Pokaż urządzenia w pojazdach (np. OSP)</label>
           </div>
           {active > 0 && <p><button type="button" className="btn btn--secondary btn--small" onClick={clear}>Wyczyść filtry ({active})</button></p>}
-          <p className="hint">Zaznaczenie kilku pól w jednej grupie pokazuje AED spełniające którekolwiek z nich. Liczby obok mówią, ile AED zobaczysz po zaznaczeniu.</p>
+          <p className="hint">Liczby obok mówią, ile AED zobaczysz po zaznaczeniu.</p>
         </aside>
 
         <div className="e2__main">
           <div className="e2__bar">
-            <MapModeSwitch mode={mode} onChange={setMode} idPrefix="e2-mode" />
+            <p role="status" aria-live="polite" className="status-line">
+              {pts.loading ? 'Wczytuję wszystkie AED…' : filtered && visible
+                ? `${fmt(filtered.length)} AED spełnia filtry${view !== 'lista' && mapView ? `, na mapie widać ${fmt(visible.length)}` : ''}.`
+                : ''}
+            </p>
             <div className="segmented" role="group" aria-label="Widok">
               {(['oba', 'lista', 'mapa'] as const).map((v) => (
                 <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>{v === 'oba' ? 'Lista i mapa' : v === 'lista' ? 'Tylko lista' : 'Tylko mapa'}</button>
@@ -181,11 +251,6 @@ export function MapList() {
             </div>
           </div>
 
-          <p role="status" aria-live="polite" className="status-line">
-            {pts.loading ? 'Wczytuję wszystkie AED…' : filtered && visible
-              ? `${fmt(filtered.length)} AED spełnia filtry${view !== 'lista' && mapView ? `, na mapie widać ${fmt(visible.length)}` : ''}.`
-              : ''}
-          </p>
           {pts.error && <ErrorBox error={pts.error} onRetry={pts.reload} />}
           {search.error && <ErrorBox error={search.error} onRetry={search.reload} />}
           {pts.loading && !pts.data && <Loading />}
@@ -194,14 +259,24 @@ export function MapList() {
             <div className={`split split--${view} e2__split`}>
               {view !== 'mapa' && (
                 <section aria-labelledby="list-title" className="split__list e2__list">
-                  <h2 id="list-title">{view === 'lista' ? 'Lista' : 'Na mapie'}</h2>
+                  <h2 id="list-title">{ref ? 'Najbliższe AED' : view === 'lista' ? 'Lista AED' : 'AED widoczne na mapie'}</h2>
+                  {ref
+                    ? <p className="hint">Od: {ref.label}. Liczymy w linii prostej{f.dostepnosc.length || f.aktualnosc.length || f.zrodlo.length ? ', z wybranymi filtrami' : ''}.</p>
+                    : <p className="hint">Najbliższe środka mapy na górze. Wpisz adres albo użyj lokalizacji, aby zobaczyć AED najbliższe Tobie.</p>}
                   {itemsErr && <ErrorBox error={itemsErr} />}
-                  {visible && visible.length === 0 && <p>Brak AED {view === 'lista' ? 'dla wybranych filtrów' : 'w tym miejscu mapy – oddal mapę albo zmień filtry'}.</p>}
-                  {items && items.length > 0 && (
-                    <ul className="aed-list">{items.map((a) => <AedListItem key={a.id_aed} aed={a} mode={mode} />)}</ul>
+                  {(nearest ?? visible)?.length === 0 && <p>Brak AED {view === 'lista' || ref ? 'dla wybranych filtrów' : 'w tym miejscu mapy – oddal mapę albo zmień filtry'}.</p>}
+                  {listItems && listItems.length > 0 && !waitingForList && (
+                    <ol className="aed-list">
+                      {listItems.map((a, i) => (
+                        <AedListItem key={a.id_aed} aed={a} mode={mode} from={ref} rank={ref ? i + 1 : undefined} nearest={!!ref && i === 0} />
+                      ))}
+                    </ol>
                   )}
-                  {!items && visible && visible.length > 0 && <Loading text="Wczytuję listę…" />}
-                  {visible && items && visible.length > items.length && (
+                  {waitingForList && !itemsErr && <Loading text="Wczytuję listę…" />}
+                  {ref && nearest && items && !waitingForList && nearest.length > nearN && (
+                    <p><button type="button" className="btn btn--secondary" onClick={() => setNearN((n) => n + NEAR)}>Pokaż {NEAR} kolejnych najbliższych</button></p>
+                  )}
+                  {!ref && visible && items && !waitingForList && visible.length > items.length && (
                     <p><button type="button" className="btn btn--secondary" onClick={() => setLimit((l) => l + PAGE)}>
                       Pokaż kolejne {Math.min(PAGE, visible.length - items.length)} (z {fmt(visible.length - items.length)} pozostałych)
                     </button></p>
@@ -213,6 +288,7 @@ export function MapList() {
                   <h2 id="map-title" className="visually-hidden">Mapa</h2>
                   <MapView items={NO_ITEMS} points={filtered as AedPoint[]} mode={mode} coverage={cov.data} fitCoverage={!!f.wojewodztwo}
                     fitKey={f.q ? `q:${f.q}` : f.wojewodztwo || 'PL'} onView={setMapView} height={640} goTo={goTo}
+                    user={ref?.gps ? { lat: ref.lat, lon: ref.lon } : null} highlight={highlight}
                     label={`Mapa AED, tryb: ${mode === 'dane' ? 'aktualność danych' : 'dostępność'}. Te same informacje są na liście.`} />
                   <MapLegend mode={mode} coverage={!!cov.data && mode === 'dane'} />
                   {mode === 'dane' && covWoj && !cov.loading && <CoverageList coverage={cov.data} collapsed />}
@@ -223,6 +299,6 @@ export function MapList() {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
