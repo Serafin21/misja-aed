@@ -122,6 +122,9 @@ def phone(v) -> str | None:
         s = "+48" + s[4:]
     if s.startswith("48") and len(s) == 11:
         s = "+" + s
+    # Standard techniczny 3.1: Polish numbers as 9 digits, without prefix, spaces or hyphens
+    if s.startswith("+48") and len(s) == 12:
+        s = s[3:]
     return s
 
 

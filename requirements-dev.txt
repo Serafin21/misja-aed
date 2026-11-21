@@ -1,0 +1,4 @@
+# Tylko testy (nie trafiają do obrazu Docker)
+-r requirements.txt
+pytest==9.1.1             # MIT
+httpx==0.28.1             # BSD-3-Clause (zależność certifi: MPL-2.0 – tylko w środowisku testowym)

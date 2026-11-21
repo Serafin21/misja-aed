@@ -377,6 +377,73 @@
         }
       }
     },
+    "/api/v1/aed.jsonld": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Zbiór AED jako JSON-LD (schema.org) – poziom 4 otwartości",
+        "operationId": "aed_jsonld_api_v1_aed_jsonld_get",
+        "parameters": [
+          {
+            "name": "warstwa",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "otwarta",
+              "title": "Warstwa"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kontekst.jsonld": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Kontekst JSON-LD (mapowanie pól na schema.org)",
+        "operationId": "jsonld_context_api_v1_kontekst_jsonld_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/aed/{id_aed}": {
       "get": {
         "tags": [
@@ -1045,7 +1112,7 @@
         "tags": [
           "publikacja"
         ],
-        "summary": "Lista zasobów eksportu",
+        "summary": "Lista zasobów eksportu (CR-B9)",
         "operationId": "export_list_api_v1_eksport_get",
         "responses": {
           "200": {
@@ -1129,6 +1196,60 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/miejsca": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Wyszukiwanie miejscowości (środek rekordów AED) – CR-B2",
+        "description": "No geocoding: localities known from the dataset, centre = mean of their AED coordinates.",
+        "operationId": "places_api_v1_miejsca_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -1292,8 +1413,20 @@
         "properties": {
           "decyzja": {
             "type": "string",
-            "pattern": "^(zatwierdz|odrzuc)$",
+            "pattern": "^(zatwierdz|odrzuc|scal)$",
             "title": "Decyzja"
+          },
+          "id_aed_docelowy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id Aed Docelowy",
+            "description": "dla „scal”: istniejący AED; domyślnie najbliższy w promieniu 30 m"
           },
           "uzasadnienie": {
             "anyOf": [

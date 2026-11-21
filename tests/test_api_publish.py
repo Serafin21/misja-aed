@@ -55,8 +55,31 @@ def test_import_flow(client, auth):
     assert client.get("/api/v1/aed").json()["meta"]["count"] == 7
 
 
-def test_auth_required(client):
+def test_auth(client, monkeypatch):
+    assert client.post("/api/v1/aed", json={}, headers={"Authorization": "Bearer zly.token"}).status_code == 401
+    from src.api import auth
+    monkeypatch.setattr(auth, "AUTH_MODE", "wymagane")
     assert client.post("/api/v1/aed", json={}).status_code == 401
+
+
+def test_ui_contract_shapes(client):
+    """Shapes the UI (Model B) relies on: CR-B1, B2, B3, B4, B5, B9."""
+    a = client.get("/api/v1/aed?per_page=1").json()["data"][0]["attributes"]
+    assert "dostepny_teraz" in a
+    d = client.get("/api/v1/aed/AED-PL-B939F7EBA4").json()
+    assert d["pochodzenie"] and "liczba" in d["potwierdzenia"]
+    z = client.post("/api/v1/zgloszenia", json={"lat": 52.24372, "lon": 21.01395, "opis": "AED w holu"}).json()
+    assert z["status"] == "do_weryfikacji" and z["id"]
+    lst = client.get("/api/v1/zgloszenia").json()["data"]
+    assert lst[0]["type"] == "zgloszenie" and lst[0]["meta"]["mozliwy_duplikat"] == "AED-PL-B939F7EBA4"
+    r = client.post(f"/api/v1/zgloszenia/{z['id']}/decyzja", json={"decyzja": "scal"}).json()
+    assert r["data"]["status"] == "scalone"
+    s = client.get("/api/v1/statystyki").json()["data"]
+    assert {"liczba_aed", "liczba_dysponentow", "wg_wojewodztw", "wg_zrodel", "kompletnosc_rozklad", "zweryfikowane_12m_proc"} <= set(s)
+    e = client.get("/api/v1/eksport").json()["data"]
+    assert {"plik", "format", "licencja", "rozmiar_b", "opis"} <= set(e[0])
+    m = client.get("/api/v1/miejsca?q=krak").json()["data"]
+    assert m[0]["nazwa"] == "Kraków" and 50 < m[0]["lat"] < 50.1
 
 
 def test_form_422(client, auth):

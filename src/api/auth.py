@@ -36,8 +36,15 @@ def role_from(authorization: str | None) -> str | None:
     return None
 
 
+# "demo" (default for the hackathon demo): a request WITHOUT a token acts as a demo user with all roles,
+# so the UI works before login is wired; a wrong token is still rejected. "wymagane": token always required.
+AUTH_MODE = os.environ.get("AED_AUTH_MODE", "demo")
+
+
 def require(*roles: str):
     def dep(authorization: str | None = Header(default=None)) -> str:
+        if not authorization and AUTH_MODE == "demo":
+            return "demo"
         role = role_from(authorization)
         if role is None:
             raise HTTPException(401, detail={"code": "brak_autoryzacji", "message": "Zaloguj się (konto demo dysponenta lub moderatora)."})

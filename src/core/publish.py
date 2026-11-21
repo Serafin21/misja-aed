@@ -113,6 +113,22 @@ RESOURCES = [
 ]
 
 
+_EXTRA_INFO = {
+    "dane_gov_pl_import.xml": ("Plik XML do automatycznego zasilania dane.gov.pl", "XML", "–"),
+    "metadane.jsonld": ("Metadane zbioru (DCAT-AP-PL, JSON-LD)", "JSON-LD", "CC0-1.0"),
+}
+
+
+def resource_info(name: str) -> dict:
+    for ext, fname, tpl, ten, dpl, den, _ in RESOURCES:
+        if fname == name:
+            lic = "ODbL-1.0" if "odbl" in fname else "CC0-1.0"
+            return {"tytul": tpl, "opis": dpl, "format": Path(name).suffix.lstrip(".").upper().replace("JSONLD", "JSON-LD"),
+                    "licencja": lic}
+    t, f, lic = _EXTRA_INFO.get(name, (name, Path(name).suffix.lstrip(".").upper(), "CC0-1.0"))
+    return {"tytul": t, "opis": t, "format": f, "licencja": lic}
+
+
 def pochodzenie_csv(store: Store) -> bytes:
     cols = ["id_aed", "kod_zrodla", "id_w_zrodle", "licencja_zrodla", "data_pobrania", "rekord_nadrzedny"]
     return to_csv(store.all_provenance(), cols)

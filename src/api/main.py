@@ -29,6 +29,16 @@ app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("AED_CORS", "*")
                    allow_methods=["*"], allow_headers=["*"])
 
 
+@app.middleware("http")
+async def jsonld_context_link(request: Request, call_next):
+    """Standard techniczny §5 (poziom 4): kontekst JSON-LD przekazywany w nagłówku HTTP Link."""
+    response = await call_next(request)
+    if request.url.path.startswith(f"{API}/aed") and response.headers.get("content-type", "").startswith("application/json"):
+        response.headers["Link"] = (f'<{API}/kontekst.jsonld>; rel="http://www.w3.org/ns/json-ld#context"; '
+                                    f'type="application/ld+json"')
+    return response
+
+
 # ---------- simple rate limit for anonymous writes (citizen reports, QR confirmations) ----------
 _hits: dict[str, list[float]] = {}
 RATE = int(os.environ.get("AED_RATE_PER_MIN", "20"))
@@ -81,6 +91,7 @@ def available_now(rec: dict, when=None) -> bool | None:
 def resource(rec: dict, extra_meta: dict | None = None) -> dict:
     attrs = {k: rec.get(k) for k in schema.field_order() if k != "id_aed"}
     now = available_now(rec)
+    attrs["dostepny_teraz"] = now  # CR-B1: computed by the server, also in attributes
     meta = {"dostepny_teraz": now, "warstwa": warstwa(rec)}
     if now is None:
         meta["komunikat_dostepnosci"] = "Sprawdź godziny na miejscu."
@@ -229,7 +240,9 @@ def get_aed(id_aed: str, request: Request):
         err(404, "nie_znaleziono", f"Nie znaleziono AED o identyfikatorze {id_aed}.")
     if "application/ld+json" in request.headers.get("accept", ""):
         return JSONResponse(linked.record(rec, publish.BASE_URL), media_type="application/ld+json")
-    return {"data": resource(rec, {"pochodzenie": st.provenance(id_aed), "potwierdzenia": confirmations(id_aed)}),
+    prov, conf = st.provenance(id_aed), confirmations(id_aed)
+    return {"data": resource(rec, {"pochodzenie": prov, "potwierdzenia": conf}),
+            "pochodzenie": prov, "potwierdzenia": conf,  # CR-B3: also top-level
             "links": {"self": f"{API}/aed/{id_aed}"}}
 
 
@@ -457,7 +470,7 @@ def create_report(body: ZgloszenieIn):
         if d <= 30 and (dist is None or d < dist):
             near, dist = cand, d
     _ = probe
-    return {"data": data, "meta": {"mozliwy_duplikat": near, "odleglosc_m": round(dist) if dist is not None else None,
+    return {"id": zid, "status": "do_weryfikacji", "data": data, "meta": {"mozliwy_duplikat": near, "odleglosc_m": round(dist) if dist is not None else None,
                                    "komunikat": "Dziękujemy! Zgłoszenie trafi do weryfikacji przed dodaniem do zbioru."}}
 
 
@@ -468,11 +481,22 @@ def list_reports(status: Optional[str] = "do_weryfikacji", role: str = Depends(r
     if status:
         sql, args = sql + " WHERE status=?", (status,)
     rows = [db.loads(r["data"]) | {"status": r["status"]} for r in st.conn.execute(sql + " ORDER BY created DESC", args)]
-    return {"data": rows, "meta": {"count": len(rows)}}
+    items = []
+    for r in rows:
+        near = None
+        for cand in st.grid.near(r["lat"], r["lon"]):
+            d = dedup.distance_m(r["lat"], r["lon"], st.records[cand]["szerokosc_geograficzna"], st.records[cand]["dlugosc_geograficzna"])
+            if d <= 30 and (near is None or d < near[1]):
+                near = (cand, round(d))
+        items.append({"type": "zgloszenie", "id": r["id"], "attributes": {k: v for k, v in r.items() if k != "id"},
+                      "meta": {"mozliwy_duplikat": near[0] if near else None, "odleglosc_m": near[1] if near else None}})
+    return {"data": items, "meta": {"count": len(items), "page": 1, "per_page": len(items)},
+            "links": {"self": f"{API}/zgloszenia" + (f"?status={status}" if status else "")}}
 
 
 class Decyzja(BaseModel):
-    decyzja: str = Field(..., pattern="^(zatwierdz|odrzuc)$")
+    decyzja: str = Field(..., pattern="^(zatwierdz|odrzuc|scal)$")
+    id_aed_docelowy: Optional[str] = Field(None, description="dla „scal”: istniejący AED; domyślnie najbliższy w promieniu 30 m")
     uzasadnienie: Optional[str] = None
     rekord: Optional[dict[str, Any]] = Field(None, description="Pola rekordu uzupełnione przez moderatora (adres, dostęp…)")
 
@@ -498,7 +522,24 @@ def decide(zid: str, body: Decyzja, role: str = Depends(require("moderator", "dy
             err(422, "walidacja", "Uzupełnij brakujące pola rekordu przed zatwierdzeniem.", problems_to_fields(probs))
         result = st.upsert_source("zgloszenia", zid, rec)
         data["id_aed"] = result["id_aed"]
-    data["status"] = "zatwierdzone" if body.decyzja == "zatwierdz" else "odrzucone"
+    if body.decyzja == "scal":
+        target = body.id_aed_docelowy
+        if not target:
+            best = None
+            for cand in st.grid.near(data["lat"], data["lon"]):
+                d = dedup.distance_m(data["lat"], data["lon"], st.records[cand]["szerokosc_geograficzna"], st.records[cand]["dlugosc_geograficzna"])
+                if d <= 30 and (best is None or d < best[1]):
+                    best = (cand, d)
+            target = best[0] if best else None
+        if not target or target not in st.records:
+            err(422, "walidacja", "Brak istniejącego AED do scalenia (w promieniu 30 m). Wskaż id_aed_docelowy.",
+                {"id_aed_docelowy": "Wskaż istniejący AED."})
+        # the report confirms an existing device (counts as a QR-style confirmation)
+        st.conn.execute("INSERT INTO potwierdzenia (id_aed, data, created) VALUES (?,?,?)",
+                        (target, db.dumps({"jest_na_miejscu": True, "komentarz": "zgłoszenie obywatela scalone przez moderatora"}), now_min()))
+        data["id_aed"] = target
+        result = {"status": "scalone", "id_aed": target}
+    data["status"] = {"zatwierdz": "zatwierdzone", "odrzuc": "odrzucone", "scal": "scalone"}[body.decyzja]
     data["uzasadnienie"] = body.uzasadnienie
     st.conn.execute("UPDATE zgloszenia SET status=?, data=? WHERE id=?", (data["status"], db.dumps(data), zid))
     st.conn.commit()
@@ -521,7 +562,7 @@ def confirm(id_aed: str, body: Potwierdzenie):
     st.conn.execute("INSERT INTO potwierdzenia (id_aed, data, created) VALUES (?,?,?)",
                     (id_aed, db.dumps(body.model_dump()), now_min()))
     st.conn.commit()
-    return {"data": confirmations(id_aed), "meta": {"komunikat": "Dziękujemy za potwierdzenie!"}}
+    return {"ok": True, "data": confirmations(id_aed), "meta": {"komunikat": "Dziękujemy za potwierdzenie!"}}
 
 
 # ---------- sources & connectors ----------
@@ -559,9 +600,15 @@ def export(plik: str):
                     headers={"Content-Disposition": f'inline; filename="{plik}"', "Cache-Control": "no-cache"})
 
 
-@app.get(f"{API}/eksport", tags=["publikacja"], summary="Lista zasobów eksportu")
+@app.get(f"{API}/eksport", tags=["publikacja"], summary="Lista zasobów eksportu (CR-B9)")
 def export_list():
-    return {"data": [{"plik": f, "url": f"{API}/eksport/{f}"} for f in publish.FILES]}
+    st = get_store()
+    out = []
+    for f in publish.FILES:
+        info = publish.resource_info(f)
+        out.append({"plik": f, "url": f"{API}/eksport/{f}", "format": info["format"], "licencja": info["licencja"],
+                    "rozmiar_b": len(publish.build(st, f)), "opis": info["opis"], "tytul": info["tytul"]})
+    return {"data": out, "meta": {"count": len(out)}}
 
 
 @app.get(f"{API}/szablon.csv", tags=["publikacja"], summary="Pusty szablon CSV dla dysponentów")
@@ -597,12 +644,13 @@ def stats():
     n = len(recs) or 1
     return {"data": {
         "liczba_aed": len(recs),
+        "liczba_dysponentow": len({r.get("dysponent_nazwa") for r in recs if r.get("dysponent_nazwa")}),
         "warstwa_otwarta": sum(1 for r in recs if warstwa(r) == "otwarta"),
         "warstwa_osm": sum(1 for r in recs if warstwa(r) == "osm"),
-        "wedlug_wojewodztw": dict(sorted(by_woj.items())), "wedlug_zrodel": by_src,
-        "rozklad_kompletnosci": buckets,
+        "wg_wojewodztw": dict(sorted(by_woj.items())), "wg_zrodel": by_src,
+        "kompletnosc_rozklad": buckets,
         "srednia_kompletnosc": round(sum(r.get("kompletnosc") or 0 for r in recs) / n),
-        "zweryfikowane_12_mies_proc": round(100 * verified / n),
+        "zweryfikowane_12m_proc": round(100 * verified / n),
         "szafka_zamknieta": sum(1 for r in recs if r.get("szafka_zamknieta")),
         "dostepne_teraz": avail,
         "zgloszenia_do_weryfikacji": st.conn.execute("SELECT COUNT(*) FROM zgloszenia WHERE status='do_weryfikacji'").fetchone()[0],
@@ -614,6 +662,29 @@ def stats():
 def dictionaries():
     return {"data": {"slowniki": schema.dictionaries(), "pola": schema.data_dictionary(),
                      "wymagane": schema.required_fields(), "zalecane": schema.recommended_fields()}}
+
+
+@app.get(f"{API}/miejsca", tags=["aed"], summary="Wyszukiwanie miejscowości (środek rekordów AED) – CR-B2")
+def places(q: str = Query(..., min_length=2), limit: int = Query(10, ge=1, le=50)):
+    """No geocoding: localities known from the dataset, centre = mean of their AED coordinates."""
+    ql = q.lower()
+    groups: dict[tuple, list] = {}
+    for r in get_store().records.values():
+        m = r.get("miejscowosc")
+        if m and ql in m.lower():
+            groups.setdefault((m, r.get("wojewodztwo")), []).append(r)
+    out = []
+    for (m, w), rs in groups.items():
+        out.append({"nazwa": m, "wojewodztwo": w, "liczba_aed": len(rs),
+                    "lat": round(sum(x["szerokosc_geograficzna"] for x in rs) / len(rs), 6),
+                    "lon": round(sum(x["dlugosc_geograficzna"] for x in rs) / len(rs), 6)})
+    out.sort(key=lambda x: (not x["nazwa"].lower().startswith(ql), -x["liczba_aed"]))
+    return {"data": out[:limit], "meta": {"count": min(len(out), limit)}}
+
+
+@app.get("/api/docs", include_in_schema=False)
+def docs_alias():
+    return RedirectResponse(f"{API}/docs")
 
 
 @app.get("/", include_in_schema=False)
