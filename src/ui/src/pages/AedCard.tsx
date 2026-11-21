@@ -43,7 +43,15 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
           <DataBadge aed={a} />
           {a.mobilny && <span className="badge badge--info"><Icon name="car" />Urządzenie w pojeździe – miejsce może się zmieniać</span>}
           {a.tryb_pediatryczny && <span className="badge badge--info">Tryb dla dzieci</span>}
+          {!helper && m.zgodnosc === 'przejsciowy' && <span className="badge badge--transitional">Zbiór przejściowy</span>}
         </div>
+        {!helper && m.dostawca && (
+          <p className="source-line">
+            Dostawca danych: <strong>{m.dostawca}</strong>
+            {m.zbior_url && <> · <ExternalLink href={m.zbior_url}>zbiór w dane.gov.pl</ExternalLink></>}
+            {m.data_danych && <> · dane z {date(m.data_danych)}</>}
+          </p>
+        )}
       </header>
 
       {helper && (
@@ -129,7 +137,8 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
             <dt>Dostawca danych</dt><dd><strong>{m.dostawca}</strong>{m.fikcyjny_dostawca ? ' (dostawca fikcyjny – prototyp)' : ''} – odpowiada za jakość, aktualność i poprawność tych danych</dd>
             <dt>Zbiór w dane.gov.pl</dt><dd>{m.zbior_url ? <ExternalLink href={m.zbior_url}>{m.zbior_tytul ?? 'zbiór dostawcy'}</ExternalLink> : '—'}{m.zasob_url && <> · <ExternalLink href={m.zasob_url}>plik z danymi</ExternalLink></>}</dd>
             <dt>Dane na dzień</dt><dd>{m.data_danych ? date(m.data_danych) : '—'}</dd>
-            <dt>Zasady korzystania</dt><dd>{m.licencja_zbioru ?? a.licencja}</dd>
+            <dt>Zasady korzystania</dt><dd>Źródło: {m.dostawca}, {m.licencja_zbioru ?? a.licencja}</dd>
+            {m.zgodnosc === 'przejsciowy' && <><dt>Zbiór przejściowy</dt><dd>Zbiór opublikowany przed wzorcem danych AED. Pokazujemy dane dostawcy bez zmian – część pól może być pusta.</dd></>}
           </dl>
         )}
         <details className="details">

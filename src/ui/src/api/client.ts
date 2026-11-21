@@ -1,6 +1,6 @@
 // REST client for CONTRACT §5. Falls back to in-browser mocks (data/sample/) when the API is unreachable.
 import * as mock from '../mocks/mockApi';
-import type { WynikImportu, Aed, AedDetail, AedMeta, AedFilters, AedPoint, AedView, ApiError, Miejsce, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
+import type { Zbiory, WynikImportu, Aed, AedDetail, AedMeta, AedFilters, AedPoint, AedView, ApiError, Miejsce, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
 
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
 export const API_BASE = env.VITE_API_BASE || '/api/v1';
@@ -156,6 +156,17 @@ export function listSources() {
     const arr = Array.isArray(r) ? r : r.data;
     return arr.map((x) => ('attributes' in x ? { ...x.attributes, kod_zrodla: x.id } : x)) as Zrodlo[];
   }, () => mock.mockSources());
+}
+
+/** GET /zbiory (CR-TL-5). Until A ships the endpoint (404 / unreachable) the contract placeholder is shown, marked `atrapa`. */
+export async function listProviderDatasets(): Promise<Zbiory> {
+  if (usingMocks) return mock.mockZbiory();
+  try {
+    return await http<Zbiory>(`/zbiory`);
+  } catch (e) {
+    if (e instanceof Unreachable || (e instanceof HttpError && e.status === 404)) return mock.mockZbiory();
+    throw e;
+  }
 }
 
 export function getStats() {

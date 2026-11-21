@@ -62,6 +62,7 @@ export function MapLegend({ mode, coverage }: { mode: MapMode; coverage?: boolea
         <li><Pin kind="private" />Tylko dla uprawnionych (znaczek kłódki)</li>
         <li><Pin kind="unknown" />Brak godzin – sprawdź na miejscu</li>
         <li>Szara pinezka z przerywaną obwódką: <strong>do sprawdzenia</strong> – punkt z OpenStreetMap, niepotwierdzony przez właściciela, poza wspólną listą</li>
+        <li><span className="badge badge--transitional">Zbiór przejściowy</span> na liście i karcie: zbiór opublikowany przed wzorcem; dane dostawcy bez zmian</li>
       </ul>
     );
   }
@@ -76,6 +77,7 @@ export function MapLegend({ mode, coverage }: { mode: MapMode; coverage?: boolea
       </>}
       <li>Szara pinezka z przerywaną obwódką: <strong>do sprawdzenia</strong> (OpenStreetMap, poza wspólną listą)</li>
       <li>Filtr „Zbiór dostawcy po terminie”: dostawca nie zaktualizował zbioru na czas (inny sygnał niż „do weryfikacji”)</li>
+      <li><span className="badge badge--transitional">Zbiór przejściowy</span> na liście i karcie: zbiór opublikowany przed wzorcem; dane dostawcy bez zmian</li>
     </ul>
   );
 }

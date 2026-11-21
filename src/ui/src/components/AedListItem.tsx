@@ -6,7 +6,9 @@ import { AvailabilityBadge, DataBadge, ExternalLink, Icon, LockedCabinet } from 
 import type { MapMode } from './MapMode';
 
 export function AedListItem({ aed, from, rank, mode = 'dostepnosc' }: { aed: AedView; from?: { lat: number; lon: number } | null; rank?: number; mode?: MapMode }) {
-  const where = [aed.opis_lokalizacji, floor(aed.pietro), aed.wewnatrz_budynku ? 'wewnątrz budynku' : 'na zewnątrz'].filter(Boolean).join(' · ');
+  const inside = aed.wewnatrz_budynku ? 'wewnątrz budynku' : 'na zewnątrz';
+  // OSM often has "Wewnątrz budynku" as the location description – do not repeat it
+  const where = [aed.opis_lokalizacji, floor(aed.pietro), aed.opis_lokalizacji?.trim().toLowerCase() === inside ? '' : inside].filter(Boolean).join(' · ');
   return (
     <li className="aed-item">
       <article aria-labelledby={`t-${aed.id_aed}`}>
@@ -24,9 +26,10 @@ export function AedListItem({ aed, from, rank, mode = 'dostepnosc' }: { aed: Aed
           {aed.mobilny && <span className="badge badge--info"><Icon name="car" />Urządzenie w pojeździe</span>}
           {aed.meta?.warstwa === 'pomocnicza' && <span className="badge badge--helper"><Icon name="question" />Do sprawdzenia – OpenStreetMap</span>}
           {aed.meta?.zbior_nieaktualny && <span className="badge badge--warn">Zbiór dostawcy po terminie</span>}
+          {aed.meta?.zgodnosc === 'przejsciowy' && <span className="badge badge--transitional">Zbiór przejściowy</span>}
         </div>
         <p className="aed-item__addr">{address(aed)}</p>
-        {aed.meta?.dostawca && <p className="hint">Dane: {aed.meta.dostawca}</p>}
+        {aed.meta?.dostawca && <p className="hint">Źródło: {aed.meta.dostawca}{aed.meta.licencja_zbioru ? `, ${aed.meta.licencja_zbioru}` : ''}</p>}
         <p className="aed-item__where">{where}</p>
         <p className="aed-item__hours"><span className="visually-hidden">Godziny: </span>{describeHours(aed.godziny_dostepnosci).join('; ')}</p>
         <LockedCabinet aed={aed} compact />
