@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Optional
 from urllib.parse import urlencode
 
@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 
-from src.core import db, dedup, hours, importers, linked, mapping, pipeline, publish, schema, template, validate
+from src.core import coverage, db, dedup, hours, importers, linked, mapping, pipeline, publish, schema, template, validate
 from src.core.store import TZ, get_store, now_min, today
 
 from .auth import check_login, require
@@ -92,7 +92,9 @@ def resource(rec: dict, extra_meta: dict | None = None) -> dict:
     attrs = {k: rec.get(k) for k in schema.field_order() if k != "id_aed"}
     now = available_now(rec)
     attrs["dostepny_teraz"] = now  # CR-B1: computed by the server, also in attributes
-    meta = {"dostepny_teraz": now, "warstwa": warstwa(rec)}
+    meta = {"dostepny_teraz": now, "warstwa": warstwa(rec),
+            # CR-TL-1: map mode "aktualność danych"
+            "stan_danych": coverage.stan_danych(rec), "wiek_danych_dni": coverage.wiek_danych_dni(rec)}
     if now is None:
         meta["komunikat_dostepnosci"] = "Sprawdź godziny na miejscu."
     if rec.get("mobilny"):
@@ -144,6 +146,7 @@ def list_aed(request: Request,
              q: Optional[str] = Query(None, description="wyszukiwanie w nazwie, adresie i opisie"),
              warstwa_: Optional[str] = Query(None, alias="warstwa", description="otwarta | osm (domyślnie obie)"),
              zrodlo_danych: Optional[str] = None,
+             stan_danych: Optional[str] = Query(None, description="aktualne (weryfikacja ≤ 365 dni) | nieaktualne (starsza lub brak daty) – CR-TL-1"),
              page: int = Query(1, ge=1), per_page: int = Query(50, ge=1, le=1000)):
     st = get_store()
     recs = list(st.records.values())
@@ -163,6 +166,10 @@ def list_aed(request: Request,
         recs = [r for r in recs if r.get("zrodlo_danych") == zrodlo_danych]
     if warstwa_:
         recs = [r for r in recs if warstwa(r) == warstwa_]
+    if stan_danych:
+        if stan_danych not in coverage.STANY_DANYCH:
+            err(422, "walidacja", "Parametr stan_danych: aktualne | nieaktualne.", {"stan_danych": "Dozwolone: aktualne, nieaktualne."})
+        recs = [r for r in recs if coverage.stan_danych(r) == stan_danych]
     if q:
         ql = q.lower()
         recs = [r for r in recs if ql in " ".join(str(r.get(f) or "") for f in
@@ -629,19 +636,26 @@ def stats():
     st = get_store()
     recs = list(st.records.values())
     by_woj, by_src, buckets = {}, {}, {"0-49": 0, "50-69": 0, "70-89": 0, "90-100": 0}
-    cutoff = (datetime.now(TZ) - timedelta(days=365)).date().isoformat()
     verified = 0
     now = datetime.now(TZ)
     avail = {"true": 0, "false": 0, "null": 0}
+    fresh = {coverage.AKTUALNE: 0, coverage.NIEAKTUALNE: 0}
     for r in recs:
+        fresh[coverage.stan_danych(r)] += 1
         by_woj[r.get("wojewodztwo") or "brak"] = by_woj.get(r.get("wojewodztwo") or "brak", 0) + 1
         by_src[r.get("zrodlo_danych")] = by_src.get(r.get("zrodlo_danych"), 0) + 1
         k = r.get("kompletnosc") or 0
         buckets["0-49" if k < 50 else "50-69" if k < 70 else "70-89" if k < 90 else "90-100"] += 1
-        verified += (r.get("data_weryfikacji") or "") >= cutoff
+        verified += coverage.stan_danych(r) == coverage.AKTUALNE
         a = available_now(r, now)
         avail[str(a).lower() if a is not None else "null"] += 1
     n = len(recs) or 1
+    gminy_bez, gminy_obj = 0, {}
+    for woj in coverage.boundary_files():
+        fc = coverage.coverage(recs, woj)
+        bez = sum(1 for f in fc["features"] if f["properties"]["stan"] == "brak_danych")
+        gminy_bez += bez
+        gminy_obj[woj] = {"gminy": len(fc["features"]), "gminy_bez_danych": bez}
     return {"data": {
         "liczba_aed": len(recs),
         "liczba_dysponentow": len({r.get("dysponent_nazwa") for r in recs if r.get("dysponent_nazwa")}),
@@ -653,9 +667,27 @@ def stats():
         "zweryfikowane_12m_proc": round(100 * verified / n),
         "szafka_zamknieta": sum(1 for r in recs if r.get("szafka_zamknieta")),
         "dostepne_teraz": avail,
+        # CR-TL-1
+        "aktualne": fresh[coverage.AKTUALNE], "nieaktualne": fresh[coverage.NIEAKTUALNE],
+        "gminy_bez_danych": gminy_bez,
         "zgloszenia_do_weryfikacji": st.conn.execute("SELECT COUNT(*) FROM zgloszenia WHERE status='do_weryfikacji'").fetchone()[0],
         "liczba_zrodel": len(st.sources_scope()),
-    }, "meta": {"liczone_na": now.strftime("%Y-%m-%dT%H:%M")}}
+    }, "meta": {"liczone_na": now.strftime("%Y-%m-%dT%H:%M"), "prog_aktualnosci_dni": coverage.PROG_DNI,
+                 "gminy_liczone_dla": gminy_obj}}
+
+
+@app.get(f"{API}/pokrycie", tags=["aed"], summary="Pokrycie gmin danymi o AED (GeoJSON) – tryb mapy „aktualność danych” (CR-TL-1)")
+def coverage_map(wojewodztwo: str = Query("kujawsko-pomorskie", description="nazwa województwa; granice: data/granice/")):
+    fc = coverage.coverage(get_store().records.values(), wojewodztwo)
+    if fc is None:
+        err(404, "brak_granic", f"Brak granic gmin dla województwa „{wojewodztwo}”. Dostępne: "
+            + ", ".join(coverage.boundary_files()) + ".")
+    summary = {s: sum(1 for f in fc["features"] if f["properties"]["stan"] == s) for s in coverage.STANY_GMINY}
+    return JSONResponse({**fc, "meta": {"wojewodztwo": wojewodztwo.lower(), "liczba_gmin": len(fc["features"]),
+                                        "gminy_wg_stanu": summary, "prog_aktualnosci_dni": coverage.PROG_DNI,
+                                        "atrybucja": fc["metadata"].get("atrybucja"),
+                                        "liczone_na": now_min()}},
+                        media_type="application/geo+json")
 
 
 @app.get(f"{API}/slowniki", tags=["publikacja"], summary="Słowniki wartości i słownik danych (dla formularzy)")
