@@ -137,6 +137,11 @@ def search(q: str, limit: int = 8, blisko: tuple[float, float] | None = None, on
     seen = {norm(i["nazwa"]) for i in out if i["typ"] == "gmina"}
     if online and len(norm(q)) >= 3:
         out += _remote(q, seen)  # localities (villages too), "Kraków, Floriańska", "Kraków, Floriańska 3"
+        m = re.match(r"^(.*\D)\s+(\d+\w?(/\d+\w?)?)\s*$", q)
+        if has_digit and not any(i["typ"] == "adres" for i in out) and m:
+            # no such house number → show the street itself
+            out += [i | {"opis": f"ulica (nie znaleziono numeru {m.group(2)})"} for i in _remote(m.group(1).strip(" ,"), seen)
+                    if i["typ"] == "ulica"]
         if len(parts) == 1 and not has_digit:
             if not out and " " in q:  # "Kraków Floriańska" without a comma → try city + street
                 city, street = q.split(" ", 1)

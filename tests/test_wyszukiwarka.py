@@ -35,6 +35,8 @@ def test_geokoder_gugik_parsowanie(monkeypatch):
     assert u[0]["typ"] == "ulica" and u[0]["bbox"] == [19.9391, 50.062, 19.9413, 50.0648]
     a = geocode.search("Kraków, Floriańska 3")
     assert [i["nazwa"] for i in a] == ["Floriańska 3, Kraków"]  # the inexact "Ariańska 3" is dropped
+    a2 = geocode.search("Kraków, Floriańska 999")  # no such number → the street
+    assert a2[0]["typ"] == "ulica" and "999" in a2[0]["opis"]
     w = geocode.search("Wieliczka")
     assert [i["typ"] for i in w] == ["gmina", "miejscowosc"]  # town = gmina (with boundaries) + the village in Skawina
     assert "Skawina" in w[1]["opis"]
