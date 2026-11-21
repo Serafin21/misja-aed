@@ -158,7 +158,7 @@ export function Contact() {
       <address className="footer-contact">[ADRES / KONTAKT ZESPOŁU]</address>
       <h2>Zgłoszenia i uwagi</h2>
       <ul>
-        <li>Brakujące albo błędne AED: <Link to="/zglos">Zgłoś AED</Link>.</li>
+        <li>Błędne dane o AED: otwórz kartę urządzenia i wybierz „Zgłoś problem z tym AED”. Brakujące AED zgłasza instytucja, która za nie odpowiada – <Link to="/zglos">jak to działa</Link>.</li>
         <li>Błędy serwisu i problemy z dostępnością: <ExternalLink href={`${REPO}/issues`}>zgłoszenia w serwisie GitHub</ExternalLink>.</li>
       </ul>
     </article>

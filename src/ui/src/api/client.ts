@@ -391,7 +391,7 @@ export const templateUrl = (fmt: 'csv' | 'xlsx') => `${API_BASE}/szablon.${fmt}`
 
 // ---------- docs/MODEL_ROL.md: provider's wizard ("Moje AED") and administrator panel – API only ----------
 export interface RaportZbioru {
-  zbior_id: string; tytul: string; dostawca: string | null; zbior_url?: string; status: 'wlaczony' | 'odrzucony' | 'poza_lista' | 'blad';
+  zbior_id: string; tytul: string; dostawca: string | null; zbior_url?: string; status: 'wlaczony' | 'przejsciowy' | 'odrzucony' | 'poza_lista' | 'blad';
   rekordy: number | null; wlaczone: number; odrzucone: number; nieaktualny: boolean | null; czestotliwosc?: string; zmodyfikowany?: string;
   problemy: string[]; problemy_rekordow: { wiersz: number; id_aed: string | null; problemy: string[] }[]; fikcyjny?: boolean;
 }
@@ -400,7 +400,7 @@ export const myAed = () => http<{ data: AedRoboczy[]; meta: { dostawca: string; 
 export const loadPublished = () => http<{ data: { wczytano: number } }>(`/moje-aed/z-opublikowanego`, json('POST'));
 export const deleteMyAed = (id: string) => http<{ ok: boolean }>(`/moje-aed/${encodeURIComponent(id)}`, json('DELETE'));
 export const patchMyAed = (id: string, changes: Record<string, unknown>) => http<{ data: AedRoboczy }>(`/aed/${encodeURIComponent(id)}`, json('PATCH', changes));
-export interface Powiadomienie { id: number; typ: 'zgloszenie' | 'potwierdzenie' | 'duplikat' | 'walidacja' | 'przypomnienie'; tresc: string; czas: string; przeczytane: boolean }
+export interface Powiadomienie { id: number; typ: 'zgloszenie' | 'potwierdzenie' | 'duplikat' | 'walidacja' | 'przypomnienie' | 'wzorzec' | 'konto' | 'zgloszenie_aed'; tresc: string; czas: string; przeczytane: boolean }
 export const myNotifications = () => http<{ data: Powiadomienie[] }>(`/moje-aed/powiadomienia`).then((r) => r.data);
 
 /** "Pobierz pliki do publikacji" – a ZIP the provider publishes ITSELF on its dane.gov.pl account (K11). */
@@ -424,3 +424,39 @@ export const lateDatasets = () => http<{ data: RaportZbioru[] }>(`/admin/przypom
 export const sendReminders = () => http<{ data: { wyslano: string[] } }>(`/admin/przypomnienia`, json('POST')).then((r) => r.data);
 export interface Zdarzenie { id: number; czas: string; kto: string; rola: string | null; operacja: string; obiekt: string | null; przed: unknown; po: unknown }
 export const eventLog = () => http<{ data: Zdarzenie[] }>(`/dziennik?limit=100`).then((r) => r.data);
+
+// ---------- CR-TL-8: trusted institution accounts and "Zgłoś AED" (HANDOFF A #11) ----------
+export interface WniosekIn { nazwa_instytucji: string; regon: string; podstawa: PodstawaPublikacji; email_sluzbowy: string; telefon: string; login: string; haslo: string }
+export interface Wniosek extends Omit<WniosekIn, 'haslo'> { id: string; status: 'oczekuje' | 'zatwierdzony' | 'odrzucony'; utworzono: string; uzasadnienie: string | null; kto: string | null; kiedy: string | null }
+export const requestAccount = (b: WniosekIn) => http<{ id: string; status: string; meta: { komunikat: string } }>(`/konta/wnioski`, json('POST', b));
+export const listAccountRequests = (status?: string) => http<{ data: Wniosek[] }>(`/konta/wnioski${qs({ status })}`).then((r) => r.data);
+export const decideAccountRequest = (id: string, decyzja: 'zatwierdz' | 'odrzuc', uzasadnienie?: string) =>
+  http<{ data: Wniosek }>(`/konta/wnioski/${encodeURIComponent(id)}/decyzja`, json('POST', { decyzja, ...(uzasadnienie ? { uzasadnienie } : {}) }));
+export const addEmployee = (login: string, email?: string) =>
+  http<{ data: Konto; haslo_jednorazowe: string }>(`/konta/ja/uzytkownicy`, json('POST', { login, ...(email ? { email } : {}) }));
+
+export interface ZgloszenieAedIn {
+  nazwa_obiektu: string; ulica: string | null; numer_budynku: string; kod_pocztowy: string; miejscowosc: string; szerokosc: number; dlugosc: number;
+  opis_lokalizacji: string; wewnatrz_budynku: boolean; dostep: 'publiczny' | 'ograniczony' | 'prywatny'; dostepny_24h: boolean; godziny: string | null;
+  szafka_zamknieta: boolean; instrukcja_dostepu: string | null; zdjecie: string;
+}
+export interface ZgloszenieAed extends Omit<ZgloszenieAedIn, 'zdjecie'> {
+  id: string; status: 'oczekuje' | 'zatwierdzone' | 'do_poprawy'; nadawca_login: string; organizacja: string; utworzono: string; teryt_terc: string;
+  decyzja: 'zatwierdz' | 'do_poprawy' | null; komentarz: string | null; kto: string | null; kiedy: string | null; id_aed: string | null;
+  zdjecie_url: string | null; historia: { decyzja: string; komentarz: string | null; kto: string | null; kiedy: string | null }[];
+}
+export const submitAed = (b: ZgloszenieAedIn) => http<{ id: string; data: ZgloszenieAed; meta: { komunikat: string } }>(`/zgloszenia-aed`, json('POST', b));
+export const resubmitAed = (id: string, b: ZgloszenieAedIn) => http<{ data: ZgloszenieAed }>(`/zgloszenia-aed/${encodeURIComponent(id)}`, json('PUT', b));
+export const mySubmissions = () => http<{ data: ZgloszenieAed[] }>(`/moje-zgloszenia`).then((r) => r.data);
+export const adminSubmissions = (status = 'oczekuje') => http<{ data: ZgloszenieAed[] }>(`/admin/zgloszenia-aed${qs({ status })}`).then((r) => r.data);
+export const decideSubmission = (id: string, decyzja: 'zatwierdz' | 'do_poprawy', komentarz?: string) =>
+  http<{ data: ZgloszenieAed }>(`/admin/zgloszenia-aed/${encodeURIComponent(id)}/decyzja`, json('POST', { decyzja, ...(komentarz ? { komentarz } : {}) }));
+/** photo links from the API are relative to the server root ("/api/v1/…") */
+export const apiUrl = (path: string) => (path.startsWith('/api/v1') ? API_BASE + path.slice('/api/v1'.length) : path);
+
+export interface Adres { ulica: string | null; numer_budynku: string | null; kod_pocztowy: string | null; miejscowosc: string | null; gmina: string | null;
+  wojewodztwo: string | null; teryt_terc: string | null; lat: number | null; lon: number | null; odleglosc_m: number | null }
+export const reverseGeocode = (lat: number, lon: number) => http<{ data: Adres }>(`/miejsca/odwrotnie${qs({ lat, lon })}`).then((r) => r.data);
+/** address → candidates with coordinates (GET /miejsca; address results carry ulica / numer / kod / miejscowość) */
+export const geocodeAddress = (q: string) =>
+  http<{ data: (Miejsce & Partial<Adres> & { teryt_terc?: string | null })[] }>(`/miejsca${qs({ q, limit: 5 })}`).then((r) => r.data);

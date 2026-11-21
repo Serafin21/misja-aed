@@ -18,21 +18,28 @@ import { FirstAid } from './pages/FirstAid';
 import { Providers } from './pages/Providers';
 import { Report } from './pages/Report';
 import { Sources } from './pages/Sources';
+import { ZglosAed } from './pages/ZglosAed';
+import { WniosekKonto } from './pages/WniosekKonto';
+import { Approvals } from './pages/Admin';
 import { Link, matchPath, navigate, useLocation, usePageTitle } from './router';
 
-// Max. 5 menu items (TL). Data, sources and moderation are in the footer under "Dla specjalistów".
+// Top menu: three items for everyone. "Dla instytucji", data, sources and login are in the footer. After logging in the
+// role's own items appear (MODEL_ROL v1.3): institution – "Zgłoś AED" and "Moje AED"; administrator – approvals and panel.
 const NAV = [
   { to: '/znajdz', label: 'Znajdź AED' },
-  { to: '/zglos', label: 'Zgłoś AED' },
-  { to: '/dysponenci', label: 'Dla instytucji' },
   { to: '/pierwsza-pomoc', label: 'Pierwsza pomoc' },
   { to: '/o-projekcie', label: 'O projekcie' },
 ];
+const ROLE_NAV: Record<string, { to: string; label: string }[]> = {
+  dysponent: [{ to: '/zglos-aed', label: 'Zgłoś AED' }],
+  administrator: [{ to: '/zatwierdzanie', label: 'Zgłoszenia AED' }],
+};
 
 // Breadcrumb labels for pages outside the menu
 const PAGE_LABELS: Record<string, string> = {
   '/mapa': 'Mapa i lista AED', '/dane': 'Eksport listy', '/zrodla': 'Dostawcy', '/akcja': 'Akcja „AED w danych”',
-  '/panel': 'Panel administratora', '/moje-aed': 'Moje AED', '/logowanie': 'Logowanie'
+  '/panel': 'Panel administratora', '/moje-aed': 'Moje AED', '/logowanie': 'Logowanie', '/zglos': 'Zgłoś problem z AED',
+  '/dysponenci': 'Dla instytucji', '/zglos-aed': 'Zgłoś AED', '/zatwierdzanie': 'Zgłoszenia AED do zatwierdzenia', '/wniosek-o-konto': 'Wniosek o konto',
 };
 
 // Footer subpages (not E1–E9; routes for E1–E9 unchanged)
@@ -91,6 +98,9 @@ function Routes() {
   if (path === '/panel' || path === '/moderacja') return <Admin />;
   if (path === '/moje-aed' || path === '/konto') return <MyAed />;
   if (path === '/logowanie') return <LoginPage />;
+  if (path === '/zglos-aed') return <ZglosAed />;
+  if (path === '/zatwierdzanie') return <Approvals />;
+  if (path === '/wniosek-o-konto') return <WniosekKonto />;
   const info = INFO_PAGES[path];
   if (info) { const Page = info.el; return <Page />; }
   return <NotFound />;
@@ -120,13 +130,13 @@ export function App() {
             <span className="brand__mark brand__mark--app"><Icon name="pin" /></span>
             <span>{APP_NAME}<span className="brand__slogan" aria-hidden="true">{APP_TAGLINE}</span></span>
           </Link>
-          <a href="tel:112" className="btn-call"><Icon name="phone" />Dzwoń 112</a>
           <button id="menu-btn" type="button" className="menu-btn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu((m) => !m)}>
             {menu ? 'Zamknij' : 'Menu'}
           </button>
           <nav id="main-nav" aria-label="Główna" className={`main-nav${menu ? ' is-open' : ''}`}>
             <ul>
               {NAV.map((n) => <li key={n.to}><Link to={n.to}>{n.label}</Link></li>)}
+              {session && (ROLE_NAV[session.rola] ?? []).map((n) => <li key={n.to} className="main-nav__role"><Link to={n.to}>{n.label}</Link></li>)}
               {/* only after logging in (docs/MODEL_ROL.md §4) – the server checks permissions on every operation anyway */}
               {roleHome && <li className="main-nav__role"><Link to={roleHome.to}>{roleHome.label}</Link></li>}
               {session && <li><button type="button" className="main-nav__logout" onClick={() => { logout(); navigate('/'); }}>Wyloguj</button></li>}
@@ -169,6 +179,7 @@ export function App() {
             <nav aria-labelledby="f-pro">
               <h2 id="f-pro">Dla specjalistów</h2>
               <ul className="footer-links">
+                <li><Link to="/dysponenci">Dla instytucji</Link></li>
                 <li><Link to="/dane">Eksport listy</Link></li>
                 <li><Link to="/zrodla">Dostawcy</Link></li>
                 <li><Link to="/logowanie">Logowanie dla dostawców i administratorów</Link></li>

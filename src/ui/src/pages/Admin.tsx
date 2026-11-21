@@ -8,10 +8,11 @@ import {
 } from '../api/client';
 import { RequireLogin } from '../components/Auth';
 import { ReportsQueue } from '../components/ReportsQueue';
+import { AccountRequests, AedSubmissionsQueue } from '../components/AdminQueues';
 import { ErrorBox, ExternalLink, Loading } from '../components/ui';
 import { dictValues } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
-import { usePageTitle } from '../router';
+import { Link, usePageTitle } from '../router';
 import type { PodstawaPublikacji } from '../api/types';
 
 const n = (x: number | undefined) => (x ?? 0).toLocaleString('pl-PL');
@@ -26,11 +27,14 @@ export function Admin() {
       <RequireLogin role="administrator">
         <nav aria-label="Sekcje panelu" className="toc">
           <ul>
+            <li><a href="#h-zgl-aed">Zgłoszenia AED</a></li><li><a href="#h-req">Wnioski o konto</a></li>
             <li><a href="#h-agg">Wspólna lista</a></li><li><a href="#h-gaps">Luki</a></li><li><a href="#h-rep">Zgłoszenia bez dostawcy</a></li>
             <li><a href="#h-late">Przypomnienia</a></li><li><a href="#h-acc">Konta dostawców</a></li><li><a href="#h-log">Dziennik zdarzeń</a></li>
             <li><a href="#h-refresh">Odświeżanie</a></li>
           </ul>
         </nav>
+        <AedSubmissionsQueue />
+        <AccountRequests />
         <Aggregation />
         <Gaps />
         <section className="admin-section" aria-labelledby="h-rep">
@@ -47,8 +51,23 @@ export function Admin() {
   );
 }
 
+/** Top menu "Zgłoszenia AED" (administrator): approvals only – AED reported by institutions and account requests. */
+export function Approvals() {
+  usePageTitle('Zgłoszenia AED do zatwierdzenia');
+  return (
+    <>
+      <h1 id="page-title">Zgłoszenia AED do zatwierdzenia</h1>
+      <p className="lead">Tu zatwierdzasz AED zgłoszone przez instytucje i wnioski instytucji o konto. Pozostałe narzędzia są w <Link to="/panel">panelu administratora</Link>.</p>
+      <RequireLogin role="administrator">
+        <AedSubmissionsQueue />
+        <AccountRequests />
+      </RequireLogin>
+    </>
+  );
+}
+
 const STATUS: Record<RaportZbioru['status'], string> = {
-  wlaczony: 'na liście', odrzucony: 'odrzucony – niezgodny ze wzorem', poza_lista: 'poza listą (nie według wzoru)', blad: 'błąd pobrania',
+  wlaczony: 'na liście', przejsciowy: 'na liście – zbiór przejściowy (sprzed wzoru)', odrzucony: 'odrzucony – niezgodny ze wzorem', poza_lista: 'poza listą (nie według wzoru)', blad: 'błąd pobrania',
 };
 
 // ---------- aggregation (P5) ----------

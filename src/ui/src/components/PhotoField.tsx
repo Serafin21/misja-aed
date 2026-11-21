@@ -24,8 +24,11 @@ async function shrink(file: File): Promise<string> {
   }
 }
 
-export function PhotoField({ value, onChange }: { value: string | null; onChange: (dataUri: string | null) => void }) {
-  const id = useId();
+export function PhotoField({ value, onChange, required = false, hint, error, inputId }: {
+  value: string | null; onChange: (dataUri: string | null) => void; required?: boolean; hint?: string; error?: string; inputId?: string;
+}) {
+  const auto = useId();
+  const id = inputId ?? auto;
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -43,19 +46,19 @@ export function PhotoField({ value, onChange }: { value: string | null; onChange
 
   return (
     <div className="field photo-field">
-      <label htmlFor={`${id}-f`}>Zdjęcie AED (nieobowiązkowe)</label>
-      <p id={`${id}-h`} className="hint">Pomoże sprawdzić zgłoszenie. Zrób zdjęcie urządzenia lub szafki tak, żeby nie było widać ludzi. Zobaczy je tylko moderator.</p>
+      <label htmlFor={`${id}-f`}>{required ? <>Zdjęcie AED<span className="req" aria-hidden="true"> *</span><span className="visually-hidden"> (wymagane)</span></> : 'Zdjęcie AED (nieobowiązkowe)'}</label>
+      <p id={`${id}-h`} className="hint">{hint ?? 'Pomoże sprawdzić zgłoszenie. Zrób zdjęcie urządzenia lub szafki tak, żeby nie było widać ludzi. Zobaczy je tylko moderator.'}</p>
       {value ? (
         <div className="photo-field__preview">
           <img src={value} alt="Podgląd wybranego zdjęcia AED" />
           <button type="button" className="btn btn--secondary" onClick={() => onChange(null)}>Usuń zdjęcie</button>
         </div>
       ) : (
-        <input id={`${id}-f`} type="file" accept="image/*" capture="environment" aria-describedby={`${id}-h${err ? ` ${id}-e` : ''}`}
-          aria-invalid={!!err} onChange={(e) => pick(e.target.files?.[0])} disabled={busy} />
+        <input id={`${id}-f`} type="file" accept="image/*" capture="environment" aria-describedby={`${id}-h${err || error ? ` ${id}-e` : ''}`}
+          aria-invalid={!!(err || error)} required={required} onChange={(e) => pick(e.target.files?.[0])} disabled={busy} />
       )}
       {busy && <p className="hint" role="status">Przygotowuję zdjęcie…</p>}
-      {err && <p id={`${id}-e`} className="field-error">{err}</p>}
+      {(err || error) && <p id={`${id}-e`} className="field-error">{err || error}</p>}
     </div>
   );
 }

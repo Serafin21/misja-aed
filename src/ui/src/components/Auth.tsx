@@ -60,7 +60,7 @@ function LoginForm({ role, wrongRole }: { role: Role; wrongRole: Role | null }) 
       {wrongRole && <p>Jesteś zalogowany jako {ROLE_LABEL[wrongRole]}. Ta część wymaga konta: {ROLE_LABEL[role]}.</p>}
       <p className="hint">
         {role === 'dysponent'
-          ? <>Instytucja loguje się loginem i hasłem, które dostała od moderatora. Do pokazu: login <code>dysponent</code>, hasło <code>dysponent-demo</code>.</>
+          ? <>Instytucja loguje się loginem i hasłem z zatwierdzonego wniosku (albo od administratora). Do pokazu: login <code>dysponent</code>, hasło <code>dysponent-demo</code>.</>
           : <>Do pokazu: login <code>administrator</code>, hasło <code>administrator-demo</code>.</>}
       </p>
       <div className="field">
@@ -132,9 +132,10 @@ export function LoginPage() {
             <li>Dostawca „Urząd Gminy Przykładowo”: login <code>dysponent</code>, hasło <code>dysponent-demo</code></li>
             <li>Administrator: login <code>administrator</code>, hasło <code>administrator-demo</code></li>
           </ul>
-          <p className="hint">Konto dostawcy zakłada administrator po sprawdzeniu instytucji. W wersji docelowej logowanie odbywa się przez login.gov.pl z drugim składnikiem (np. kod w telefonie).</p>
+          <p className="hint">W wersji docelowej logowanie odbywa się przez login.gov.pl z drugim składnikiem (np. kod w telefonie).</p>
         </details>
       </form>
+      <p>Twoja instytucja nie ma jeszcze konta? <Link to="/wniosek-o-konto">Złóż wniosek o konto</Link> – zacznie działać po sprawdzeniu przez administratora.</p>
     </>
   );
 }
