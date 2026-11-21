@@ -1,5 +1,5 @@
 // In-browser implementation of CONTRACT §5 on data/sample/ – used until Model A's API is up.
-import type { WynikImportu, Aed, AedDetail, AedFilters, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo } from '../api/types';
+import type { WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo } from '../api/types';
 import { availableNow, haversine } from '../lib/format';
 import { ageDays, computeState } from '../lib/dataState';
 import geo from './aed_ujednolicone.json';
@@ -39,6 +39,13 @@ export function mockListAed(f: AedFilters): Promise<{ items: AedView[]; meta: Li
   const per = f.per_page ?? 100;
   const page = f.page ?? 1;
   return delay({ items: items.slice((page - 1) * per, page * per), meta: { count: items.length, page, per_page: per } });
+}
+
+export function mockPoints(): Promise<AedPoint[]> {
+  return delay(records.map(withAvailability).map((a) => ({
+    id_aed: a.id_aed, lat: a.szerokosc_geograficzna, lon: a.dlugosc_geograficzna,
+    dostepny_teraz: a.dostepny_teraz ?? null, stan_danych: a.stan_danych ?? 'nieaktualne', osm: a.licencja === 'ODbL-1.0',
+  })));
 }
 
 export function mockNearest(lat: number, lon: number, limit: number, onlyNow: boolean): Promise<AedView[]> {

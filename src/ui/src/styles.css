@@ -283,3 +283,8 @@ h2[tabindex="-1"]:focus { outline: none; }
 .marker-cluster { border-radius: 50%; }
 .marker-cluster div { width: 30px; height: 30px; margin: 5px 0 0 5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .85rem; line-height: 1; }
 .mode-switch__opt { flex: 1 1 15rem; max-width: 22rem; }
+
+/* Map popup (point layer, CR-TL-2) */
+.map-popup p, .leaflet-popup-content p { margin: 0 0 .35rem; font-size: .95rem; }
+.map-popup__title { font-weight: 800; color: var(--text); }
+.map-popup a { font-weight: 700; }

@@ -1,6 +1,6 @@
 // REST client for CONTRACT §5. Falls back to in-browser mocks (data/sample/) when the API is unreachable.
 import * as mock from '../mocks/mockApi';
-import type { WynikImportu, Aed, AedDetail, AedFilters, AedView, ApiError, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
+import type { WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ApiError, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
 
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
 export const API_BASE = env.VITE_API_BASE || '/api/v1';
@@ -218,6 +218,16 @@ export function login(loginName: Role, haslo: string): Promise<Session> {
     () => http<{ token: string; rola: Role }>(`/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: loginName, haslo }) }),
     () => mock.mockLogin(loginName, haslo),
   ).then((s) => { setSession(s); return s; });
+}
+
+type PointsFC = { features: { id: string; geometry: { coordinates: [number, number] }; properties: { dostepny_teraz: boolean | null; stan_danych: AedPoint['stan_danych']; osm: boolean } }[] };
+
+/** Whole-Poland map layer (gzip + ETag on the server; the browser cache sends If-None-Match by itself). */
+export function listPoints(): Promise<AedPoint[]> {
+  return withFallback(async () => {
+    const r = await http<PointsFC>(`/aed/punkty`);
+    return r.features.map((f) => ({ id_aed: f.id, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], ...f.properties }));
+  }, () => mock.mockPoints());
 }
 
 /** Municipality coverage layer (data-freshness map mode). null = no boundaries for this voivodeship / sample mode. */

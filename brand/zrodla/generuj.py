@@ -52,7 +52,12 @@ def main():
     for k in ("aktualne", "nieaktualne"):
         export(znak.data_pin_svg(k), VAR / f"znacznik_dane_{k}", png_w=280, pdf=False)
 
-    (BRAND / "haslo.txt").write_text(f"Nazwa akcji: {znak.NAME}\nHasło: {znak.SLOGAN}\n", encoding="utf-8")
+    (BRAND / "haslo.txt").write_text(
+        f"Nazwa akcji: {znak.NAME}\n"
+        f"Hasło: {znak.SLOGAN}\n"
+        f"Podtytuł: {znak.SUBTITLE}\n"
+        "Zasada: hasło zawsze występuje z nazwą akcji albo z podtytułem – nigdy samodzielnie.\n",
+        encoding="utf-8")
     print("OK:", BRAND)
 
 

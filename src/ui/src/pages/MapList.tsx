@@ -1,6 +1,6 @@
 // E2 – Mapa i lista. The list is the accessible equivalent of the map (same data, same filters).
 import { useState } from 'react';
-import { listAed } from '../api/client';
+import { listAed, listPoints } from '../api/client';
 import type { AedFilters } from '../api/types';
 import { AedListItem } from '../components/AedListItem';
 import { MapView } from '../components/MapView';
@@ -41,7 +41,12 @@ export function MapList() {
   const [view, setView] = useState<'oba' | 'lista' | 'mapa'>('oba');
   const st = useAsync(() => listAed({ ...f, per_page: 500 }), [JSON.stringify(f)]);
   const [mode, setMode] = useMapMode();
-  const cov = useCoverage(mode);
+  const cov = useCoverage(mode, f.wojewodztwo);
+  // CR-TL-2: without filters the map shows the whole of Poland from GET /aed/punkty (light, gzip);
+  // with filters it shows the filtered list. "Tylko dostępne teraz" also works on the point layer.
+  const filtered = !!(f.q || f.wojewodztwo || f.gmina || f.dostep || f.pokaz_mobilne === false);
+  const pts = useAsync(() => (filtered ? Promise.resolve(null) : listPoints()), [filtered]);
+  const mapPoints = pts.data ? (f.dostepne_teraz ? pts.data.filter((p) => p.dostepny_teraz === true) : pts.data) : null;
 
   const set = <K extends keyof AedFilters>(k: K, v: AedFilters[K]) => setDraft((d) => ({ ...d, [k]: v }));
   const apply = (next: AedFilters) => { setF(next); writeFilters(next); };
@@ -102,7 +107,7 @@ export function MapList() {
       </div>
 
       <p role="status" aria-live="polite" className="status-line">
-        {st.loading ? 'Wczytuję…' : st.data ? `Znaleziono: ${st.data.meta.count} AED.` : ''}
+        {st.loading ? 'Wczytuję…' : st.data ? `Znaleziono: ${st.data.meta.count.toLocaleString('pl-PL')} AED.${mapPoints ? ` Na mapie: ${mapPoints.length.toLocaleString('pl-PL')} (cała Polska).` : ''}` : ''}
       </p>
       {st.error && <ErrorBox error={st.error} onRetry={st.reload} />}
       {st.loading && !st.data && <Loading />}
@@ -112,6 +117,9 @@ export function MapList() {
           {view !== 'mapa' && (
             <section aria-labelledby="list-title" className="split__list">
               <h2 id="list-title">Lista</h2>
+              {st.data.items.length < st.data.meta.count && (
+                <p className="hint">Lista pokazuje pierwsze {st.data.items.length} z {st.data.meta.count.toLocaleString('pl-PL')} AED. Zawęź wyniki filtrem, np. województwem albo miejscowością.</p>
+              )}
               {st.data.items.length === 0 ? <p>Brak AED dla wybranych filtrów.</p> : (
                 <ul className="aed-list">{st.data.items.map((a) => <AedListItem key={a.id_aed} aed={a} mode={mode} />)}</ul>
               )}
@@ -121,7 +129,8 @@ export function MapList() {
             <section aria-labelledby="map-title" className="split__map">
               <h2 id="map-title">Mapa</h2>
               <MapView items={st.data.items} label={`Mapa AED, tryb: ${mode === 'dane' ? 'aktualność danych' : 'dostępność'}. Te same informacje są na liście.`} height={560}
-                mode={mode} coverage={cov.data} fitCoverage />
+                mode={mode} coverage={cov.data} fitCoverage points={filtered ? null : mapPoints} />
+              {!filtered && pts.loading && <p className="hint" role="status">Wczytuję wszystkie AED na mapę…</p>}
               <MapLegend mode={mode} coverage={!!cov.data} />
               {mode === 'dane' && !cov.loading && <CoverageList coverage={cov.data} />}
             </section>

@@ -79,9 +79,9 @@ export function MapLegend({ mode, coverage }: { mode: MapMode; coverage?: boolea
   );
 }
 
-/** Loads GET /pokrycie only in the data mode. */
-export function useCoverage(mode: MapMode) {
-  return useAsync<Pokrycie | null>(() => (mode === 'dane' ? getCoverage() : Promise.resolve(null)), [mode]);
+/** Loads GET /pokrycie only in the data mode (boundaries exist for all 16 voivodeships; default kujawsko-pomorskie). */
+export function useCoverage(mode: MapMode, wojewodztwo?: string) {
+  return useAsync<Pokrycie | null>(() => (mode === 'dane' ? getCoverage(wojewodztwo || undefined) : Promise.resolve(null)), [mode, wojewodztwo]);
 }
 
 /** Text alternative for the hatched municipalities (WCAG 1.1.1): the list of gminy without data. */
@@ -92,7 +92,7 @@ export function CoverageList({ coverage, collapsed = false }: { coverage: Pokryc
       <p className="hint">
         {mock
           ? 'Warstwa gmin działa z serwerem danych (granice z Państwowego Rejestru Granic). W trybie demonstracyjnym jej nie ma.'
-          : 'Warstwa gmin jest na razie dostępna dla województwa kujawsko-pomorskiego.'}
+          : 'Nie udało się wczytać warstwy gmin dla tego województwa.'}
       </p>
     );
   }
@@ -104,7 +104,7 @@ export function CoverageList({ coverage, collapsed = false }: { coverage: Pokryc
       {none.length === 0 ? <p>Każda gmina ma co najmniej jedno AED w zbiorze.</p> : (
         <ul className="cols">{none.map((g) => <li key={g.teryt}>{g.gmina}{g.rodzaj ? <span className="hint"> ({g.rodzaj})</span> : null}</li>)}</ul>
       )}
-      <p className="hint">Granice gmin: {coverage.meta?.atrybucja ?? 'Państwowy Rejestr Granic – GUGiK'}.</p>
+      <p className="hint">Warstwa gmin pokazuje jedno województwo naraz – inne wybierz w filtrze „Województwo”. Granice gmin: {coverage.meta?.atrybucja ?? 'Państwowy Rejestr Granic – GUGiK'}.</p>
     </>
   );
   const title = `Gminy bez danych o AED: ${none.length} z ${total} (województwo ${woj})`;

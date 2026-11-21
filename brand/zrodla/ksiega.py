@@ -102,7 +102,7 @@ def p1():
 
 def p2():
     b = t(M, 110, "Nazwa i hasło", 13, 700, Z.GREEN)
-    b += t(M, 142, Z.NAME, 26, 700) + t(M, 168, Z.SLOGAN, 16, 600, Z.GREEN)
+    b += t(M, 142, Z.NAME, 26, 700) + t(M, 168, Z.SLOGAN, 16, 600, Z.GREEN) + t(M, 188, Z.SUBTITLE, 11.5, 500)
     b += t(M, 215, "Koncepcja", 13, 700, Z.GREEN)
     concept = [
         "Znak to serce zbudowane z 21 zaokrąglonych kwadratów ułożonych jak komórki arkusza danych.",
@@ -118,10 +118,10 @@ def p2():
     mark, _, _ = embed(Z.mark_only("kolor", pad=0)[0], 600, 120, w=170)
     b += card(560, 90, 250, 250) + mark
     b += t(685, 320, "21 komórek = 21 wierszy danych", 9.5, 500, Z.SAGE, "middle")
-    b += card(560, 360, 250, 150, Z.WHITE, "#D5DDD6")
+    b += card(560, 360, 250, 160, Z.WHITE, "#D5DDD6")
     b += t(575, 388, "Ton komunikacji", 11, 700)
-    for i, s in enumerate(["prosto i konkretnie, bez żargonu", "„Ty” zamiast urzędowego „Państwo”", "liczby tylko ze źródłem", "zawsze z numerem 112 przy mapie"]):
-        b += t(585, 412 + i * 22, "• " + s, 10.5)
+    for i, s in enumerate(["hasło zawsze z nazwą lub podtytułem", "prosto i konkretnie, bez żargonu", "„Ty” zamiast urzędowego „Państwo”", "liczby tylko ze źródłem", "zawsze z numerem 112 przy mapie"]):
+        b += t(585, 408 + i * 20, "• " + s, 10.5)
     return page(2, "Koncepcja znaku", b)
 
 

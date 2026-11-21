@@ -61,6 +61,9 @@ export interface AedView extends Aed {
   wiek_danych_dni?: number | null;
 }
 
+/** GET /aed/punkty (CR-TL-2) – light map layer; details come from GET /aed/{id} on click */
+export interface AedPoint { id_aed: string; lat: number; lon: number; dostepny_teraz: boolean | null; stan_danych: 'aktualne' | 'nieaktualne'; osm: boolean }
+
 /** GET /pokrycie – municipalities (PRG) with AED coverage, CONTRACT §8 */
 export type StanGminy = 'brak_danych' | 'nieaktualne' | 'aktualne';
 export interface GminaProps { teryt: string; gmina: string; wojewodztwo: string; rodzaj?: string; liczba_aed: number; aktualne: number; nieaktualne: number; stan: StanGminy }

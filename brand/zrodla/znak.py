@@ -14,6 +14,7 @@ from fontTools.ttLib import TTFont
 
 NAME = "AED w danych"
 SLOGAN = "Dane prosto z serca"
+SUBTITLE = "Masz AED? Udostępnij je na dane.gov.pl"
 
 # Palette (team decision, brand/ PDF "Wybrany system")
 GREEN = "#1A7A50"      # zieleń ratunkowa

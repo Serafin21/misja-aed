@@ -4,15 +4,18 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
-import type { AedView, Pokrycie, StanGminy } from '../api/types';
+import { getAed } from '../api/client';
+import type { AedPoint, AedView, Pokrycie, StanGminy } from '../api/types';
 import { dataLabel } from '../lib/dataState';
-import { availableNow } from '../lib/format';
-import { navigate } from '../router';
+import { address, availableNow } from '../lib/format';
+import { navigate, toHref } from '../router';
 import { dataPinSvg, pinSvg, type PinKind } from './Brand';
 import type { MapMode } from './MapMode';
 
 export interface MapViewProps {
   items: AedView[];
+  /** CR-TL-2: light whole-Poland layer (GET /aed/punkty); when given, it is drawn instead of `items` and details load on click */
+  points?: AedPoint[] | null;
   user?: { lat: number; lon: number } | null;
   /** id of the record to centre on (E3 card) */
   focusId?: string;
@@ -56,7 +59,7 @@ function markerName(a: AedView, mode: MapMode): string {
   return `${a.nazwa_obiektu}, ${a.miejscowosc} – ${state}${a.szafka_zamknieta ? ', szafka zamknięta' : ''}`;
 }
 
-export function MapView({ items, user, focusId, onPick, picked, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false }: MapViewProps) {
+export function MapView({ items, user, focusId, onPick, picked, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false, points }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -90,9 +93,22 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     layer.current?.remove();
     const anyL = L as unknown as { markerClusterGroup?: (o: object) => L.LayerGroup };
     const group: L.LayerGroup = cluster && anyL.markerClusterGroup
-      ? anyL.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40 })
+      ? anyL.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40, chunkedLoading: true })
       : L.layerGroup();
     const pts: L.LatLngExpression[] = [];
+    if (points) {
+      // 18k points: build markers in one go (chunkedLoading keeps the page responsive); details on demand
+      const markers = points.map((p) => pointMarker(p, mode));
+      (group as unknown as { addLayers?: (l: L.Layer[]) => void }).addLayers?.(markers) ?? markers.forEach((mk) => group.addLayer(mk));
+      group.addTo(m);
+      layer.current = group;
+      const key = `pts:${points.length}:${points[0]?.id_aed ?? ''}:${points[points.length - 1]?.id_aed ?? ''}`;
+      if (key !== fitKey.current) {
+        fitKey.current = key;
+        if (points.length) m.fitBounds(L.latLngBounds(points.map((p) => [p.lat, p.lon] as L.LatLngTuple)), { padding: [16, 16], maxZoom: 15 });
+      }
+      return;
+    }
     for (const a of items) {
       const ll: L.LatLngExpression = [a.szerokosc_geograficzna, a.dlugosc_geograficzna];
       pts.push(ll);
@@ -114,7 +130,7 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     if (focus) m.setView([focus.szerokosc_geograficzna, focus.dlugosc_geograficzna], 17);
     else if (pts.length === 1) m.setView(pts[0], 16);
     else if (pts.length > 1) m.fitBounds(L.latLngBounds(pts), { padding: [32, 32], maxZoom: 17 });
-  }, [items, user, focusId, cluster, mode]);
+  }, [items, user, focusId, cluster, mode, points]);
 
   useEffect(() => {
     const g = extra.current;
@@ -181,4 +197,68 @@ function ensureHatch(m: L.Map) {
   defs.innerHTML = '<pattern id="aed-hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
     + '<rect width="10" height="10" fill="#F2EFE6"/><rect width="5" height="10" fill="#D9DDDA"/></pattern>';
   svg.insertBefore(defs, svg.firstChild);
+}
+
+// ---------- CR-TL-2: point layer (GET /aed/punkty) ----------
+function pointKind(p: AedPoint): PinKind {
+  return p.dostepny_teraz === true ? 'ok' : p.dostepny_teraz === false ? 'closed' : 'unknown';
+}
+
+function pointName(p: AedPoint, mode: MapMode): string {
+  const state = mode === 'dane'
+    ? (p.stan_danych === 'aktualne' ? 'dane aktualne' : 'dane nieaktualne')
+    : (p.dostepny_teraz === true ? 'dostępne teraz' : p.dostepny_teraz === false ? 'teraz zamknięte' : 'godziny do sprawdzenia');
+  return `AED – ${state}. Naciśnij Enter, aby zobaczyć nazwę i adres.`;
+}
+
+function pointMarker(p: AedPoint, mode: MapMode): L.Marker {
+  const name = pointName(p, mode);
+  const icon = L.divIcon({
+    className: 'aed-pin',
+    html: mode === 'dane' ? dataPinSvg(p.stan_danych, p.osm) : pinSvg(pointKind(p), p.osm),
+    iconSize: [40, 52],
+    iconAnchor: [20, 50],
+    popupAnchor: [0, -46],
+  });
+  const mk = L.marker([p.lat, p.lon], { icon, title: name, keyboard: true, riseOnHover: true });
+  mk.on('add', () => mk.getElement()?.setAttribute('aria-label', name));
+  mk.bindPopup('<p class="map-popup__loading">Wczytuję dane AED…</p>', { maxWidth: 280, autoPanPadding: [24, 24] });
+  let loaded = false;
+  mk.on('popupopen', async (e: L.PopupEvent) => {
+    const el = e.popup.getElement();
+    const wire = () => {
+      const a = el?.querySelector<HTMLAnchorElement>('a[data-aed]');
+      if (a) {
+        a.addEventListener('click', (ev) => { ev.preventDefault(); navigate(`/aed/${p.id_aed}`); });
+        a.focus(); // keyboard users land on the link (WCAG 2.4.3)
+      }
+    };
+    if (loaded) { wire(); return; }
+    try {
+      const d = await getAed(p.id_aed);
+      if (!d) { e.popup.setContent('<p>Nie znaleziono tego AED. Mogło zostać usunięte ze zbioru.</p>'); return; }
+      const a = d.aed;
+      const dl = dataLabel(a);
+      e.popup.setContent(
+        `<div class="map-popup"><p class="map-popup__title">${esc(a.nazwa_obiektu || 'AED bez nazwy')}</p>`
+        + `<p>${esc(address(a))}</p>`
+        + `<p>${esc(mode === 'dane' ? dl.long : availText(a))}</p>`
+        + (a.szafka_zamknieta ? '<p><strong>Szafka zamknięta</strong> – instrukcja na karcie AED.</p>' : '')
+        + `<p><a data-aed href="${toHref(`/aed/${encodeURIComponent(p.id_aed)}`)}">Karta AED: dojście, godziny, źródło</a></p></div>`,
+      );
+      loaded = true;
+      wire();
+    } catch {
+      e.popup.setContent('<p>Nie udało się wczytać danych. Spróbuj ponownie.</p>');
+    }
+  });
+  mk.on('keypress', (e: L.LeafletKeyboardEvent) => { if (e.originalEvent.key === 'Enter' || e.originalEvent.key === ' ') mk.openPopup(); });
+  return mk;
+}
+
+function availText(a: AedView): string {
+  if (a.dostep === 'prywatny') return 'Tylko dla uprawnionych';
+  if (a.status_urzadzenia === 'niesprawny' || a.status_urzadzenia === 'w_serwisie') return 'Urządzenie niesprawne lub w serwisie';
+  const v = availableNow(a);
+  return v === true ? 'Dostępne teraz' : v === false ? 'Teraz zamknięte' : 'Sprawdź godziny na miejscu';
 }

@@ -125,3 +125,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: dane demo mają tylko rekordy „aktualne” (brak przykładu pinezki nieaktualnej w trybie demo).
 - Użycie AI (jedna linia): test w przeglądarce i poprawki z Claude (Model B), uruchomienie i typecheck – człowiek.
 - Następny krok: Python → test na API (warstwa gmin), Docker u TL/A, prezentacja.
+
+## HANDOFF #11
+
+- Czas: sob 17:25
+- Zrobione: (1) `brand/haslo.txt`: podtytuł „Masz AED? Udostępnij je na dane.gov.pl” i zasada „hasło zawsze z nazwą akcji albo podtytułem” (też w generatorze i w księdze znaku s. 2). (2) E2 na `GET /aed/punkty` (CR-TL-2): bez filtrów mapa całej Polski z warstwy punktów (klastry, `chunkedLoading`), szczegóły z `GET /aed/{id}` dopiero po kliknięciu lub Enter – okienko z nazwą, adresem, stanem i linkiem do karty (fokus na linku); z filtrami mapa = lista; „Tylko dostępne teraz” działa też na punktach; podpowiedź „Lista pokazuje pierwsze 500 z N”. Warstwa gmin wg filtra województwa (domyślnie kujawsko-pomorskie). (3) `pitch/prezentacja.md` – 10 slajdów, liczby z `docs/tech/LICZBY.md`, miejsca `[ZRZUT: …]`. (4) `pitch/scenariusz_demo.md` v1 – 2:00, oba tryby mapy.
+- Jak uruchomić / zobaczyć: `git pull`, `npm run typecheck`, `npm run dev` → /mapa.
+- Założenia: punkty nie mają nazwy, więc dostępna nazwa pinezki = stan + „Naciśnij Enter, aby zobaczyć nazwę i adres”.
+- CR do A: w `/aed/punkty` dodać `prywatny: bool` (i ewentualnie `niesprawny`) – bez tego pinezka „tylko dla uprawnionych” (kłódka) i „niesprawny” nie da się pokazać na mapie całej Polski (17% AED w OSM to dostęp prywatny).
+- Znane błędy: (2) niesprawdzone typecheckiem z pakietami ani w przeglądarce. Slajd 10: wyniki axe/Lighthouse/NVDA i zakres AI do uzupełnienia.
+- Użycie AI (jedna linia): warstwa punktów, treść prezentacji i scenariusz z Claude (Model B) na podstawie LICZBY.md i COMPLIANCE.md od A.
+- Następny krok: typecheck u człowieka, test mapy w przeglądarce, zrzuty ekranu, PDF prezentacji.
