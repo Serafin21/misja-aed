@@ -24,7 +24,8 @@ uvicorn src.api.main:app --reload                       # http://localhost:8000/
 | `python scripts/check_csv.py deliverables/dataset/*.csv` | sprawdzenie CSV wg Standardu technicznego |
 | `python -m scripts.seed --reset --osm sample` | szybki start tylko na próbce (bez sieci) |
 | `python -m scripts.seed --reset --osm full` | pełna warstwa OSM dla Polski (ok. 18 tys. AED, 12 s; plik zostaje w `data/cache/`) |
-| `python -m scripts.build_granice --woj 04` | granice gmin z PRG (GUGiK) → `data/granice/` (inne województwo: kod TERYT, np. `14`) |
+| `python -m scripts.build_granice` | granice gmin z PRG (GUGiK) dla 16 województw → `data/granice/` (pobrania w `data/cache/prg/`; `--offline` bez sieci) |
+| `python -m scripts.liczby` | `docs/tech/LICZBY.md` – liczby do prezentacji (po `seed --osm full`) |
 | `python scripts/export_openapi.py` | `docs/tech/openapi.json` |
 | `python scripts/check_licenses.py` | licencje zależności |
 
@@ -32,7 +33,7 @@ uvicorn src.api.main:app --reload                       # http://localhost:8000/
 `POST /api/v1/auth/login` z `{"login": "dysponent", "haslo": "dysponent-demo"}` albo `moderator` / `moderator-demo` (zmiana w `.env`). Token przekazujesz w nagłówku `Authorization: Bearer <token>`. W trybie `AED_AUTH_MODE=demo` (domyślnym na czas prezentacji) żądanie bez tokenu działa jako konto demo, a błędny token zawsze daje 401. Po podłączeniu logowania w UI ustaw `AED_AUTH_MODE=wymagane`.
 
 ## Najważniejsze adresy dla interfejsu
-- Mapa: `GET /api/v1/aed?bbox=minLon,minLat,maxLon,maxLat&per_page=1000` (warstwa w `meta.warstwa`: `otwarta` | `osm`).
+- Mapa (zalecane): `GET /api/v1/aed/punkty` – cała Polska w jednym żądaniu (339 KB gzip, `ETag`), opcjonalnie `?bbox=`; szczegóły rekordu po kliknięciu z `GET /api/v1/aed/{id}`. Pełne rekordy z filtrami: `GET /api/v1/aed?bbox=…&per_page=1000`.
 - Najbliższe: `GET /api/v1/aed/najblizsze?lat=..&lon=..&limit=5&tylko_dostepne_teraz=true`.
 - Szczegóły i Paszport AED: `GET /api/v1/aed/{id}`, `POST /api/v1/aed/{id}/potwierdzenia`.
 - Kreator importu: `POST /import` → `POST /import/{id}/mapowanie` → `POST /import/{id}/zatwierdz`.

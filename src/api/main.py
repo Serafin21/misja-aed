@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from src.core import coverage, db, dedup, hours, importers, linked, mapping, pipeline, publish, schema, template, validate
 from src.core.store import TZ, get_store, now_min, today
 
-from .auth import check_login, require
+from .auth import DYSPONENT_NAZWA, check_login, require
 
 API = "/api/v1"
 app = FastAPI(
@@ -216,6 +216,58 @@ def nearest(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-
     return {"data": data, "meta": {"count": len(data), "lat": lat, "lon": lon, "promien_m": promien_m,
                                    "dostepne_teraz_liczone_na": now.strftime("%Y-%m-%dT%H:%M")},
             "links": {"self": f"{API}/aed/najblizsze?lat={lat}&lon={lon}&limit={limit}"}}
+
+
+_points_cache: dict[tuple, tuple[bytes, bytes, str]] = {}
+
+
+@app.get(f"{API}/aed/punkty", tags=["aed"], summary="Lekka warstwa punktów do mapy (GeoJSON, gzip, ETag)",
+         description="Cała Polska albo `bbox`. Każdy punkt: `id`, współrzędne i trzy pola do kolorowania: "
+                     "`dostepny_teraz` (true/false/null), `stan_danych` (aktualne/nieaktualne), `osm` (true = warstwa ODbL). "
+                     "Odpowiedź skompresowana gzip, gdy klient to obsługuje; nagłówek `ETag` – przy `If-None-Match` serwer zwraca 304. "
+                     "`dostepny_teraz` przeliczane co minutę.")
+def aed_points(request: Request, bbox: Optional[str] = Query(None, description="minLon,minLat,maxLon,maxLat (WGS 84)")):
+    import gzip
+    import hashlib
+    import json as _json
+    st = get_store()
+    box = None
+    if bbox:
+        try:
+            box = tuple(float(x) for x in bbox.split(","))
+            assert len(box) == 4
+        except (ValueError, AssertionError):
+            err(422, "walidacja", "Parametr bbox: minLon,minLat,maxLon,maxLat.", {"bbox": "Nieprawidłowy format."})
+    now = datetime.now(TZ)
+    minute = now.strftime("%Y-%m-%dT%H:%M")
+    key = (box, minute, st.version)
+    if key not in _points_cache:
+        feats = []
+        for r in sorted(st.records.values(), key=lambda r: r["id_aed"]):
+            x, y = r["dlugosc_geograficzna"], r["szerokosc_geograficzna"]
+            if box and not (box[0] <= x <= box[2] and box[1] <= y <= box[3]):
+                continue
+            feats.append({"type": "Feature", "id": r["id_aed"], "geometry": {"type": "Point", "coordinates": [x, y]},
+                          "properties": {"dostepny_teraz": available_now(r, now), "stan_danych": coverage.stan_danych(r),
+                                         "osm": warstwa(r) == "osm"}})
+        body = _json.dumps({"type": "FeatureCollection", "features": feats,
+                            "meta": {"count": len(feats), "liczone_na": minute, "prog_aktualnosci_dni": coverage.PROG_DNI,
+                                     "atrybucja_osm": "© autorzy OpenStreetMap (ODbL)"}},
+                           ensure_ascii=False, separators=(",", ":")).encode()
+        if len(_points_cache) > 32:
+            _points_cache.clear()
+        _points_cache[key] = (body, gzip.compress(body, 6), '"' + hashlib.sha1(body).hexdigest()[:20] + '"')
+    body, gz, etag = _points_cache[key]
+    use_gz = "gzip" in request.headers.get("accept-encoding", "")
+    etag = etag[:-1] + ('-gz"' if use_gz else '"')
+    headers = {"ETag": etag, "Cache-Control": "no-cache", "Vary": "Accept-Encoding"}
+    inm = request.headers.get("if-none-match", "")
+    if etag in [t.strip() for t in inm.split(",")] or inm.strip() == "*":
+        return Response(status_code=304, headers=headers)
+    if use_gz:
+        headers["Content-Encoding"] = "gzip"
+        return Response(gz, media_type="application/geo+json", headers=headers)
+    return Response(body, media_type="application/geo+json", headers=headers)
 
 
 @app.get(f"{API}/aed.jsonld", tags=["aed"], summary="Zbiór AED jako JSON-LD (schema.org) – poziom 4 otwartości")
@@ -481,7 +533,23 @@ def create_report(body: ZgloszenieIn):
                                    "komunikat": "Dziękujemy! Zgłoszenie trafi do weryfikacji przed dodaniem do zbioru."}}
 
 
-@app.get(f"{API}/zgloszenia", tags=["zgloszenia"], summary="Kolejka zgłoszeń do moderacji")
+def _nearest_aed(st, lat: float, lon: float, max_m: float = 30) -> tuple[str, int] | None:
+    best = None
+    for cand in st.grid.near(lat, lon):
+        d = dedup.distance_m(lat, lon, st.records[cand]["szerokosc_geograficzna"], st.records[cand]["dlugosc_geograficzna"])
+        if d <= max_m and (best is None or d < best[1]):
+            best = (cand, round(d))
+    return best
+
+
+def _is_own(st, id_aed: str | None) -> bool:
+    """AED operated by the logged-in provider (demo account → DEMO_DYSPONENT_NAZWA)."""
+    rec = st.records.get(id_aed) if id_aed else None
+    return bool(rec) and (rec.get("dysponent_nazwa") or "").strip().lower() == DYSPONENT_NAZWA.strip().lower()
+
+
+@app.get(f"{API}/zgloszenia", tags=["zgloszenia"], summary="Kolejka zgłoszeń do moderacji",
+         description="Moderator widzi wszystkie zgłoszenia. Dysponent – tylko dotyczące jego AED (najbliższy AED w promieniu 30 m).")
 def list_reports(status: Optional[str] = "do_weryfikacji", role: str = Depends(require("moderator", "dysponent"))):
     st = get_store()
     sql, args = "SELECT data, status FROM zgloszenia", ()
@@ -490,11 +558,10 @@ def list_reports(status: Optional[str] = "do_weryfikacji", role: str = Depends(r
     rows = [db.loads(r["data"]) | {"status": r["status"]} for r in st.conn.execute(sql + " ORDER BY created DESC", args)]
     items = []
     for r in rows:
-        near = None
-        for cand in st.grid.near(r["lat"], r["lon"]):
-            d = dedup.distance_m(r["lat"], r["lon"], st.records[cand]["szerokosc_geograficzna"], st.records[cand]["dlugosc_geograficzna"])
-            if d <= 30 and (near is None or d < near[1]):
-                near = (cand, round(d))
+        near = _nearest_aed(st, r["lat"], r["lon"])
+        target = r.get("id_aed") or (near[0] if near else None)
+        if role == "dysponent" and not _is_own(st, target):
+            continue
         items.append({"type": "zgloszenie", "id": r["id"], "attributes": {k: v for k, v in r.items() if k != "id"},
                       "meta": {"mozliwy_duplikat": near[0] if near else None, "odleglosc_m": near[1] if near else None}})
     return {"data": items, "meta": {"count": len(items), "page": 1, "per_page": len(items)},
@@ -508,7 +575,10 @@ class Decyzja(BaseModel):
     rekord: Optional[dict[str, Any]] = Field(None, description="Pola rekordu uzupełnione przez moderatora (adres, dostęp…)")
 
 
-@app.post(f"{API}/zgloszenia/{{zid}}/decyzja", tags=["zgloszenia"], summary="Decyzja moderatora")
+@app.post(f"{API}/zgloszenia/{{zid}}/decyzja", tags=["zgloszenia"], summary="Decyzja moderatora albo dysponenta",
+          description="Moderator: każde zgłoszenie. Dysponent: tylko dla swoich AED – `scal`/`odrzuc`, gdy zgłoszenie dotyczy "
+                      "jego AED (wskazany `id_aed_docelowy` albo najbliższy w 30 m); `zatwierdz` – nowy AED z jego `dysponent_nazwa`. "
+                      "Inaczej 403 `brak_uprawnien`.")
 def decide(zid: str, body: Decyzja, role: str = Depends(require("moderator", "dysponent"))):
     st = get_store()
     row = st.conn.execute("SELECT data, status FROM zgloszenia WHERE id=?", (zid,)).fetchone()
@@ -517,6 +587,19 @@ def decide(zid: str, body: Decyzja, role: str = Depends(require("moderator", "dy
     data = db.loads(row["data"])
     if row["status"] != "do_weryfikacji":
         err(409, "juz_rozpatrzone", "Zgłoszenie zostało już rozpatrzone.")
+    if role == "dysponent":
+        if body.decyzja == "zatwierdz":
+            # a provider may add only its own device to the dataset
+            nazwa = (body.rekord or {}).get("dysponent_nazwa")
+            if nazwa and nazwa.strip().lower() != DYSPONENT_NAZWA.strip().lower():
+                err(403, "brak_uprawnien", "Dysponent może zatwierdzić zgłoszenie tylko jako swój AED.",
+                    {"rekord.dysponent_nazwa": f"Dozwolone: {DYSPONENT_NAZWA}."})
+            body.rekord = (body.rekord or {}) | {"dysponent_nazwa": DYSPONENT_NAZWA}
+        else:
+            near = _nearest_aed(st, data["lat"], data["lon"])
+            target = body.id_aed_docelowy or (near[0] if near else None)
+            if not _is_own(st, target):
+                err(403, "brak_uprawnien", "Dysponent rozpatruje tylko zgłoszenia dotyczące swoich AED.")
     result = {}
     if body.decyzja == "zatwierdz":
         r = {"nazwa_obiektu": data.get("nazwa_obiektu"), "opis_lokalizacji": data["opis"][:250],
@@ -532,22 +615,19 @@ def decide(zid: str, body: Decyzja, role: str = Depends(require("moderator", "dy
     if body.decyzja == "scal":
         target = body.id_aed_docelowy
         if not target:
-            best = None
-            for cand in st.grid.near(data["lat"], data["lon"]):
-                d = dedup.distance_m(data["lat"], data["lon"], st.records[cand]["szerokosc_geograficzna"], st.records[cand]["dlugosc_geograficzna"])
-                if d <= 30 and (best is None or d < best[1]):
-                    best = (cand, d)
+            best = _nearest_aed(st, data["lat"], data["lon"])
             target = best[0] if best else None
         if not target or target not in st.records:
             err(422, "walidacja", "Brak istniejącego AED do scalenia (w promieniu 30 m). Wskaż id_aed_docelowy.",
                 {"id_aed_docelowy": "Wskaż istniejący AED."})
         # the report confirms an existing device (counts as a QR-style confirmation)
         st.conn.execute("INSERT INTO potwierdzenia (id_aed, data, created) VALUES (?,?,?)",
-                        (target, db.dumps({"jest_na_miejscu": True, "komentarz": "zgłoszenie obywatela scalone przez moderatora"}), now_min()))
+                        (target, db.dumps({"jest_na_miejscu": True, "komentarz": f"zgłoszenie obywatela scalone ({role})"}), now_min()))
         data["id_aed"] = target
         result = {"status": "scalone", "id_aed": target}
     data["status"] = {"zatwierdz": "zatwierdzone", "odrzuc": "odrzucone", "scal": "scalone"}[body.decyzja]
     data["uzasadnienie"] = body.uzasadnienie
+    data["decyzje_podjal"] = role
     st.conn.execute("UPDATE zgloszenia SET status=?, data=? WHERE id=?", (data["status"], db.dumps(data), zid))
     st.conn.commit()
     return {"data": data, "meta": result}
@@ -651,8 +731,13 @@ def stats():
         avail[str(a).lower() if a is not None else "null"] += 1
     n = len(recs) or 1
     gminy_bez, gminy_obj = 0, {}
+    counts = coverage.counts_by_gmina(recs)
+    by_woj_loc: dict[str, int] = {}
+    for r in recs:
+        w = coverage.wojewodztwo_z_polozenia(r) or "poza_granicami"
+        by_woj_loc[w] = by_woj_loc.get(w, 0) + 1
     for woj in coverage.boundary_files():
-        fc = coverage.coverage(recs, woj)
+        fc = coverage.coverage(recs, woj, counts=counts)
         bez = sum(1 for f in fc["features"] if f["properties"]["stan"] == "brak_danych")
         gminy_bez += bez
         gminy_obj[woj] = {"gminy": len(fc["features"]), "gminy_bez_danych": bez}
@@ -662,6 +747,8 @@ def stats():
         "warstwa_otwarta": sum(1 for r in recs if warstwa(r) == "otwarta"),
         "warstwa_osm": sum(1 for r in recs if warstwa(r) == "osm"),
         "wg_wojewodztw": dict(sorted(by_woj.items())), "wg_zrodel": by_src,
+        # by location in PRG boundaries (OSM records often have no address, so the field-based count shows "brak")
+        "wg_wojewodztw_polozenie": dict(sorted(by_woj_loc.items())),
         "kompletnosc_rozklad": buckets,
         "srednia_kompletnosc": round(sum(r.get("kompletnosc") or 0 for r in recs) / n),
         "zweryfikowane_12m_proc": round(100 * verified / n),
