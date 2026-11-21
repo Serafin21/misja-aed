@@ -170,13 +170,13 @@ class Login(BaseModel):
 def login(body: Login):
     token = check_login(body.login, body.haslo)
     if not token:
-        a = auth.account((body.login or "").strip().lower())
+        a = auth.account(auth.normalize_login(body.login))
         if a and not a["aktywne"] and auth.verify_password(body.haslo or "", a["haslo"]):
             if str(a.get("utworzyl") or "").startswith("wniosek:"):  # CR-TL-8: request not approved yet
                 err(403, "konto_oczekuje", "Konto czeka na zatwierdzenie przez administratora.")
             err(403, "konto_zablokowane", "Konto jest zablokowane. Skontaktuj się z administratorem.")
         err(401, "bledne_dane_logowania", "Nieprawidłowy login lub hasło.")
-    u = auth.user_for(body.login.strip().lower())
+    u = auth.user_for(auth.normalize_login(body.login))
     return {"token": token, "rola": str(u), "login": u.login, "dysponent_nazwa": u.nazwa}
 
 
@@ -940,7 +940,8 @@ def confirm(id_aed: str, body: Potwierdzenie):
 
 # ---------- accounts: providers (and administrators), managed by an administrator ----------
 class KontoIn(BaseModel):
-    login: str = Field(..., description="3–41 znaków: małe litery, cyfry, . _ -")
+    login: str = Field(..., description="3–60 znaków: litery, cyfry, . _ - @ (wielkość liter bez znaczenia)")
+    haslo: Optional[str] = Field(None, min_length=8, max_length=200, description="hasło nadane przez administratora; puste = wygenerowane")
     dysponent_nazwa: str = Field(..., min_length=3, max_length=200, description="Instytucja – tak jak w polu dysponent_nazwa rekordów")
     email: Optional[str] = Field(None, max_length=200)
     rola: str = Field("dysponent", pattern="^(dysponent|administrator)$")
@@ -965,12 +966,12 @@ def accounts_list(role: str = Depends(require("administrator"))):
 
 @app.post(f"{API}/konta", tags=["auth"], status_code=201, summary="Załóż konto instytucji (moderator) – hasło pokazywane raz")
 def account_create(body: KontoIn, role: str = Depends(require("administrator"))):
-    login = body.login.strip().lower()
+    login = auth.normalize_login(body.login)
     if not auth.LOGIN_RE.match(login) or login in auth.RESERVED:
-        err(422, "walidacja", "Nieprawidłowy login.", {"login": "3–41 znaków: małe litery, cyfry, kropka, _ i -; inny niż konta demo."})
+        err(422, "walidacja", "Nieprawidłowy login.", {"login": auth.LOGIN_HINT})
     if auth.account(login):
         err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
-    haslo = auth.new_password()
+    haslo = body.haslo or auth.new_password()  # typed by the administrator, otherwise a readable one is generated
     st = get_store()
     if body.rola == "dysponent" and not body.dostawca_podstawa:
         err(422, "walidacja", "Podaj podstawę publikacji.", {"dostawca_podstawa": "wlasciciel | zarzadca | weryfikujacy"})
@@ -1020,10 +1021,10 @@ def account_update(login: str, body: KontoZmianaIn, role: str = Depends(require(
     przed = _konto_out(a)
     ch = body.model_dump(exclude_none=True)
     if "nowy_login" in ch:
-        nl = ch["nowy_login"].strip().lower()
+        nl = auth.normalize_login(ch["nowy_login"])
         if nl != login:
             if not auth.LOGIN_RE.match(nl) or nl in auth.RESERVED:
-                err(422, "walidacja", "Nieprawidłowy login.", {"nowy_login": "3–41 znaków: małe litery, cyfry, kropka, _ i -."})
+                err(422, "walidacja", "Nieprawidłowy login.", {"nowy_login": auth.LOGIN_HINT})
             if auth.account(nl):
                 err(409, "konto_istnieje", "Takie konto już istnieje.", {"nowy_login": "Login zajęty."})
             st.conn.execute("UPDATE konta SET login=? WHERE login=?", (nl, login))
@@ -1438,9 +1439,9 @@ def _wniosek_out(w: dict) -> dict:
 def account_request(body: WniosekIn):
     from src.core import dziennik
     _bez_nie_wiem(body.model_dump())
-    login = body.login.strip().lower()
+    login = auth.normalize_login(body.login)
     if not auth.LOGIN_RE.match(login) or login in auth.RESERVED:
-        err(422, "walidacja", "Nieprawidłowy login.", {"login": "3–41 znaków: małe litery, cyfry, kropka, _ i -; inny niż konta demo."})
+        err(422, "walidacja", "Nieprawidłowy login.", {"login": auth.LOGIN_HINT})
     if auth.account(login):
         err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
     st = get_store()
@@ -1511,9 +1512,9 @@ def account_add_employee(body: PracownikIn, role: str = Depends(require("dyspone
     me = auth.account(getattr(role, "login", ""))
     if not me or not me.get("aktywne"):
         err(403, "brak_uprawnien", "Pracowników dodaje zatwierdzone konto instytucji (nie konto demo).")
-    login = body.login.strip().lower()
+    login = auth.normalize_login(body.login)
     if not auth.LOGIN_RE.match(login) or login in auth.RESERVED:
-        err(422, "walidacja", "Nieprawidłowy login.", {"login": "3–41 znaków: małe litery, cyfry, kropka, _ i -."})
+        err(422, "walidacja", "Nieprawidłowy login.", {"login": auth.LOGIN_HINT})
     if auth.account(login):
         err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
     haslo = auth.new_password()

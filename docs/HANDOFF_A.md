@@ -1,5 +1,11 @@
 # HANDOFF – Model A
 
+## 2026-11-22 – HANDOFF #14: dowolniejszy login, hasło nadane przez administratora
+
+- Login: 3–60 znaków – litery (także wielkie i polskie), cyfry, `. _ - @ +` (e-mail też); wielkość liter bez znaczenia, spacje → kropki (`auth.normalize_login`, „UM Krosno” → `um.krosno`). Token koduje login (`quote`), więc polskie litery działają w nagłówku HTTP.
+- `POST /konta` przyjmuje `haslo` (min. 8) – administrator może wpisać hasło; bez niego hasło jest generowane. W obu przypadkach odpowiedź zwraca je raz (`haslo_jednorazowe`).
+- Test: `tests/test_admin_edycja.py::test_login_dowolny_i_haslo_od_admina`; `pytest` 102.
+
 ## 2026-11-22 – HANDOFF #13: błąd 500 przy równoczesnych zapytaniach
 
 - **Naprawione:** jedno połączenie SQLite było używane przez kilka wątków serwera naraz – przy kilku zapytaniach w tej samej chwili (np. po zalogowaniu strona pobiera 4–5 rzeczy) zdarzał się błąd 500 `sqlite3.InterfaceError: bad parameter or other API misuse`. `db.connect()` zwraca teraz `LockedConnection`: każde polecenie pod jedną blokadą, wiersze pobierane od razu (`fetchone`/`fetchall`/iteracja bez zmian dla kodu). Sprawdzone: 110 równoczesnych zapytań (20 wątków) – same 200; `pytest` 101.

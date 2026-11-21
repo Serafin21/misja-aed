@@ -121,3 +121,16 @@ def test_zgloszenie_administratora_i_przypomnienia(client):
     client.patch(f"/api/v1/admin/aed/{aid}", headers=adm, json={"pola": {"data_weryfikacji": "2024-01-10"}})
     n = client.get("/api/v1/moje-aed/powiadomienia", headers=inst).json()
     assert n["meta"]["przypomnienia"] >= 1 and any(x["typ"] == "przypomnienie" and "2024-01-10" in x["tresc"] for x in n["data"])
+
+
+def test_login_dowolny_i_haslo_od_admina(client):
+    adm = _h(client, "admin", "admin123")
+    r = client.post("/api/v1/konta", headers=adm, json={"login": "UG Kraków", "haslo": "tajne-haslo", "dysponent_nazwa": "Urząd Gminy Kraków",
+                                                        "dostawca_podstawa": "wlasciciel"})
+    assert r.status_code == 201 and r.json()["data"]["login"] == "ug.kraków" and r.json()["haslo_jednorazowe"] == "tajne-haslo"
+    h = _h(client, "UG Kraków", "tajne-haslo")  # case and spaces do not matter, Polish letters work (token is encoded)
+    assert client.get("/api/v1/konta/ja", headers=h).json()["data"]["login"] == "ug.kraków"
+    r = client.post("/api/v1/konta", headers=adm, json={"login": "aed@szkola.example.pl", "dysponent_nazwa": "Szkoła", "dostawca_podstawa": "wlasciciel"})
+    assert r.status_code == 201 and len(r.json()["haslo_jednorazowe"]) >= 10
+    assert _h(client, "AED@Szkola.example.pl", r.json()["haslo_jednorazowe"])
+    assert client.post("/api/v1/konta", headers=adm, json={"login": "ab", "dysponent_nazwa": "Xyz", "dostawca_podstawa": "wlasciciel"}).status_code == 422

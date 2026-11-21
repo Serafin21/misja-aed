@@ -14,6 +14,7 @@ import hmac
 import os
 import re
 import secrets
+from urllib.parse import quote, unquote
 
 from fastapi import Header, HTTPException
 
@@ -32,7 +33,14 @@ if os.environ.get("AED_KONTA_TESTOWE") == "tak":
 ACCOUNTS = DEMO  # backwards compatibility
 # TL decision: a provider (dysponent) may decide on citizen reports only for AED it operates.
 DYSPONENT_NAZWA = os.environ.get("DEMO_DYSPONENT_NAZWA", "Urząd Gminy Przykładowo")
-LOGIN_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,40}$")
+# Login: 3–60 characters – letters (also Polish and capital ones), digits, . _ - @ + (so an e-mail works too).
+# Logins are case-insensitive (stored lower-case); spaces become dots ("UG Krosno" → "ug.krosno").
+LOGIN_RE = re.compile(r"^[\w.@+-]{3,60}$")
+LOGIN_HINT = "Login: od 3 do 60 znaków – litery, cyfry, kropka, myślnik, podkreślenie albo adres e-mail."
+
+
+def normalize_login(login: str | None) -> str:
+    return re.sub(r"\s+", ".", (login or "").strip()).lower()
 
 
 class User(str):
@@ -77,12 +85,13 @@ def account(login: str) -> dict | None:
 
 
 def token_for(login: str) -> str:
+    # the login is percent-encoded: an HTTP header cannot carry Polish letters
     sig = hmac.new(SECRET.encode(), login.encode(), hashlib.sha256).hexdigest()[:32]
-    return f"{login}.{sig}"
+    return f"{quote(login, safe='@+-_')}.{sig}"
 
 
 def check_login(login: str, password: str) -> str | None:
-    login = (login or "").strip().lower()
+    login = normalize_login(login)
     expected = DEMO.get(login)
     if expected and hmac.compare_digest(expected, password or ""):
         return token_for(login)
@@ -105,7 +114,7 @@ def role_from(authorization: str | None) -> User | None:
     if not authorization or not authorization.lower().startswith("bearer "):
         return None
     token = authorization.split(" ", 1)[1].strip()
-    login = token.rsplit(".", 1)[0]
+    login = unquote(token.rsplit(".", 1)[0])
     if not hmac.compare_digest(token, token_for(login)):
         return None
     return user_for(login)
