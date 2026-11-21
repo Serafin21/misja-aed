@@ -395,6 +395,56 @@
         }
       }
     },
+    "/api/v1/aed/punkty": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Lekka warstwa punktów do mapy (GeoJSON, gzip, ETag)",
+        "description": "Cała Polska albo `bbox`. Każdy punkt: `id`, współrzędne i trzy pola do kolorowania: `dostepny_teraz` (true/false/null), `stan_danych` (aktualne/nieaktualne), `osm` (true = warstwa ODbL). Odpowiedź skompresowana gzip, gdy klient to obsługuje; nagłówek `ETag` – przy `If-None-Match` serwer zwraca 304. `dostepny_teraz` przeliczane co minutę.",
+        "operationId": "aed_points_api_v1_aed_punkty_get",
+        "parameters": [
+          {
+            "name": "bbox",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "minLon,minLat,maxLon,maxLat (WGS 84)",
+              "title": "Bbox"
+            },
+            "description": "minLon,minLat,maxLon,maxLat (WGS 84)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/aed.jsonld": {
       "get": {
         "tags": [
@@ -788,6 +838,7 @@
           "zgloszenia"
         ],
         "summary": "Kolejka zgłoszeń do moderacji",
+        "description": "Moderator widzi wszystkie zgłoszenia. Dysponent – tylko dotyczące jego AED (najbliższy AED w promieniu 30 m).",
         "operationId": "list_reports_api_v1_zgloszenia_get",
         "parameters": [
           {
@@ -851,7 +902,8 @@
         "tags": [
           "zgloszenia"
         ],
-        "summary": "Decyzja moderatora",
+        "summary": "Decyzja moderatora albo dysponenta",
+        "description": "Moderator: każde zgłoszenie. Dysponent: tylko dla swoich AED – `scal`/`odrzuc`, gdy zgłoszenie dotyczy jego AED (wskazany `id_aed_docelowy` albo najbliższy w 30 m); `zatwierdz` – nowy AED z jego `dysponent_nazwa`. Inaczej 403 `brak_uprawnien`.",
         "operationId": "decide_api_v1_zgloszenia__zid__decyzja_post",
         "parameters": [
           {

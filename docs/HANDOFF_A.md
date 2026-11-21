@@ -1,5 +1,31 @@
 # HANDOFF – Model A
 
+## 2026-11-21 16:45 – HANDOFF #4: decyzje TL (CR-TL-2) – uprawnienia dysponenta, /aed/punkty, granice 16 województw, LICZBY
+
+- **Czas:** sob 15:10–16:45
+- **Zrobione:**
+  1. **Uprawnienia:** zgłoszenia rozpatruje moderator (wszystkie) albo dysponent – tylko dla swoich AED (`dysponent_nazwa` = organizacja konta, w demo `DEMO_DYSPONENT_NAZWA`, domyślnie „Urząd Gminy Przykładowo”). Dysponent: `scal`/`odrzuc`, gdy zgłoszenie dotyczy jego AED (wskazany `id_aed_docelowy` albo najbliższy w 30 m); `zatwierdz` – nowy rekord dostaje jego `dysponent_nazwa`, cudza nazwa → 403. `GET /zgloszenia` dla dysponenta pokazuje tylko zgłoszenia jego AED. W zgłoszeniu zapisuje się `decyzje_podjal`. `docs/CONTRACT.md` §4 pkt 6 i tabela §5 spójne z API (CONTRACT v1.2, CR-TL-2).
+  2. **`GET /api/v1/aed/punkty`** – lekka warstwa mapy dla całej Polski albo `?bbox=`; gzip (18 tys. punktów: 3,2 MB → 339 KB), `ETag` + 304 przy `If-None-Match`, `Cache-Control: no-cache`, budowa 0,2 s, potem z pamięci.
+  3. **Granice gmin 16 województw** (2479 gmin, 7,3 MB, nazwy plików bez polskich znaków) – uproszczenie z zachowaniem topologii (wspólny odcinek granicy upraszczany raz → bez szczelin i nakładek); AED poza wielokątami → najbliższa gmina do 1 km; indeks przestrzenny. `/pokrycie?wojewodztwo=` bez zmian. W `/statystyki` nowe `wg_wojewodztw_polozenie`; `gminy_bez_danych` liczone dla całej Polski. W `zrodla.csv` jedno źródło `prg-gugik:gminy` (2479, Polska).
+  4. **`docs/tech/LICZBY.md`** (skrypt `python -m scripts.liczby`) – liczby z pełnych danych bez rekordów fikcyjnych. Import OSM zapisuje teraz powody odrzuceń.
+  - Testy: 64 (14 nowych: uprawnienia dysponenta i moderatora, kształt/bbox/gzip/ETag `/aed/punkty`, topologia na danych syntetycznych, **brak szczelin w danych PRG** – w województwach śródlądowych każdy odcinek granicy gminy należy do dokładnie 2 gmin, punkt na granicy i w morzu, województwo z położenia, 16 plików granic).
+- **Liczby (z LICZBY.md):** 18 033 AED; aktualne 3 148 (17%), nieaktualne 14 885, w tym 12 169 bez żadnej daty; 351 z 2479 gmin bez AED w danych (najwięcej: mazowieckie 79, lubelskie 60, podlaskie 38); odrzucone 22 z 18 297 – wszystkie za długie teksty (nazwa > 200 znaków: 20).
+- **Jak uruchomić:** `python -m scripts.seed --reset --osm full && uvicorn src.api.main:app`; `python -m scripts.build_granice` (sieć, ok. 4 min) albo `--offline`; `python -m scripts.liczby`; `pytest`.
+- **CR do B – kształt `GET /api/v1/aed/punkty`:**
+  ```json
+  {"type": "FeatureCollection",
+   "features": [{"type": "Feature", "id": "AED-PL-B939F7EBA4",
+                 "geometry": {"type": "Point", "coordinates": [21.0139, 52.2437]},
+                 "properties": {"dostepny_teraz": true, "stan_danych": "aktualne", "osm": false}}],
+   "meta": {"count": 18039, "liczone_na": "2026-11-21T16:40", "prog_aktualnosci_dni": 365,
+            "atrybucja_osm": "© autorzy OpenStreetMap (ODbL)"}}
+  ```
+  `dostepny_teraz`: true / false / null (godzin nie da się odczytać); `stan_danych`: `aktualne` / `nieaktualne`; `osm`: true = warstwa ODbL (pokaż atrybucję). Nagłówki: `Content-Type: application/geo+json`, `Content-Encoding: gzip` (przeglądarka rozpakowuje sama), `ETag`; `fetch` z domyślnym cache przeglądarki sam wyśle `If-None-Match`. Zastępuje `GET /aed?per_page=500` na mapie; szczegóły po kliknięciu z `GET /aed/{id}`. Kolejka moderacji: dysponent może dostać 403 `brak_uprawnien` – pokaż komunikat z `error.message`.
+- **Założenia:** obiekty OSM ≤ 5 m od siebie z prawie tą samą nazwą (242) są traktowane jako duplikat w OSM i łączone (zachowanie z wcześniejszego kodu).
+- **Znane błędy / do decyzji TL:** 22 odrzucone rekordy OSM można przyjąć po skróceniu tekstu; 242 łączenia duplikatów OSM warto przejrzeć (czasem to dwa urządzenia w jednym budynku).
+- **Użycie AI:** kod, testy i dokumentacja z Claude, przegląd człowieka.
+- **Następny krok:** B – mapa na `/aed/punkty` i tryb „aktualność danych”.
+
 ## 2026-11-21 15:00 – HANDOFF #3: CR-TL-1 (tryb „aktualność danych”), pełny OSM, porządki
 
 - **Czas:** sob 14:30–15:00

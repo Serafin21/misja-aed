@@ -13,6 +13,10 @@ ACCOUNTS = {
     "moderator": os.environ.get("DEMO_MODERATOR_PASSWORD", "moderator-demo"),
 }
 
+# TL decision: a provider (dysponent) may decide on citizen reports only for AED it operates.
+# The demo provider account represents this organisation (record field dysponent_nazwa).
+DYSPONENT_NAZWA = os.environ.get("DEMO_DYSPONENT_NAZWA", "Urząd Gminy Przykładowo")
+
 
 def token_for(role: str) -> str:
     sig = hmac.new(SECRET.encode(), role.encode(), hashlib.sha256).hexdigest()[:32]
