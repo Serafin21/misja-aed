@@ -73,7 +73,8 @@ def test_punkty_ksztalt(client):
     assert fc["type"] == "FeatureCollection" and fc["meta"]["count"] == len(fc["features"]) == 7
     f = fc["features"][0]
     assert set(f) == {"type", "id", "geometry", "properties"} and f["geometry"]["type"] == "Point"
-    assert set(f["properties"]) == {"dostepny_teraz", "stan_danych", "osm"}
+    assert set(f["properties"]) == {"dostepny_teraz", "stan_danych", "osm", "dostep", "wiek_danych_dni", "mobilny", "wojewodztwo"}
+    assert any(x["properties"]["dostep"] == "prywatny" for x in fc["features"])
     assert sum(x["properties"]["osm"] for x in fc["features"]) == 2
 
 
@@ -95,3 +96,15 @@ def test_punkty_gzip_i_etag(client):
     assert client.get("/api/v1/aed/punkty", headers={"Accept-Encoding": "gzip", "If-None-Match": etag}).status_code == 304
     assert client.patch(f"/api/v1/aed/{OWN}", json={"data_weryfikacji": "2020-01-01"}).status_code == 200
     assert client.get("/api/v1/aed/punkty", headers={"Accept-Encoding": "gzip", "If-None-Match": etag}).status_code == 200
+
+
+def test_aed_po_ids_w_kolejnosci(client):
+    j = client.get(f"/api/v1/aed?ids={FOREIGN},{OWN},NIE-MA").json()
+    assert [d["id"] for d in j["data"]] == [FOREIGN, OWN] and j["meta"]["count"] == 2
+    assert client.get("/api/v1/aed?ids=" + ",".join(f"X{i}" for i in range(201))).status_code == 422
+
+
+def test_filtr_wojewodztwa_po_polozeniu(client):
+    # OSM sample record in Gdańsk has no "wojewodztwo" field – found by location
+    ids = {d["id"] for d in client.get("/api/v1/aed?wojewodztwo=pomorskie").json()["data"]}
+    assert "AED-PL-9778083B54" in ids

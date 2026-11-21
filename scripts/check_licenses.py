@@ -5,7 +5,7 @@ import re
 import sys
 from importlib import metadata
 
-ROOTS = ["fastapi", "uvicorn", "python-multipart", "jsonschema", "openpyxl", "rapidfuzz"]
+ROOTS = ["fastapi", "uvicorn", "python-multipart", "jsonschema", "openpyxl", "rapidfuzz", "tzdata"]
 OK = re.compile(r"MIT|BSD|Apache|ISC|PSF|Python Software Foundation|Unlicense|0BSD", re.I)
 
 
