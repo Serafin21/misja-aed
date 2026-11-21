@@ -1,4 +1,5 @@
-// Demo login (dysponent / moderator). After POST /auth/login every request carries Authorization: Bearer <token>.
+// Login: demo accounts (dysponent / moderator) or an institution account created by a moderator (/panel).
+// After POST /auth/login every request carries Authorization: Bearer <token>.
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { getSession, login, logout, onSessionChange, type Role, type Session } from '../api/client';
 import { ErrorSummary, Req, RequiredNote, useValidation } from './form';
@@ -18,7 +19,8 @@ export function RequireLogin({ role, roles = [role], children }: { role: Role; r
     return (
       <>
         <p className="session-line">
-          Zalogowano jako <strong>{ROLE_LABEL[s.rola]}</strong> (konto demo).{' '}
+          Zalogowano jako <strong>{s.dysponent_nazwa && s.rola === 'dysponent' ? s.dysponent_nazwa : ROLE_LABEL[s.rola]}</strong>
+          {' '}({s.login && s.login !== s.rola ? <>login <code>{s.login}</code></> : 'konto demo'}).{' '}
           <button type="button" className="btn btn--tertiary" onClick={logout}>Wyloguj</button>
         </p>
         {children}
@@ -30,6 +32,7 @@ export function RequireLogin({ role, roles = [role], children }: { role: Role; r
 
 function LoginForm({ role, wrongRole }: { role: Role; wrongRole: Role | null }) {
   const [haslo, setHaslo] = useState('');
+  const [name, setName] = useState<string>(role);
   const [busy, setBusy] = useState(false);
   const v = useValidation({ haslo: () => (haslo ? '' : 'Wpisz hasło.') });
   const error = v.errors.haslo ?? '';
@@ -38,7 +41,7 @@ function LoginForm({ role, wrongRole }: { role: Role; wrongRole: Role | null }) 
     e.preventDefault();
     if (!v.validateAll()) return;
     setBusy(true);
-    try { await login(role, haslo); }
+    try { await login(name.trim().toLowerCase() || role, haslo); }
     catch (ex) { v.showServerErrors({ haslo: (ex as Error).message || 'Nie udało się zalogować.' }); }
     finally { setBusy(false); }
   }
@@ -50,11 +53,13 @@ function LoginForm({ role, wrongRole }: { role: Role; wrongRole: Role | null }) 
       <ErrorSummary errors={v.summary} fieldIds={{ haslo: 'login-pass' }} focusToken={v.focusToken} />
       {wrongRole && <p>Jesteś zalogowany jako {ROLE_LABEL[wrongRole]}. Ta część wymaga konta: {ROLE_LABEL[role]}.</p>}
       <p className="hint">
-        To prototyp, więc używamy konta próbnego. Hasło: <code>{role}-demo</code>.
+        {role === 'dysponent'
+          ? <>Instytucja loguje się loginem i hasłem, które dostała od moderatora. Do pokazu: login <code>dysponent</code>, hasło <code>dysponent-demo</code>.</>
+          : <>Do pokazu: login <code>moderator</code>, hasło <code>moderator-demo</code>.</>}
       </p>
       <div className="field">
         <label htmlFor="login-name">Login</label>
-        <input id="login-name" type="text" value={role} readOnly autoComplete="username" />
+        <input id="login-name" type="text" value={name} onChange={(e) => setName(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} />
       </div>
       <div className="field">
         <label htmlFor="login-pass">Hasło<Req /></label>

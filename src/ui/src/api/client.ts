@@ -22,7 +22,7 @@ class Unreachable extends Error {}
 
 // ---------- auth (CONTRACT: POST /auth/login → Bearer token) ----------
 export type Role = 'dysponent' | 'moderator';
-export type Session = { token: string; rola: Role } | null;
+export type Session = { token: string; rola: Role; login?: string; dysponent_nazwa?: string | null } | null;
 const SESSION_KEY = 'aed.session';
 function readSession(): Session {
   try { const raw = sessionStorage.getItem(SESSION_KEY); return raw ? (JSON.parse(raw) as Session) : null; } catch { return null; }
@@ -136,9 +136,11 @@ export function confirmAed(id: string, body: Potwierdzenie) {
   );
 }
 
-export function reportAed(lat: number, lon: number, opis: string) {
+/** Citizen report. Optional details (hours, cabinet) and a photo (data URI, shrunk in the browser) – HANDOFF A #8. */
+export interface ZgloszenieExtra { godziny_dostepnosci?: string; szafka_zamknieta?: boolean; instrukcja_dostepu?: string; zdjecie?: string }
+export function reportAed(lat: number, lon: number, opis: string, extra: ZgloszenieExtra = {}) {
   return withFallback(
-    () => http<{ id: string; status: string }>(`/zgloszenia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat, lon, opis }) }),
+    () => http<{ id: string; status: string }>(`/zgloszenia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat, lon, opis, ...extra }) }),
     () => mock.mockReport(lat, lon, opis),
   );
 }
@@ -277,7 +279,8 @@ export function approveImport(rep: RaportWalidacji): Promise<WynikImportu> {
 
 export function listReports() {
   return withFallback(async () => {
-    const r = await http<{ data: JsonApiItem<{ lat: number; lon: number; opis: string; czas: string; status: string }>[] }>(`/zgloszenia`);
+    const r = await http<{ data: JsonApiItem<{ lat: number; lon: number; opis: string; czas: string; status: string; zdjecie_url?: string | null;
+      godziny_dostepnosci?: string | null; szafka_zamknieta?: boolean | null; instrukcja_dostepu?: string | null }>[] }>(`/zgloszenia`);
     return r.data.map((i) => ({ ...i.attributes, id: i.id }));
   }, () => mock.mockReports());
 }
@@ -292,12 +295,36 @@ export function decideReport(id: string, decyzja: 'zatwierdz' | 'odrzuc' | 'scal
   );
 }
 
-export function login(loginName: Role, haslo: string): Promise<Session> {
+/** Login: demo accounts (dysponent / moderator) or an institution account created by a moderator. */
+export function login(loginName: string, haslo: string): Promise<Session> {
   return withFallback(
-    () => http<{ token: string; rola: Role }>(`/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: loginName, haslo }) }),
-    () => mock.mockLogin(loginName, haslo),
+    () => http<{ token: string; rola: Role; login: string; dysponent_nazwa: string | null }>(`/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: loginName, haslo }) }),
+    () => mock.mockLogin(loginName as Role, haslo),
   ).then((s) => { setSession(s); return s; });
 }
+
+// ---------- moderator panel (HANDOFF A #8) – API only, no sample-mode fallback ----------
+const json = (method: string, body?: unknown): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+
+export interface StanOdswiezania {
+  w_toku: boolean; ostatnie: string | null; nastepne: string | null; harmonogram: string | null; blad: string | null; powod?: string;
+  wynik: null | { osm?: Record<string, unknown>; dane_gov_pl?: { kod_zrodla: string; status: string; dodane?: number; scalone?: number; zaktualizowane?: number; odrzucone?: number; powod?: string }[]; rekordy_przed?: number; rekordy_po?: number };
+}
+export const refreshStatus = () => http<{ data: StanOdswiezania }>(`/zrodla/odswiezanie`).then((r) => r.data);
+export const refreshNow = () => http<{ data: StanOdswiezania & { uruchomiono: boolean }; meta: { komunikat: string } }>(`/zrodla/odswiez`, json('POST'));
+
+export interface ZbiorDgp { id: string; tytul: string; instytucja: string | null; licencja: string | null; licencja_portalu: string | null; strona: string; zmodyfikowano: string | null }
+export interface ImportDgp { kod_zrodla: string; status: string; dodane?: number; scalone?: number; zaktualizowane?: number; odrzucone?: number; wiersze?: number; powod?: string }
+export const searchDgp = (q: string, importuj: boolean) =>
+  http<{ data: ZbiorDgp[]; meta: { count: number; importy: ImportDgp[]; pominiete_niezwiazane?: number; bledy: string[] } }>(`/zrodla/dane-gov-pl/szukaj`, json('POST', { q, importuj }));
+
+export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; email: string | null; aktywne: boolean; utworzono: string | null; utworzyl: string | null; liczba_aed: number }
+export const listAccounts = () => http<{ data: Konto[] }>(`/konta`).then((r) => r.data);
+export const createAccount = (b: { login: string; dysponent_nazwa: string; email?: string }) =>
+  http<{ data: Konto; haslo_jednorazowe: string }>(`/konta`, json('POST', b));
+export const resetPassword = (login: string) => http<{ data: Konto; haslo_jednorazowe: string }>(`/konta/${encodeURIComponent(login)}/reset-hasla`, json('POST'));
+export const setAccountActive = (login: string, aktywne: boolean) => http<{ data: Konto }>(`/konta/${encodeURIComponent(login)}`, json('PATCH', { aktywne }));
+export const changeMyPassword = (stare: string, nowe: string) => http<{ ok: boolean }>(`/konta/ja/haslo`, json('POST', { stare, nowe }));
 
 type PointsFC = { features: { id: string; geometry: { coordinates: [number, number] }; properties: Omit<AedPoint, 'id_aed' | 'lat' | 'lon'> }[] };
 

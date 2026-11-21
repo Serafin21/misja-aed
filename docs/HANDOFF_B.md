@@ -238,3 +238,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Uwaga: LICZBY.md (16:37) ma 18 033 / 3 148, a stan z żywego API podany przez B to 18 040 / 3 155 – przed prezentacją jedno źródło (ponowne `python -m scripts.liczby`, strefa A/TL).
 - Użycie AI (jedna linia): aktualizacja tekstu zgłoszenia i sprawdzenie zgodności z wymaganiami formalnymi – Claude (Model B); zatwierdza i wysyła człowiek B.
 - Następny krok: nazwa zespołu → wysłanie DRAFT ok. 19:30; potem test w przeglądarce.
+
+## HANDOFF #21
+
+- Czas: sob 22:45
+- Zrobione (API: HANDOFF A #8): **Panel moderatora `/panel`** (`pages/Admin.tsx`, w stopce „Dla specjalistów”, link z `/moderacja`): (1) aktualizacja danych – harmonogram, ostatnie/następne odświeżenie, wynik, przycisk „Odśwież teraz” (w tle, stan co 3 s); (2) zbiory AED na dane.gov.pl – wyszukiwanie, tabela (zbiór z linkiem, instytucja, licencja), „Zaimportuj znalezione zbiory” z wynikiem na wiersz; (3) konta instytucji – zakładanie (login, nazwa instytucji jak w danych, e-mail), hasło jednorazowe pokazane raz, „Nowe hasło”, „Zablokuj/Odblokuj”, liczba AED instytucji. **Moje konto `/konto`** – zmiana hasła. **Logowanie**: pole loginu edytowalne (konto instytucji albo demo), w nagłówku nazwa instytucji. **Zgłoszenie (E4)**: pole „Zdjęcie AED (nieobowiązkowe)” na ostatnim kroku (`components/PhotoField.tsx`: przeglądarka zmniejsza do 1600 px JPEG i usuwa metadane, w tym GPS; podgląd, „Usuń zdjęcie”; `capture=environment` na telefonie); godziny, szafka i instrukcja idą osobnymi polami (CR #16 pkt 1 zrealizowany po stronie A). **Moderacja (E9)**: zdjęcie ze zgłoszenia (podpisany link, otwiera się w nowym oknie) i podane godziny/szafka.
+- Jak uruchomić / zobaczyć: API z `a/core` + `npm run dev` → `/panel` (moderator / moderator-demo), `/zglos`, `/moderacja`, `/konto`.
+- Założenia: panel działa tylko z API (bez trybu przykładowego).
+- CR: –
+- Znane błędy: –
+- Użycie AI (jedna linia): panel moderatora, zdjęcie w zgłoszeniu i logowanie instytucji z Claude.
+- Następny krok: test czytnikiem ekranu panelu i pola zdjęcia.
