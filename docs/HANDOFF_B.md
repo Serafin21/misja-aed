@@ -148,3 +148,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: niesprawdzone typecheckiem z pakietami ani w przeglądarce (środowisko B bez npm).
 - Użycie AI (jedna linia): przebudowa stylów, formularzy, stopki i podstron informacyjnych z Claude (Model B); treść podstron oparta na faktach z kodu i raportu dostępności.
 - Następny krok: npm install + typecheck + build u człowieka, przegląd w przeglądarce (1280 / 320 px, klawiatura, podsumowanie błędów).
+
+## HANDOFF #13
+
+- Czas: sob 18:15
+- Zrobione: **sprawdzone przez człowieka:** `npm install @fontsource/open-sans`, `npm run build` – OK (font w paczce, w tym latin-ext), `package-lock.json` w repo (e0d53e6). **Sprawdzone w przeglądarce (Claude, tryb demo):** Open Sans załadowany, tekst 16 px / 14 px poniżej 700 px, pasek prototypu, „Przejdź do treści głównej”, okruszki widoczne przy 1280 px i ukryte przy 590 px, stopka z 10 linkami; E4: wysłanie pustego formularza → podsumowanie „Formularz zawiera 2 błędy” z `role="alert"` i fokusem, `aria-invalid` na polach; walidacja po opuszczeniu pola (Tab) pokazuje błąd przy polu bez podsumowania. Poprawka: dopisek „(otwiera się w nowym oknie)” rozjeżdżał się w kolumnę w stopce i na liście AED.
+- Jak uruchomić / zobaczyć: `npm run dev` → /zglos, /mapa, stopka.
+- Założenia: –
+- CR: bez zmian (OFL-1.1 w `check_licenses.py` – A).
+- Znane błędy: `npm run typecheck` po przebudowie gov.pl nie był pokazany – do potwierdzenia u człowieka.
+- Użycie AI (jedna linia): test w przeglądarce i poprawka stopki z Claude (Model B).
+- Następny krok: typecheck, przegląd pozostałych ekranów (E5, E9, karta AED), zrzuty do prezentacji.

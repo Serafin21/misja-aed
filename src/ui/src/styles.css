@@ -174,7 +174,7 @@ legend { font-weight: var(--font-weight-semibold); padding: 0; margin-bottom: va
 .aed-item__addr { font-weight: var(--font-weight-semibold); margin-bottom: .2rem; }
 .aed-item__where, .aed-item__hours { color: var(--color-text-secondary); margin-bottom: .2rem; }
 .aed-item__actions { display: flex; flex-wrap: wrap; gap: var(--space-s) var(--space); margin: var(--space-m) 0 0; }
-.aed-item__actions a { display: inline-flex; align-items: center; min-height: 32px; font-weight: var(--font-weight-semibold); }
+.aed-item__actions a { display: inline-block; padding: 4px 0; font-weight: var(--font-weight-semibold); }
 
 .split { display: grid; gap: var(--space); }
 @media (min-width: 900px) {
@@ -279,7 +279,8 @@ thead th { background: var(--color-surface); }
 .footer-grid { display: grid; gap: var(--space); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
 .footer-grid h2 { font-size: 1rem; margin-bottom: var(--space-s); }
 .footer-links { list-style: none; padding: 0; margin: 0; }
-.footer-links a { display: inline-flex; align-items: center; min-height: 32px; }
+.footer-links li { padding: 4px 0; }
+.footer-links a { display: inline-block; line-height: 1.5; }
 .footer-contact { font-style: normal; }
 .footer-legal { border-top: var(--border-width) solid var(--color-border); margin-top: var(--space); padding-top: var(--space-m); color: var(--color-text-secondary); }
 
