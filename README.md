@@ -27,6 +27,10 @@ npm run dev
 
 Otwórz http://localhost:5173. Gdy API nie odpowiada, aplikacja sama przełącza się na dane przykładowe z `data/sample/` i pokazuje baner „Tryb demonstracyjny”.
 
+## Dla zespołu
+
+Jak każdy uruchamia Claude Code na tym repo ze swojego konta: [`docs/user/claude_code_dla_zespolu.md`](docs/user/claude_code_dla_zespolu.md).
+
 ## Ścieżki testowe dla jury
 
 1. **Obywatel – najbliższe AED.** Strona główna → „Pokaż najbliższe AED” (albo „Użyj punktu w centrum Warszawy” w trybie demonstracyjnym) → lista 5 najbliższych z filtrem „Tylko dostępne teraz” → „Biblioteka Testowa” → na górze karty informacja, że szafka jest zamknięta, i instrukcja dostępu → „Paszport AED”: potwierdź, że urządzenie jest na miejscu.
