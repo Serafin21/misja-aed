@@ -6,7 +6,7 @@
 
 ## Szybki start
 
-### Cały system (backend + aplikacja) – w toku
+### Cały system (backend + aplikacja)
 
 ```bash
 cp .env.example .env
@@ -14,6 +14,17 @@ docker compose up --build
 ```
 
 Aplikacja: http://localhost (port 80), API: http://localhost/api/v1, dokumentacja API: http://localhost/api/docs.
+
+> Stan: konfiguracja gotowa, pierwsze zbudowanie obrazów przez zespół – sob wieczorem (wynik wpiszemy tutaj).
+
+**Konta demonstracyjne** (hasła z pliku `.env`, domyślne z `.env.example`):
+
+| Rola | Login | Hasło | Do czego |
+|---|---|---|---|
+| Dysponent | `dysponent` | `dysponent-demo` | wgranie pliku z AED (ekran „Dla dysponentów”, kroki 2–5) |
+| Moderator | `moderator` | `moderator-demo` | panel moderatora (zatwierdzanie zgłoszeń obywateli) |
+
+Przeglądanie mapy, kart AED, zgłaszanie AED i pobieranie zbioru nie wymagają logowania.
 
 ### Sama aplikacja (bez backendu, na danych przykładowych)
 
@@ -34,10 +45,10 @@ Jak każdy uruchamia Claude Code na tym repo ze swojego konta: [`docs/user/claud
 ## Ścieżki testowe dla jury
 
 1. **Obywatel – najbliższe AED.** Strona główna → „Pokaż najbliższe AED” (albo „Użyj punktu w centrum Warszawy” w trybie demonstracyjnym) → lista 5 najbliższych z filtrem „Tylko dostępne teraz” → „Biblioteka Testowa” → na górze karty informacja, że szafka jest zamknięta, i instrukcja dostępu → „Paszport AED”: potwierdź, że urządzenie jest na miejscu.
-2. **Dysponent – import pliku.** „Dla dysponentów” → pobierz szablon → wgraj `data/sample/zrodlo_gmina_przyklad.csv` → sprawdź dopasowanie kolumn → raport (zamiana „pn-pt 8-16” na `Mo-Fr 08:00-16:00`, scalony duplikat z OpenStreetMap) → zatwierdź → pobierz odznakę akcji.
+2. **Dysponent – import pliku.** „Dla dysponentów” → pobierz szablon → zaloguj się kontem `dysponent` → wpisz nazwę i rodzaj dysponenta → wgraj `data/sample/zrodlo_gmina_przyklad.csv` → sprawdź dopasowanie kolumn → raport (zamiana „pn-pt 8-16” na `Mo-Fr 08:00-16:00`, scalony duplikat z OpenStreetMap) → zatwierdź → pobierz odznakę akcji.
 3. **Programista / dane.gov.pl.** „Zbiór danych” → pliki CSV, GeoJSON, osobny zasób OSM (ODbL), pochodzenie, źródła, słownik danych, CSVW, metadane DCAT-AP-PL, XML importu; opis 44 pól; przykłady zapytań do API.
 4. **Źródła.** „Źródła” → zakres referencyjny każdego źródła (liczba rekordów, pokrycie pól wymaganych i zalecanych, licencja, częstotliwość, obszar).
-5. **Moderator.** Stopka → „Panel moderatora” → zgłoszenie obywatela → zatwierdź, scal albo odrzuć.
+5. **Moderator.** Stopka → „Panel moderatora” → zaloguj się kontem `moderator` → zgłoszenie obywatela → „Zatwierdź…” (uzupełnij nazwę obiektu, adres i godziny), „Scal z istniejącym” albo „Odrzuć”.
 
 ## Architektura
 

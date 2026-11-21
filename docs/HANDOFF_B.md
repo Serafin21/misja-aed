@@ -70,3 +70,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: ostrzeżenie Vite o paczce JS 535 kB (nie błąd). Mapa (kafelki, pinezki, klastry) i skan QR na `/aed/AED-PL-CBD53ED4AA` niesprawdzone wzrokowo – sesja bez narzędzi przeglądarki; serwer zwraca 200, kafelki OSM osiągalne.
 - Użycie AI (jedna linia): diagnoza i naprawa builda z Claude (Model B).
 - Następny krok: ręcznie sprawdzić mapę i QR telefonem; audyt axe/Lighthouse/NVDA.
+
+## HANDOFF #6
+
+- Czas: sob 14:45
+- Zrobione: UI dostosowane do API A (3 CR z HANDOFF_A #2): 1) logowanie `POST /auth/login`, token w `sessionStorage`, każde żądanie z `Authorization: Bearer`; 401 → wylogowanie i ponowny formularz; E5 kroki 2–5 i E9 wymagają zalogowania (konta demo w README); 2) import wysyła `dysponent_nazwa`, `dysponent_typ` (nowe pole wyboru w kroku 2) i `nazwa_zrodla`; 3) „Zatwierdź…” w E9 otwiera formularz rekordu (nazwa, opis, adres, godziny, dostęp, szafka, dysponent), błędy 422 z `fields` przy polach i w podsumowaniu. Gałąź zsynchronizowana z `main` (merge), więc `docker compose up --build` działa z `b/ux-docs`.
+- Jak uruchomić / zobaczyć: `cp .env.example .env && docker compose up --build` → http://localhost.
+- Założenia: w trybie demonstracyjnym (bez API) logowanie przyjmuje hasła z `.env.example`.
+- CR: brak nowych.
+- Znane błędy: zmiany NIESPRAWDZONE w przeglądarce ani na żywym API (środowisko B bez sieci npm/pip); sprawdzona tylko składnia TS. Docker nadal nie budowany.
+- Użycie AI (jedna linia): logowanie, formularz moderatora i pola importu z Claude (Model B).
+- Następny krok: `npm run typecheck && npm run build` u człowieka, `docker compose up --build`, przejście ścieżek z README.

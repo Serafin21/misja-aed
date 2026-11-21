@@ -14,14 +14,37 @@ function setMock(v: boolean) { if (usingMocks !== v) { usingMocks = v; listeners
 
 export class HttpError extends Error {
   constructor(public status: number, public body: ApiError | null) { super(body?.message ?? `Błąd ${status}`); }
+  /** Field-level messages from a 422 response ({ pole: komunikat }). */
+  get fields(): Record<string, string> { return this.body?.fields ?? {}; }
 }
 
 class Unreachable extends Error {}
 
+// ---------- auth (CONTRACT: POST /auth/login → Bearer token) ----------
+export type Role = 'dysponent' | 'moderator';
+export type Session = { token: string; rola: Role } | null;
+const SESSION_KEY = 'aed.session';
+function readSession(): Session {
+  try { const raw = sessionStorage.getItem(SESSION_KEY); return raw ? (JSON.parse(raw) as Session) : null; } catch { return null; }
+}
+let session: Session = readSession();
+const authListeners = new Set<(s: Session) => void>();
+export const getSession = () => session;
+export function onSessionChange(fn: (s: Session) => void) { authListeners.add(fn); return () => { authListeners.delete(fn); }; }
+function setSession(s: Session) {
+  session = s;
+  try { if (s) sessionStorage.setItem(SESSION_KEY, JSON.stringify(s)); else sessionStorage.removeItem(SESSION_KEY); } catch { /* storage blocked – keep in memory */ }
+  authListeners.forEach((l) => l(s));
+}
+export const logout = () => setSession(null);
+
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  headers.set('Accept', 'application/json');
+  if (session && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${session.token}`);
   let res: Response;
   try {
-    res = await fetch(API_BASE + path, { headers: { Accept: 'application/json', ...(init?.headers ?? {}) }, ...init });
+    res = await fetch(API_BASE + path, { ...init, headers });
   } catch {
     throw new Unreachable();
   }
@@ -29,6 +52,10 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   if (!isJson && (res.status === 404 || res.status >= 500 || res.ok)) throw new Unreachable(); // dev server / proxy without backend
   if (!res.ok) {
     const body = isJson ? ((await res.json()) as { error?: ApiError }) : null;
+    if (res.status === 401 && session && !path.startsWith('/auth/')) {
+      setSession(null); // token no longer valid (e.g. server restarted with a new AED_SECRET)
+      throw new HttpError(401, { code: 'sesja_wygasla', message: 'Sesja wygasła. Zaloguj się ponownie.' });
+    }
     throw new HttpError(res.status, body?.error ?? null);
   }
   return (await res.json()) as T;
@@ -123,13 +150,19 @@ export function getStats() {
   return withFallback(() => http<Record<string, unknown>>(`/statystyki`), () => mock.mockStats() as Promise<Record<string, unknown>>);
 }
 
-export function uploadAndValidate(file: File, kodZrodla: string, licencja: string): Promise<RaportWalidacji> {
+export type ImportMeta = { kodZrodla: string; licencja: string; dysponentNazwa: string; dysponentTyp: string };
+
+export function uploadAndValidate(file: File, m: ImportMeta): Promise<RaportWalidacji> {
   return withFallback(
     async () => {
       const fd = new FormData();
       fd.append('plik', file);
-      fd.append('kod_zrodla', kodZrodla);
-      fd.append('licencja', licencja);
+      fd.append('kod_zrodla', m.kodZrodla);
+      fd.append('licencja', m.licencja);
+      // CR from A: provider name/type fill required fields missing in the file (dysponent_nazwa, dysponent_typ)
+      fd.append('dysponent_nazwa', m.dysponentNazwa);
+      fd.append('dysponent_typ', m.dysponentTyp);
+      fd.append('nazwa_zrodla', m.dysponentNazwa);
       const imp = await http<{ import_id: string; mapowanie_proponowane: RaportWalidacji['mapowanie'] }>(`/import`, { method: 'POST', body: fd });
       const rep = await http<RaportWalidacji>(`/import/${imp.import_id}/mapowanie`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mapowanie: imp.mapowanie_proponowane }),
@@ -161,11 +194,21 @@ export function listReports() {
   }, () => mock.mockReports());
 }
 
-export function decideReport(id: string, decyzja: 'zatwierdz' | 'odrzuc' | 'scal') {
+/** Moderator decision. "zatwierdz" needs `rekord` with the address etc. – otherwise the API answers 422 with `fields`. */
+export function decideReport(id: string, decyzja: 'zatwierdz' | 'odrzuc' | 'scal', rekord?: Record<string, unknown>) {
   return withFallback(
-    () => http<unknown>(`/zgloszenia/${encodeURIComponent(id)}/decyzja`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decyzja }) }),
-    () => mock.mockDecide(id, decyzja),
+    () => http<unknown>(`/zgloszenia/${encodeURIComponent(id)}/decyzja`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rekord ? { decyzja, rekord } : { decyzja }),
+    }),
+    () => mock.mockDecide(id, decyzja, rekord),
   );
+}
+
+export function login(loginName: Role, haslo: string): Promise<Session> {
+  return withFallback(
+    () => http<{ token: string; rola: Role }>(`/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: loginName, haslo }) }),
+    () => mock.mockLogin(loginName, haslo),
+  ).then((s) => { setSession(s); return s; });
 }
 
 export const templateUrl = (fmt: 'csv' | 'xlsx') => `${API_BASE}/szablon.${fmt}`;

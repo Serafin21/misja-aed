@@ -3,10 +3,13 @@ import { useRef, useState, type FormEvent } from 'react';
 import { approveImport, isMockMode, templateUrl, uploadAndValidate } from '../api/client';
 import type { RaportWalidacji, WynikImportu } from '../api/types';
 import { BRAND_NAME, BRAND_SLOGAN, heartRects } from '../components/Brand';
+import { RequireLogin } from '../components/Auth';
 import { ErrorBox, Icon } from '../components/ui';
-import { dictValues } from '../lib/format';
+import { dictValues, label } from '../lib/format';
 import { FIELDS, fieldLabel, templateCsv } from '../lib/fields';
 import { usePageTitle } from '../router';
+
+const FIELD_IDS: Record<string, string> = { owner: 'up-owner', ownerType: 'up-owner-type', file: 'up-file' };
 
 const STEPS = ['Pobierz szablon', 'Wgraj plik', 'Sprawdź kolumny', 'Popraw błędy', 'Zatwierdź'];
 
@@ -23,7 +26,7 @@ export function Providers() {
   return (
     <>
       <h1 id="page-title">Dla dysponentów AED</h1>
-      <p className="lead">Masz defibrylator w urzędzie, szkole, firmie albo w wozie OSP? Udostępnij dane w 5 krokach. Bez zakładania konta w prototypie i bez danych osobowych.</p>
+      <p className="lead">Masz defibrylator w urzędzie, szkole, firmie albo w wozie OSP? Udostępnij dane w 5 krokach. Szablon pobierzesz bez logowania. Do wgrania pliku w prototypie służy konto demonstracyjne dysponenta.</p>
 
       <nav aria-label="Kroki importu" className="stepper">
         <ol>
@@ -39,10 +42,14 @@ export function Providers() {
       <section className="panel" aria-labelledby="step-title">
         <h2 id="step-title" ref={headRef} tabIndex={-1}>Krok {step + 1} z 5: {STEPS[step]}</h2>
         {step === 0 && <StepTemplate onNext={() => go(1)} />}
-        {step === 1 && <StepUpload owner={owner} setOwner={setOwner} onDone={(r) => { setRep(r); go(2); }} onBack={() => go(0)} />}
-        {step === 2 && rep && <StepMapping rep={rep} onNext={() => go(3)} onBack={() => go(1)} />}
-        {step === 3 && rep && <StepReport rep={rep} onNext={() => go(4)} onBack={() => go(1)} />}
-        {step === 4 && rep && <StepApprove rep={rep} owner={owner} result={result} setResult={setResult} onBack={() => go(3)} />}
+        {step > 0 && (
+          <RequireLogin role="dysponent" roles={['dysponent', 'moderator']}>
+            {step === 1 && <StepUpload owner={owner} setOwner={setOwner} onDone={(r) => { setRep(r); go(2); }} onBack={() => go(0)} />}
+            {step === 2 && rep && <StepMapping rep={rep} onNext={() => go(3)} onBack={() => go(1)} />}
+            {step === 3 && rep && <StepReport rep={rep} onNext={() => go(4)} onBack={() => go(1)} />}
+            {step === 4 && rep && <StepApprove rep={rep} owner={owner} result={result} setResult={setResult} onBack={() => go(3)} />}
+          </RequireLogin>
+        )}
       </section>
     </>
   );
@@ -80,6 +87,7 @@ function StepTemplate({ onNext }: { onNext: () => void }) {
 function StepUpload({ owner, setOwner, onDone, onBack }: { owner: string; setOwner: (s: string) => void; onDone: (r: RaportWalidacji) => void; onBack: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [lic, setLic] = useState('CC0-1.0');
+  const [ownerType, setOwnerType] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [fail, setFail] = useState<Error | null>(null);
@@ -88,15 +96,16 @@ function StepUpload({ owner, setOwner, onDone, onBack }: { owner: string; setOwn
     e.preventDefault();
     const er: Record<string, string> = {};
     if (!owner.trim()) er.owner = 'Wpisz nazwę instytucji lub firmy.';
+    if (!ownerType) er.ownerType = 'Wybierz rodzaj dysponenta.';
     if (!file) er.file = 'Wybierz plik CSV, XLSX, JSON albo GeoJSON.';
     else if (!/\.(csv|xlsx|json|geojson)$/i.test(file.name)) er.file = 'Ten format nie jest obsługiwany. Wybierz CSV, XLSX, JSON albo GeoJSON.';
     else if (file.size > 20 * 1024 * 1024) er.file = 'Plik jest większy niż 20 MB.';
     setErrors(er);
-    if (Object.keys(er).length) { document.getElementById(er.owner ? 'up-owner' : 'up-file')?.focus(); return; }
+    if (Object.keys(er).length) { document.getElementById(er.owner ? 'up-owner' : er.ownerType ? 'up-owner-type' : 'up-file')?.focus(); return; }
     setBusy(true); setFail(null);
     try {
       const code = `dysponent:${owner.trim().toLocaleLowerCase('pl').normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
-      onDone(await uploadAndValidate(file!, code, lic));
+      onDone(await uploadAndValidate(file!, { kodZrodla: code, licencja: lic, dysponentNazwa: owner.trim(), dysponentTyp: ownerType }));
     } catch (ex) { setFail(ex as Error); } finally { setBusy(false); }
   }
 
@@ -106,13 +115,23 @@ function StepUpload({ owner, setOwner, onDone, onBack }: { owner: string; setOwn
       {errCount > 0 && (
         <div className="callout callout--error" role="alert">
           <p className="callout__title">Popraw {errCount === 1 ? '1 pole' : `${errCount} pola`}</p>
-          <ul>{Object.entries(errors).map(([k, v]) => <li key={k}><a href={k === 'owner' ? '#up-owner' : '#up-file'}>{v}</a></li>)}</ul>
+          <ul>{Object.entries(errors).map(([k, v]) => <li key={k}><a href={`#${FIELD_IDS[k] ?? 'up-file'}`}>{v}</a></li>)}</ul>
         </div>
       )}
       <div className="field">
         <label htmlFor="up-owner">Nazwa dysponenta <span className="req">(wymagane)</span></label>
         <input id="up-owner" type="text" autoComplete="organization" value={owner} onChange={(e) => setOwner(e.target.value)} aria-invalid={!!errors.owner} aria-describedby={errors.owner ? 'err-owner' : undefined} />
         {errors.owner && <p id="err-owner" className="field-error">{errors.owner}</p>}
+      </div>
+      <div className="field">
+        <label htmlFor="up-owner-type">Rodzaj dysponenta <span className="req">(wymagane)</span></label>
+        <p id="up-owner-type-hint" className="hint">Trafi do każdego wiersza, w którym plik nie ma tej kolumny.</p>
+        <select id="up-owner-type" value={ownerType} onChange={(e) => setOwnerType(e.target.value)} aria-invalid={!!errors.ownerType}
+          aria-describedby={`up-owner-type-hint${errors.ownerType ? ' err-owner-type' : ''}`}>
+          <option value="">– wybierz –</option>
+          {dictValues('dysponent_typ').map((d) => <option key={d.wartosc} value={d.wartosc}>{label('dysponent_typ', d.wartosc)}</option>)}
+        </select>
+        {errors.ownerType && <p id="err-owner-type" className="field-error">{errors.ownerType}</p>}
       </div>
       <div className="field">
         <label htmlFor="up-file">Plik z danymi <span className="req">(wymagane)</span></label>

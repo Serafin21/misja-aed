@@ -252,3 +252,9 @@ h2[tabindex="-1"]:focus { outline: none; }
 .reasons { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); padding-left: 1.2rem; }
 .reasons li::marker { font-weight: 800; color: var(--brand); }
 .sticker { display: block; max-width: 100%; height: auto; margin: .5rem 0; }
+
+/* Login (demo accounts) and moderator approve form */
+.login-box { max-width: 28rem; }
+.session-line { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.approve-form { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--line-soft); }
+.form-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
