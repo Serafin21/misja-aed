@@ -1,0 +1,61 @@
+{
+  "type": "FeatureCollection",
+  "_note": "Dane FIKCYJNE w strukturze podobnej do eksportu OSM (licencja ODbL dla prawdziwych danych).",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          21.01395,
+          52.24372
+        ]
+      },
+      "properties": {
+        "osm_id": "node/900000001",
+        "emergency": "defibrillator",
+        "defibrillator:location": "w holu urzędu",
+        "indoor": "yes",
+        "access": "yes",
+        "opening_hours": "Mo-Fr 08:00-16:00",
+        "operator": "Urząd Gminy Przykładowo"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.6466,
+          54.352
+        ]
+      },
+      "properties": {
+        "osm_id": "node/900000002",
+        "emergency": "defibrillator",
+        "defibrillator:location": "przy kasach biletowych",
+        "indoor": "yes",
+        "access": "yes",
+        "opening_hours": "24/7",
+        "operator": "Dworzec Demo Gdańsk"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.6501,
+          54.3498
+        ]
+      },
+      "properties": {
+        "osm_id": "node/900000003",
+        "emergency": "defibrillator",
+        "defibrillator:location": "remiza OSP, samochód ratowniczy",
+        "access": "private",
+        "operator": "OSP Demo"
+      }
+    }
+  ]
+}

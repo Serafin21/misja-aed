@@ -1,0 +1,51 @@
+{
+  "main": "main",
+  "branches": {
+    "A": "a/core",
+    "B": "b/ux-docs"
+  },
+  "zones": {
+    "A": [
+      "src/core/",
+      "src/api/",
+      "data/",
+      "tests/",
+      "scripts/",
+      "docker-compose.yml",
+      "Dockerfile",
+      "requirements.txt",
+      "pyproject.toml",
+      ".env.example",
+      "docs/tech/",
+      "deliverables/dataset/",
+      "docs/HANDOFF_A.md",
+      "docs/INTEGRATION_REPORT.md"
+    ],
+    "B": [
+      "src/ui/",
+      "pitch/",
+      "README.md",
+      "SUBMISSION.md",
+      "docs/user/",
+      "docs/a11y/",
+      "docs/HANDOFF_B.md",
+      "docs/JURY_QA.md",
+      "docs/ui_spec.md"
+    ],
+    "HUMAN": [
+      "docs/BRIEF.md",
+      "docs/CONTRACT.md",
+      "docs/DECISIONS.md",
+      "docs/AI_USAGE.md",
+      "docs/agents/",
+      "docs/task/",
+      "docs/schema/",
+      "deliverables/zakres_danych/",
+      "brand/",
+      "qa/",
+      ".hn/",
+      "tools/",
+      ".gitignore"
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+Nazwa;Adres;Gdzie dokładnie;Godziny;Współrzędne;Całą dobę;Zamknięta szafka
+Urząd Gminy Przykładowo;ul. Królewska 27, 00-060 Warszawa;hol główny, przy informacji;pn-pt 8-16;52,243700 21,013900;NIE;NIE
+Hala sportowa Demo;al. Przykładowa 5A, 00-950 Warszawa;kapsuła na elewacji przy wejściu;całodobowo;52,229800 21,011800;TAK;NIE
+Biblioteka Testowa;ul. Książkowa 12, 00-001 Warszawa;parter, wypożyczalnia;pn-pt 10-19, sob 10-14;52,251000 21,000500;NIE;TAK

@@ -1,0 +1,9 @@
+id_aed,kod_zrodla,id_w_zrodle,licencja_zrodla,data_pobrania,rekord_nadrzedny
+AED-PL-B939F7EBA4,dysponent:gmina-przykladowo,Urząd Gminy Przykładowo,CC0-1.0,2026-11-21,true
+AED-PL-B939F7EBA4,osm,node/900000001,ODbL-1.0,2026-11-21,false
+AED-PL-D6AADC75B3,dysponent:gmina-przykladowo,Hala sportowa Demo,CC0-1.0,2026-11-21,true
+AED-PL-CBD53ED4AA,dysponent:gmina-przykladowo,Biblioteka Testowa,CC0-1.0,2026-11-21,true
+AED-PL-AED495CA3B,dysponent:uczelnia-testowa,0,CC0-1.0,2026-11-21,true
+AED-PL-9FBD911D8A,dysponent:uczelnia-testowa,1,CC0-1.0,2026-11-21,true
+AED-PL-9778083B54,osm,node/900000002,ODbL-1.0,2026-11-21,true
+AED-PL-4AF9A8418D,osm,node/900000003,ODbL-1.0,2026-11-21,true

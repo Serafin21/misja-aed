@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PRZYKŁAD pliku XML importu (automatyczne zasilanie dane.gov.pl) dla zbioru AED.
+     Nazwy elementów według instrukcji COI dla pliku XML importu (dataset/resource). Przestrzeń nazw "p" i XSD:
+     DO WERYFIKACJI w kodzie źródłowym portalu (https://dane.gov.pl/source-code/) lub na stoisku danych. -->
+<p:datasets xmlns:p="urn:do-weryfikacji:dane.gov.pl:import">
+  <dataset status="published">
+    <extIdent>aed-polska</extIdent>
+    <title>
+      <polish>Defibrylatory AED w Polsce – zbiór zintegrowany</polish>
+      <english>AED defibrillators in Poland – integrated dataset</english>
+    </title>
+    <description>
+      <polish>Ogólnopolski, otwarty zbiór lokalizacji i dostępności automatycznych defibrylatorów zewnętrznych (AED), integrujący dane od dysponentów według wzorcowego zakresu danych.</polish>
+      <english>Nationwide open dataset of automated external defibrillator (AED) locations and availability, integrating data from AED owners according to a reference data scope.</english>
+    </description>
+    <url>https://example.org/aed/zbior</url>
+    <categories><category>HEAL</category></categories>
+    <conditions><!-- warunki ponownego wykorzystania: do decyzji dostawcy --></conditions>
+    <resources>
+      <resource status="published">
+        <extIdent>aed-csv</extIdent>
+        <url>https://example.org/aed/eksport/aed.csv</url>
+        <title><polish>Defibrylatory AED – CSV</polish><english>AED defibrillators – CSV</english></title>
+        <description><polish>Rekordy według wzorcowego zakresu danych (UTF-8, przecinek, RFC 4180).</polish><english>Records in the reference data scope (UTF-8, comma, RFC 4180).</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <hasDynamicData>false</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+      <resource status="published">
+        <extIdent>aed-geojson</extIdent>
+        <url>https://example.org/aed/eksport/aed.geojson</url>
+        <title><polish>Defibrylatory AED – GeoJSON</polish><english>AED defibrillators – GeoJSON</english></title>
+        <description><polish>Te same rekordy jako punkty WGS 84.</polish><english>The same records as WGS 84 points.</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <hasDynamicData>false</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+    </resources>
+    <tags><!-- AED; defibrylator; pierwsza pomoc; ratownictwo – składnia znaczników do weryfikacji z XSD --></tags>
+    <updateFrequency>daily</updateFrequency>
+    <hasDynamicData>false</hasDynamicData>
+    <hasHighValueData>false</hasHighValueData>
+    <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+    <hasResearchData>false</hasResearchData>
+  </dataset>
+</p:datasets>

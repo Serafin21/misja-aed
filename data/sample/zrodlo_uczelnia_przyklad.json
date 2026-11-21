@@ -1,0 +1,30 @@
+[
+  {
+    "budynek": "Wydział Energetyki – Uczelnia Testowa",
+    "lokalizacja": "I piętro, przy dziekanacie",
+    "lat": 50.066,
+    "lon": 19.918,
+    "adres": {
+      "ulica": "Testowa",
+      "nr": "30",
+      "kod": "30-059",
+      "miasto": "Kraków"
+    },
+    "dostepnosc": "Mo-Fr 07:00-21:00",
+    "dzieci": true
+  },
+  {
+    "budynek": "Biblioteka Główna – Uczelnia Testowa",
+    "lokalizacja": "wejście główne, ściana po lewej",
+    "lat": 50.0645,
+    "lon": 19.9215,
+    "adres": {
+      "ulica": "Testowa",
+      "nr": "1",
+      "kod": "30-059",
+      "miasto": "Kraków"
+    },
+    "dostepnosc": "Mo-Su 08:00-22:00",
+    "dzieci": false
+  }
+]
