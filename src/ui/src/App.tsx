@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { probeApi } from './api/client';
 import { useMockMode } from './lib/useMockMode';
-import { APP_NAME, APP_TAGLINE, BRAND_NAME } from './components/Brand';
+import { APP_NAME, APP_TAGLINE, BRAND_NAME, LogoMark } from './components/Brand';
 import { ExternalLink, Icon } from './components/ui';
 import { About, AccessibilityStatement, Contact, Cookies, Licenses, Privacy } from './pages/Info';
 import { AedCard } from './pages/AedCard';
@@ -56,7 +56,7 @@ const REPO = 'https://github.com/Serafin21/misja-aed';
 
 /** Breadcrumbs (gov.pl pattern): home icon first, hidden below 700 px; not on the home page. */
 function Breadcrumbs({ path }: { path: string }) {
-  if (path === '/') return null;
+  if (path === '/' || path === '/znajdz' || path === '/mapa') return null; // Znajdź AED: no breadcrumbs (owner's request)
   const nav = NAV.find((n) => n.to === path);
   const trail: { label: string; to?: string }[] = [];
   if (matchPath('/aed/:id', path)) trail.push({ label: 'Znajdź AED', to: '/znajdz' }, { label: 'AED' });
@@ -125,7 +125,7 @@ export function App() {
       <header className="site-header">
         <div className="container site-header__inner">
           <Link to="/" className="brand" aria-label={`${APP_NAME} – strona główna`}>
-            <span className="brand__mark brand__mark--app"><Icon name="pin" /></span>
+            <span className="brand__mark"><LogoMark size={34} /></span>
             <span>{APP_NAME}<span className="brand__slogan" aria-hidden="true">{APP_TAGLINE}</span></span>
           </Link>
           <button id="menu-btn" type="button" className="menu-btn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu((m) => !m)}>
@@ -133,6 +133,7 @@ export function App() {
           </button>
           <nav id="main-nav" aria-label="Główna" className={`main-nav${menu ? ' is-open' : ''}`}>
             <ul>
+              {!session && <li className="main-nav__login"><Link to="/logowanie">Zaloguj się, aby dodać AED</Link></li>}
               {NAV.map((n) => <li key={n.to}><Link to={n.to}>{n.label}</Link></li>)}
               {session && (ROLE_NAV[session.rola] ?? []).map((n) => <li key={n.to} className="main-nav__role"><Link to={n.to}>{n.label}</Link></li>)}
               {/* only after logging in (docs/MODEL_ROL.md §4) – the server checks permissions on every operation anyway */}

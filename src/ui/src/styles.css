@@ -488,3 +488,6 @@ thead th { background: var(--color-surface); }
 .e2__filters .mode-switch { margin: 0 0 var(--space); }
 .e2__filters .mode-switch__opts { display: grid; gap: var(--space-s); }
 .e2-page .area-chip { margin: 0 0 var(--space-m); }
+/* "Zaloguj się, aby dodać AED" – first menu tab, separated from the rest by a line */
+.main-nav__login a { font-weight: var(--font-weight-bold); }
+@media (min-width: 900px) { .main-nav__login { padding-right: var(--space-s); margin-right: var(--space-s); border-right: 2px solid var(--color-border); } }

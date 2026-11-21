@@ -191,7 +191,6 @@ export function MapList() {
   return (
     <div className="e2-page">
       <h1 id="page-title">Znajdź AED</h1>
-      <p className="lead e2__lead">Wpisz, gdzie jesteś, albo użyj lokalizacji – pokażemy najbliższe defibrylatory. W nagłym wypadku dzwoń <a href="tel:112">112</a>.</p>
 
       <div className="e2__search" role="search" aria-label="Gdzie jesteś?">
         <div className="e2__search-box">

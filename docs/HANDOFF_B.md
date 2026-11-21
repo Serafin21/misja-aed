@@ -313,3 +313,12 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
   - Przejrzystość: krótszy wstęp, przełącznik „Co pokazać na mapie” w kolumnie filtrów, liczba AED w jednym wierszu z przełącznikiem widoku, „Aktualność danych” i „Skąd są dane” schowane pod „Więcej filtrów”, cały ekran na pełną szerokość. Lista nie pokazuje już samego przycisku „Pokaż kolejne” w czasie wczytywania.
 - Sprawdzone: `tsc -b`, przeglądarka – „Kraków, Floriańska 3” → 5 najbliższych, znacznik „Najbliższe AED · 60 m”, rozwinięcie do 10; lokalizacja → „Najbliższe AED · 40 m”; widok telefonu.
 - CR: – · Znane błędy: – · Użycie AI: ekran „Znajdź AED” z Claude.
+
+## HANDOFF #27
+
+- Czas: sob 22:30
+- Kontekst: zmiany CR-TL-8 z tej sesji (a8ed601..f977be4) **cofnięte** na prośbę człowieka B (09e8034, stan = 307a132). Zamiast nich trzy poprawki od B:
+- Zrobione: (1) „Znajdź AED” (`/znajdz`, `/mapa`): bez ścieżki okruszków i bez zdania wstępu (z linkiem 112); (2) nagłówek: serce z logo akcji (`LogoMark`) zamiast pinezki; (3) menu: dla niezalogowanych pierwsza karta „Zaloguj się, aby dodać AED” → `/logowanie`, oddzielona kreską od reszty (od 900 px).
+- Sprawdzone: składnia TS. Build – u B.
+- Użycie AI (jedna linia): trzy poprawki interfejsu z Claude (Model B) według zrzutu od B.
+- Następny krok: build i ocena B.
