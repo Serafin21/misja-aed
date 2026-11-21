@@ -114,3 +114,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: niesprawdzone w przeglądarce ani typecheckiem z pakietami (środowisko B bez npm).
 - Użycie AI (jedna linia): tryby mapy, warstwa gmin, etykiety i strona księgi z Claude (Model B).
 - Następny krok: typecheck + build u człowieka, przegląd w przeglądarce (klawiatura, 320 px, legenda).
+
+## HANDOFF #10
+
+- Czas: sob 16:40
+- Zrobione: **sprawdzone przez człowieka u siebie (Windows):** `npm ci`, `npm run typecheck` – 0 błędów, `npm run build` – OK. **Sprawdzone w przeglądarce (tryb demo, `npm run dev`):** przełącznik trybów (strzałki zmieniają tryb, URL `?tryb=dane`, legenda i etykiety się zmieniają, widoczny fokus), pinezki trybu danych, etykiety „Dane z 11.2026”, E8 z hasłem i CTA, 320 px bez przewijania w poziomie. Poprawki po teście: klastry jako koła (brakowało stylu – kwadraty z liczbą poza kształtem), `aria-label` pinezek (divIcon ignoruje `alt`), zmiana trybu nie resetuje przybliżenia, równe szerokości opcji przełącznika.
+- Jak uruchomić / zobaczyć: `git pull`, `npm run dev` → http://localhost:5173/mapa?tryb=dane.
+- Założenia: na komputerze B nie ma Dockera ani Pythona – `docker compose` i warstwy gmin na żywym API jeszcze nikt nie widział.
+- CR: dla TL – `.gitattributes` z `*.sh text eol=lf` (na Windows `scripts/start.sh` miał CRLF → kontener API by nie wstał).
+- Znane błędy: dane demo mają tylko rekordy „aktualne” (brak przykładu pinezki nieaktualnej w trybie demo).
+- Użycie AI (jedna linia): test w przeglądarce i poprawki z Claude (Model B), uruchomienie i typecheck – człowiek.
+- Następny krok: Python → test na API (warstwa gmin), Docker u TL/A, prezentacja.

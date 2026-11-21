@@ -63,6 +63,7 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
   const extra = useRef<L.LayerGroup | null>(null);
   const covLayer = useRef<L.GeoJSON | null>(null);
   const covAttr = useRef<string | null>(null);
+  const fitKey = useRef<string>('');
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
 
@@ -97,6 +98,7 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
       pts.push(ll);
       const name = markerName(a, mode);
       const mk = L.marker(ll, { icon: markerIcon(a, mode), title: name, alt: name, keyboard: true, riseOnHover: true });
+      mk.on('add', () => mk.getElement()?.setAttribute('aria-label', name)); // divIcon ignores `alt`; title alone is unreliable for screen readers
       mk.on('click', () => navigate(`/aed/${a.id_aed}`));
       mk.on('keypress', (e: L.LeafletKeyboardEvent) => { if (e.originalEvent.key === 'Enter' || e.originalEvent.key === ' ') navigate(`/aed/${a.id_aed}`); });
       group.addLayer(mk);
@@ -104,6 +106,10 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     group.addTo(m);
     layer.current = group;
     if (user) pts.push([user.lat, user.lon]);
+    // switching the map mode only repaints the pins – keep the user's zoom; refit only when the data changes
+    const key = `${items.map((a) => a.id_aed).join(',')}|${user ? `${user.lat},${user.lon}` : ''}|${focusId ?? ''}`;
+    if (key === fitKey.current) return;
+    fitKey.current = key;
     const focus = focusId ? items.find((a) => a.id_aed === focusId) : undefined;
     if (focus) m.setView([focus.szerokosc_geograficzna, focus.dlugosc_geograficzna], 17);
     else if (pts.length === 1) m.setView(pts[0], 16);

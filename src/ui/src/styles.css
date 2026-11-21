@@ -278,3 +278,8 @@ h2[tabindex="-1"]:focus { outline: none; }
 .coverage-list h3 { margin-bottom: .25rem; }
 .campaign-hero__title { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; margin-bottom: .5rem; }
 .campaign-hero__cta { font-size: 1.2rem; font-weight: 600; margin: 0 0 .25rem; }
+
+/* Marker clusters (MarkerCluster.Default.css is not imported – own round style in brand colours) */
+.marker-cluster { border-radius: 50%; }
+.marker-cluster div { width: 30px; height: 30px; margin: 5px 0 0 5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .85rem; line-height: 1; }
+.mode-switch__opt { flex: 1 1 15rem; max-width: 22rem; }
