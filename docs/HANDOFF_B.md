@@ -170,3 +170,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: lista E2 przy filtrze województwa – do czasu CR (2).
 - Użycie AI (jedna linia): test na żywym API i poprawka filtra z Claude (Model B); uruchomienie środowiska – człowiek.
 - Następny krok: zrzuty ekranu do prezentacji z żywego API.
+
+## HANDOFF #15
+
+- Czas: sob 19:30
+- Zrobione: **E2 Mapa i lista – nowy układ** (prośba właściciela projektu): filtry po lewej, lista obok mapy, mapa na szerokość ekranu (do 1680 px). (1) **Przybliżanie kółkiem myszy / touchpadem** (`MapView` prop `wheelZoom`, domyślnie włączony). (2) **Lista pokazuje AED widoczne na mapie**, najbliższe środka mapy na górze, po 30 z „Pokaż kolejne”; po każdym przesunięciu/przybliżeniu (opóźnienie 250 ms) szczegóły z nowego `GET /aed?ids=` (HANDOFF A #6). Status: „X AED spełnia filtry, na mapie widać Y”. (3) **Filtry z licznikami, działają od razu w przeglądarce** na warstwie `/aed/punkty` (`lib/pointFilters.ts`): Dostępność (dostępne teraz / teraz zamknięte / godziny nieznane / tylko dla uprawnionych), Aktualność danych (aktualne / nieaktualne / bez daty sprawdzenia), Źródło (dysponenci / OpenStreetMap), województwo (po położeniu), urządzenia w pojazdach; szukaj i gmina przez API (`searchAedIds`). W grupie – „lub”, między grupami – „i”; liczba przy opcji = ile AED pokaże kliknięcie (liczenie fasetowe). Filtry w URL (`?dostepnosc=teraz,nieznane&aktualnosc=aktualne&zrodlo=osm&wojewodztwo=…`), stare linki `?dostepne_teraz=true` działają. (4) Warstwa gmin w trybie „Aktualność danych”: wybrane województwo albo to, w którym jest większość widocznych AED (od przybliżenia 8). Poprawki: szara połowa mapy po „Tylko mapa” (`ResizeObserver` → `invalidateSize`), mapa na karcie AED pokazywała Europę zamiast urządzenia, podwójne okruszki na karcie AED; znaczniki budowane raz na tryb i używane ponownie (bez `chunkedLoading` – jego liczniki czasu dodawały znaczniki po zmianie filtrów i dawały błąd `getMinZoom` przy React StrictMode).
+- Jak uruchomić / zobaczyć: API z `a/core` (potrzebne `/aed?ids=` i nowe pola punktów) + `npm run dev` → /mapa.
+- Założenia: lista w trybie „Tylko lista” = wszystkie AED spełniające filtry (bez ograniczenia mapą).
+- CR: –
+- Znane błędy: –
+- Użycie AI (jedna linia): układ E2, filtry i poprawki mapy z Claude.
+- Następny krok: sprawdzenie czytnikiem ekranu nowego panelu filtrów.

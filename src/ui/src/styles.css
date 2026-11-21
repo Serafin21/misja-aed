@@ -286,3 +286,37 @@ thead th { background: var(--color-surface); }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 @media (forced-colors: active) { .badge, .btn, .callout { border: 2px solid var(--forced-outline); } }
+
+/* ---------- E2: filters on the left, list next to the map (list = what is visible on the map) ---------- */
+.e2 { display: grid; gap: var(--space); }
+.e2__filters .field { margin-bottom: var(--space-m); }
+.e2__filters .field input, .e2__filters .field select { width: 100%; }
+.e2__bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-s) var(--space); }
+.e2__bar .mode-switch { margin: 0; }
+.facet { border: 0; padding: 0; margin: 0 0 var(--space); }
+.facet legend { font-weight: var(--font-weight-bold); padding: 0; margin-bottom: var(--space-s); }
+.facet--text { display: grid; gap: var(--space-s); margin-bottom: var(--space-m); }
+.facet--text .field { margin-bottom: 0; }
+.facet__opt { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: var(--space-s); padding: 6px 0; border-bottom: 1px solid var(--color-border); }
+.facet__opt input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--color-action); }
+.facet__opt label { cursor: pointer; line-height: 1.3; }
+.facet__label { display: block; font-weight: var(--font-weight-semibold); }
+.facet__hint { display: block; font-size: .85rem; color: var(--color-text-secondary); }
+.facet__count { font-variant-numeric: tabular-nums; font-size: .9rem; color: var(--color-text-secondary); padding-top: 2px; }
+.btn--small { min-height: 36px; padding: 0 var(--space-m); font-size: .85rem; }
+.e2__list .aed-list { margin-top: 0; }
+@media (min-width: 1100px) {
+  .e2 { grid-template-columns: 270px minmax(0, 1fr); align-items: start; }
+  .e2__filters { position: sticky; top: var(--space); max-height: calc(100vh - 2 * var(--space)); overflow: auto; padding-right: var(--space-s); }
+  .e2__split.split--oba { grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.4fr); }
+  .e2__split.split--oba .e2__list { max-height: 700px; overflow: auto; padding-right: var(--space-s); }
+}
+@media (min-width: 900px) and (max-width: 1099px) {
+  .e2__split.split--oba .e2__list { max-height: 700px; overflow: auto; }
+}
+@media (min-width: 1100px) {
+  /* E2 uses the full screen width (up to 1680px): filters | list | map */
+  .e2 { width: min(1680px, calc(100vw - 2 * var(--space))); margin-left: calc(50% - min(840px, 50vw - var(--space))); }
+  .e2__bar .mode-switch__opts { display: flex; flex-wrap: wrap; gap: var(--space-s); }
+}
+.e2__bar .mode-switch { flex: 1 1 32rem; }

@@ -34,7 +34,6 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
   const osm = a.licencja === 'ODbL-1.0';
   return (
     <article className="card-page" aria-labelledby="page-title">
-      <p className="breadcrumbs"><Link to="/mapa">Mapa i lista</Link> <span aria-hidden="true">›</span> Karta AED</p>
       <header className="card-page__head">
         <h1 id="page-title">{a.nazwa_obiektu}</h1>
         <div className="aed-item__badges">

@@ -62,7 +62,11 @@ export interface AedView extends Aed {
 }
 
 /** GET /aed/punkty (CR-TL-2) – light map layer; details come from GET /aed/{id} on click */
-export interface AedPoint { id_aed: string; lat: number; lon: number; dostepny_teraz: boolean | null; stan_danych: 'aktualne' | 'nieaktualne'; osm: boolean }
+export interface AedPoint {
+  id_aed: string; lat: number; lon: number; dostepny_teraz: boolean | null; stan_danych: 'aktualne' | 'nieaktualne'; osm: boolean;
+  /** HANDOFF A #6 – for filters next to the map (older API: undefined) */
+  dostep?: Dostep | null; wiek_danych_dni?: number | null; mobilny?: boolean; wojewodztwo?: string | null;
+}
 
 /** GET /pokrycie – municipalities (PRG) with AED coverage, CONTRACT §8 */
 export type StanGminy = 'brak_danych' | 'nieaktualne' | 'aktualne';

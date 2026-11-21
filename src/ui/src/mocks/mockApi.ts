@@ -45,7 +45,13 @@ export function mockPoints(): Promise<AedPoint[]> {
   return delay(records.map(withAvailability).map((a) => ({
     id_aed: a.id_aed, lat: a.szerokosc_geograficzna, lon: a.dlugosc_geograficzna,
     dostepny_teraz: a.dostepny_teraz ?? null, stan_danych: a.stan_danych ?? 'nieaktualne', osm: a.licencja === 'ODbL-1.0',
+    dostep: a.dostep, wiek_danych_dni: ageDays(a.data_weryfikacji), mobilny: a.mobilny, wojewodztwo: a.wojewodztwo || null,
   })));
+}
+
+export function mockByIds(ids: string[]): Promise<AedView[]> {
+  const by = new Map(records.map(withAvailability).map((a) => [a.id_aed, a]));
+  return delay(ids.map((i) => by.get(i)).filter((a): a is AedView => !!a));
 }
 
 export function mockNearest(lat: number, lon: number, limit: number, onlyNow: boolean): Promise<AedView[]> {
