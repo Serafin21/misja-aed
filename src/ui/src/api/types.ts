@@ -127,6 +127,7 @@ export interface ProblemWalidacji {
 }
 
 export interface RaportWalidacji {
+  import_id?: string;
   plik: string;
   wykryty_format: { separator?: string; kodowanie?: string; przecinek_dziesietny?: boolean };
   mapowanie: Record<string, string | string[]>;
@@ -144,3 +145,5 @@ export interface ApiError {
   message: string;
   fields?: Record<string, string>;
 }
+
+export interface WynikImportu { dodane: number; zaktualizowane: number; scalone: number; odrzucone: number }

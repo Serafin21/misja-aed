@@ -37,3 +37,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: nie uruchomiono jeszcze z prawdziwym Leafletem (w środowisku Modelu B brak sieci – podgląd na atrapie mapy); brak `npm run typecheck` (brak `@types` offline). Do sprawdzenia na Windows.
 - Użycie AI (jedna linia): kod `src/ui/` (E1–E3, klient API, style) wygenerowany z Claude (Model B), przegląd i decyzje – zespół.
 - Następny krok: uruchomić u siebie, potem E5 kroki 1–4, E6, E7, E4.
+
+## HANDOFF #3
+
+- Czas: sob 13:40
+- Zrobione: system znaku TL wdrożony w UI (nazwa „AED w danych”, hasło, logo z kwadratów w nagłówku i favikonie, pinezki według stanu: zielona / bursztynowa + zegar / bursztynowa + kłódka / biała z szarym obrysem, przerywana obwódka = OSM, paleta #1A7A50 / #0F3B2B / #EDF2EC / #E2A23B / #B9791A / #6B7570). Nowe ekrany: **E4** Zgłoś AED, **E5** kreator dysponenta (5 kroków + odznaka SVG), **E6** Zbiór danych (pliki, API, słownik 44 pól z filtrem), **E7** Źródła (zakres referencyjny + statystyki), **E8** Akcja, **E9** Moderacja. Wszystkie 9 ekranów działają na mockach; testy w Chrome: 1280 px i 320 px bez przewijania w poziomie, brak błędów w konsoli, walidacja formularzy przenosi fokus na pierwsze błędne pole.
+- Jak uruchomić / zobaczyć: `cd src/ui && npm install && npm run dev`.
+- Założenia: liczniki na E7/E8 z `GET /statystyki` (w trybie demo – policzone z `data/sample`); odznaka dysponenta generowana w przeglądarce; brak kodu QR na naklejce (do zrobienia).
+- CR: bez zmian (B1–B9).
+- Znane błędy: jak w #2 (Leaflet i typecheck niesprawdzone na prawdziwych pakietach).
+- Użycie AI (jedna linia): ekrany E4–E9 i wdrożenie znaku w UI wygenerowane z Claude (Model B); znak, nazwa i hasło – zespół (TL).
+- Następny krok: przełączenie na API A, audyt WCAG (axe/Lighthouse/NVDA), README v1, `docs/a11y/raport.md`.

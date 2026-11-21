@@ -52,7 +52,7 @@ let lastPath: string | null = null;
 /** Sets document title and focuses the page heading after in-app navigation (not on first load). */
 export function usePageTitle(title: string) {
   useEffect(() => {
-    document.title = `${title} – Misja AED`;
+    document.title = `${title} – AED w danych`;
     const here = location.pathname;
     if (lastPath !== null && lastPath !== here) {
       const h1 = document.querySelector<HTMLElement>('main h1');

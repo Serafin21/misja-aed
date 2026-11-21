@@ -4,6 +4,7 @@ import { listAed } from '../api/client';
 import type { AedFilters } from '../api/types';
 import { AedListItem } from '../components/AedListItem';
 import { MapView } from '../components/MapView';
+import { Pin } from '../components/Brand';
 import { ErrorBox, Loading } from '../components/ui';
 import { dictValues } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
@@ -116,9 +117,13 @@ export function MapList() {
             <section aria-labelledby="map-title" className="split__map">
               <h2 id="map-title">Mapa</h2>
               <MapView items={st.data.items} label="Mapa AED. Te same informacje są na liście." height={560} />
-              <p className="legend">
-                Oznaczenia: <span className="legend__ok">✓ dostępne teraz</span> · <span className="legend__no">× teraz zamknięte</span> · <span className="legend__unk">? godziny do sprawdzenia</span> · <span className="legend__priv">! dla uprawnionych</span>. Obwódka przerywana: warstwa OpenStreetMap (ODbL).
-              </p>
+              <ul className="legend-list" aria-label="Oznaczenia na mapie">
+                <li><Pin kind="ok" />Dostępne teraz</li>
+                <li><Pin kind="closed" />Teraz zamknięte lub niesprawne (znaczek zegara)</li>
+                <li><Pin kind="private" />Tylko dla uprawnionych (znaczek kłódki)</li>
+                <li><Pin kind="unknown" />Brak godzin – sprawdź na miejscu</li>
+                <li>Przerywana obwódka: warstwa OpenStreetMap (licencja ODbL)</li>
+              </ul>
             </section>
           )}
         </div>

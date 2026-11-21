@@ -1,6 +1,6 @@
 // REST client for CONTRACT §5. Falls back to in-browser mocks (data/sample/) when the API is unreachable.
 import * as mock from '../mocks/mockApi';
-import type { Aed, AedDetail, AedFilters, AedView, ApiError, ListMeta, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
+import type { WynikImportu, Aed, AedDetail, AedFilters, AedView, ApiError, ListMeta, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
 
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
 export const API_BASE = env.VITE_API_BASE || '/api/v1';
@@ -146,3 +146,26 @@ export const exportUrl = (file: string) => `${API_BASE}/eksport/${file}`;
 export function probeApi(): Promise<void> {
   return withFallback(() => http<unknown>(`/aed?per_page=1`), () => Promise.resolve(null)).then(() => undefined, () => undefined);
 }
+
+export function approveImport(rep: RaportWalidacji): Promise<WynikImportu> {
+  return withFallback(
+    () => http<WynikImportu>(`/import/${rep.import_id}/zatwierdz`, { method: 'POST' }),
+    () => mock.mockApprove(rep),
+  );
+}
+
+export function listReports() {
+  return withFallback(async () => {
+    const r = await http<{ data: JsonApiItem<{ lat: number; lon: number; opis: string; czas: string; status: string }>[] }>(`/zgloszenia`);
+    return r.data.map((i) => ({ ...i.attributes, id: i.id }));
+  }, () => mock.mockReports());
+}
+
+export function decideReport(id: string, decyzja: 'zatwierdz' | 'odrzuc' | 'scal') {
+  return withFallback(
+    () => http<unknown>(`/zgloszenia/${encodeURIComponent(id)}/decyzja`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decyzja }) }),
+    () => mock.mockDecide(id, decyzja),
+  );
+}
+
+export const templateUrl = (fmt: 'csv' | 'xlsx') => `${API_BASE}/szablon.${fmt}`;

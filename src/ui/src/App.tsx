@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
 import { probeApi } from './api/client';
 import { useMockMode } from './lib/useMockMode';
+import { BRAND_NAME, BRAND_SLOGAN, LogoMark } from './components/Brand';
 import { Icon } from './components/ui';
 import { AedCard } from './pages/AedCard';
 import { MapList } from './pages/MapList';
+import { Campaign } from './pages/Campaign';
+import { Dataset } from './pages/Dataset';
+import { Moderation } from './pages/Moderation';
 import { Nearest } from './pages/Nearest';
+import { Providers } from './pages/Providers';
+import { Report } from './pages/Report';
+import { Sources } from './pages/Sources';
 import { Link, matchPath, useLocation, usePageTitle } from './router';
 
 const NAV = [
@@ -17,11 +24,6 @@ const NAV = [
   { to: '/akcja', label: 'Akcja' },
 ];
 
-function Todo({ title }: { title: string }) {
-  usePageTitle(title);
-  return (<><h1>{title}</h1><p>Ten ekran jest w budowie.</p></>);
-}
-
 function NotFound() {
   usePageTitle('Nie ma takiej strony');
   return (<><h1>Nie ma takiej strony</h1><p><Link to="/">Wróć do wyszukiwania najbliższego AED</Link></p></>);
@@ -33,12 +35,12 @@ function Routes() {
   if (path === '/mapa') return <MapList />;
   const card = matchPath('/aed/:id', path);
   if (card) return <AedCard id={card.id} />;
-  if (path === '/zglos') return <Todo title="Zgłoś AED" />;
-  if (path === '/dysponenci') return <Todo title="Dla dysponentów" />;
-  if (path === '/dane') return <Todo title="Zbiór danych" />;
-  if (path === '/zrodla') return <Todo title="Źródła danych" />;
-  if (path === '/akcja') return <Todo title="Akcja" />;
-  if (path === '/moderacja') return <Todo title="Moderacja zgłoszeń" />;
+  if (path === '/zglos') return <Report />;
+  if (path === '/dysponenci') return <Providers />;
+  if (path === '/dane') return <Dataset />;
+  if (path === '/zrodla') return <Sources />;
+  if (path === '/akcja') return <Campaign />;
+  if (path === '/moderacja') return <Moderation />;
   return <NotFound />;
 }
 
@@ -60,9 +62,9 @@ export function App() {
       <a className="skip-link" href="#main">Przejdź do treści</a>
       <header className="site-header">
         <div className="container site-header__inner">
-          <Link to="/" className="brand" aria-label="Misja AED – strona główna">
-            <img src="/favicon.svg" alt="" width={36} height={36} />
-            <span>Misja AED</span>
+          <Link to="/" className="brand" aria-label={`${BRAND_NAME} – strona główna`}>
+            <span className="brand__mark"><LogoMark size={34} /></span>
+            <span>{BRAND_NAME}<span className="brand__slogan" aria-hidden="true">{BRAND_SLOGAN}</span></span>
           </Link>
           <a href="tel:112" className="header-112"><Icon name="phone" /><span className="visually-hidden">Zadzwoń pod numer alarmowy </span>112</a>
           <button id="menu-btn" type="button" className="menu-btn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu((m) => !m)}>
@@ -83,7 +85,7 @@ export function App() {
       </main>
       <footer className="site-footer">
         <div className="container">
-          <p>Otwarty zbiór danych o defibrylatorach AED dla portalu dane.gov.pl. Projekt na HackNation 2026.</p>
+          <p><strong>{BRAND_NAME}</strong> – {BRAND_SLOGAN}. Otwarty zbiór danych o defibrylatorach AED dla portalu dane.gov.pl. Prototyp na HackNation 2026 (zadanie Ministerstwa Cyfryzacji „Misja AED”).</p>
           <ul className="footer-links">
             <li><Link to="/dane">Pobierz dane (CSV, GeoJSON, API)</Link></li>
             <li><Link to="/zrodla">Źródła i licencje</Link></li>

@@ -7,6 +7,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import type { AedView } from '../api/types';
 import { availableNow } from '../lib/format';
 import { navigate } from '../router';
+import { pinSvg, type PinKind } from './Brand';
 
 export interface MapViewProps {
   items: AedView[];
@@ -23,15 +24,19 @@ export interface MapViewProps {
 
 const POLAND: L.LatLngBoundsExpression = [[49.0, 14.1], [54.9, 24.2]];
 
-function markerIcon(a: AedView): L.DivIcon {
+function pinKind(a: AedView): PinKind {
+  if (a.dostep === 'prywatny') return 'private';
+  if (a.status_urzadzenia === 'niesprawny' || a.status_urzadzenia === 'w_serwisie') return 'closed';
   const v = availableNow(a);
-  const kind = a.dostep === 'prywatny' ? 'private' : v === true ? 'ok' : v === false ? 'no' : 'unknown';
-  const glyph = kind === 'ok' ? '✓' : kind === 'no' ? '×' : kind === 'private' ? '!' : '?';
+  return v === true ? 'ok' : v === false ? 'closed' : 'unknown';
+}
+
+function markerIcon(a: AedView): L.DivIcon {
   return L.divIcon({
-    className: `aed-marker aed-marker--${kind}${a.licencja === 'ODbL-1.0' ? ' aed-marker--osm' : ''}`,
-    html: `<span aria-hidden="true">AED</span><b aria-hidden="true">${glyph}</b>`,
-    iconSize: [44, 44],
-    iconAnchor: [22, 40],
+    className: 'aed-pin',
+    html: pinSvg(pinKind(a), a.licencja === 'ODbL-1.0'),
+    iconSize: [40, 52],
+    iconAnchor: [20, 50],
   });
 }
 
@@ -96,7 +101,7 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     const g = extra.current;
     if (!g) return;
     g.clearLayers();
-    if (user) L.circleMarker([user.lat, user.lon], { radius: 9, color: '#0b3d91', weight: 3, fillColor: '#3b6fe0', fillOpacity: 0.9 }).bindTooltip('Twoja lokalizacja').addTo(g);
+    if (user) L.circleMarker([user.lat, user.lon], { radius: 9, color: '#0F3B2B', weight: 3, fillColor: '#2f6fe0', fillOpacity: 0.9 }).bindTooltip('Twoja lokalizacja').addTo(g);
     if (picked) {
       L.marker([picked.lat, picked.lon], { icon: L.divIcon({ className: 'pick-marker', html: '<span aria-hidden="true"></span>', iconSize: [30, 30], iconAnchor: [15, 28] }), title: 'Wybrany punkt', alt: 'Wybrany punkt', keyboard: false }).addTo(g);
       map.current?.setView([picked.lat, picked.lon], Math.max(map.current.getZoom(), 16));

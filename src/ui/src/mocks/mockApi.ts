@@ -1,5 +1,5 @@
 // In-browser implementation of CONTRACT §5 on data/sample/ – used until Model A's API is up.
-import type { Aed, AedDetail, AedFilters, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo } from '../api/types';
+import type { WynikImportu, Aed, AedDetail, AedFilters, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo } from '../api/types';
 import { availableNow, haversine } from '../lib/format';
 import geo from './aed_ujednolicone.json';
 import pochodzenie from './aed_pochodzenie.json';
@@ -99,3 +99,8 @@ export function mockStats() {
 }
 
 export const mockAll = records;
+
+export function mockApprove(r: RaportWalidacji): Promise<WynikImportu> {
+  const scalone = r.duplikaty.length;
+  return delay({ dodane: Math.max(0, r.poprawne - scalone), zaktualizowane: 0, scalone, odrzucone: r.bledy }, 300);
+}
