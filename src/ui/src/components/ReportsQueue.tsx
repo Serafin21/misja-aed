@@ -68,7 +68,7 @@ export function ReportsQueue({ mode }: { mode: 'dostawca' | 'administrator' }) {
         </ul>
       ))}
       <p className="hint">{mode === 'dostawca'
-        ? 'Rozpatrzenie zgłoszenia nie zmienia danych. Jeśli zgłoszenie jest słuszne, popraw AED w kopii roboczej i opublikuj nowe pliki (zalecany termin: 14 dni).'
+        ? 'Rozpatrzenie zgłoszenia nie zmienia danych. Jeśli zgłoszenie jest słuszne, zgłoś zmianę tego AED w „Twoje AED” (zalecany termin: 14 dni).'
         : 'Urządzenia spoza listy nie dodajemy za właściciela. Zaproszenie oznacza miejsce jako lukę i trafia do akcji promocyjnej.'}</p>
     </>
   );

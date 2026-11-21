@@ -17,7 +17,7 @@ export function About() {
       <h2>Co robi</h2>
       <ul>
         <li>Pokazuje na jednej mapie defibrylatory ze zbiorów, które ich właściciele (urzędy, szkoły, szpitale, firmy) opublikowali w dane.gov.pl według wspólnego wzoru. Przy każdym AED widać, kto odpowiada za dane i kiedy je sprawdzono.</li>
-        <li>Pomaga właścicielom przygotować pliki do publikacji (kreator „Moje AED”) – publikują je sami, na koncie swojej instytucji.</li>
+        <li>Instytucje odpowiedzialne za AED zgłaszają je i poprawiają po zalogowaniu („Zgłoszenia AED”); każde zgłoszenie zatwierdza administrator.</li>
         <li>Punkty z mapy OpenStreetMap pokazuje osobno, jako „do sprawdzenia” – nie należą do wspólnej listy.</li>
         <li>Przekazuje zgłoszenia mieszkańców właścicielowi urządzenia. Ministerstwo nie wprowadza ani nie poprawia danych – prowadzi konta, wzór danych i akcję „{BRAND_NAME}”.</li>
         <li>Pokazuje najbliższe AED, które są dostępne teraz, i to, jak aktualne są dane o każdym z nich.</li>

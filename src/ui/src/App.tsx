@@ -9,36 +9,35 @@ import { MapList } from './pages/MapList';
 import { Campaign } from './pages/Campaign';
 import { Dataset } from './pages/Dataset';
 import { Admin } from './pages/Admin';
-import { MyAed } from './pages/MyAed';
-import { LoginPage, ROLE_HOME, useSession } from './components/Auth';
-import { logout } from './api/client';
+import { LoginPage, useSession } from './components/Auth';
 import { Home } from './pages/Home';
 import { FirstAid } from './pages/FirstAid';
 import { Providers } from './pages/Providers';
 import { Report } from './pages/Report';
 import { Sources } from './pages/Sources';
-import { ZglosAed } from './pages/ZglosAed';
 import { WniosekKonto } from './pages/WniosekKonto';
-import { Approvals } from './pages/Admin';
+import { Zgloszenia } from './pages/Zgloszenia';
 import { Link, matchPath, navigate, useLocation, usePageTitle } from './router';
 
-// Top menu: three items for everyone. "Dla instytucji", data, sources and login are in the footer. After logging in the
-// role's own items appear (MODEL_ROL v1.3): institution – "Zgłoś AED" and "Moje AED"; administrator – approvals and panel.
+// Top menu (owner's decision 22.11): everyone – Znajdź AED, Pierwsza pomoc, O projekcie; a guest also "Zaloguj się, aby
+// dodać AED"; an institution – "Zgłoszenia AED" instead; the administrator – "Zgłoszenia AED" and "Panel administratora".
+// Logging out and changing the password are at the top of those pages.
 const NAV = [
   { to: '/znajdz', label: 'Znajdź AED' },
   { to: '/pierwsza-pomoc', label: 'Pierwsza pomoc' },
   { to: '/o-projekcie', label: 'O projekcie' },
 ];
 const ROLE_NAV: Record<string, { to: string; label: string }[]> = {
-  dysponent: [{ to: '/zglos-aed', label: 'Zgłoś AED' }],
-  administrator: [{ to: '/zatwierdzanie', label: 'Zgłoszenia AED' }],
+  gosc: [{ to: '/logowanie', label: 'Zaloguj się, aby dodać AED' }],
+  dysponent: [{ to: '/zgloszenia-aed', label: 'Zgłoszenia AED' }],
+  administrator: [{ to: '/zgloszenia-aed', label: 'Zgłoszenia AED' }, { to: '/panel', label: 'Panel administratora' }],
 };
 
 // Breadcrumb labels for pages outside the menu
 const PAGE_LABELS: Record<string, string> = {
   '/mapa': 'Mapa i lista AED', '/dane': 'Eksport listy', '/zrodla': 'Dostawcy', '/akcja': 'Akcja „AED w danych”',
-  '/panel': 'Panel administratora', '/moje-aed': 'Moje AED', '/logowanie': 'Logowanie', '/zglos': 'Zgłoś problem z AED',
-  '/dysponenci': 'Dla instytucji', '/zglos-aed': 'Zgłoś AED', '/zatwierdzanie': 'Zgłoszenia AED do zatwierdzenia', '/wniosek-o-konto': 'Wniosek o konto',
+  '/panel': 'Panel administratora', '/logowanie': 'Logowanie', '/zglos': 'Zgłoś problem z AED',
+  '/dysponenci': 'Dla instytucji', '/zgloszenia-aed': 'Zgłoszenia AED', '/wniosek-o-konto': 'Wniosek o konto',
 };
 
 // Footer subpages (not E1–E9; routes for E1–E9 unchanged)
@@ -56,7 +55,7 @@ const REPO = 'https://github.com/Serafin21/misja-aed';
 
 /** Breadcrumbs (gov.pl pattern): home icon first, hidden below 700 px; not on the home page. */
 function Breadcrumbs({ path }: { path: string }) {
-  if (path === '/') return null;
+  if (path === '/' || path === '/znajdz' || path === '/mapa') return null;
   const nav = NAV.find((n) => n.to === path);
   const trail: { label: string; to?: string }[] = [];
   if (matchPath('/aed/:id', path)) trail.push({ label: 'Znajdź AED', to: '/znajdz' }, { label: 'AED' });
@@ -94,10 +93,8 @@ function Routes() {
   if (path === '/zrodla') return <Sources />;
   if (path === '/akcja') return <Campaign />;
   if (path === '/panel' || path === '/moderacja') return <Admin />;
-  if (path === '/moje-aed' || path === '/konto') return <MyAed />;
+  if (['/zgloszenia-aed', '/zglos-aed', '/zatwierdzanie', '/moje-aed', '/konto'].includes(path)) return <Zgloszenia />;
   if (path === '/logowanie') return <LoginPage />;
-  if (path === '/zglos-aed') return <ZglosAed />;
-  if (path === '/zatwierdzanie') return <Approvals />;
   if (path === '/wniosek-o-konto') return <WniosekKonto />;
   const info = INFO_PAGES[path];
   if (info) { const Page = info.el; return <Page />; }
@@ -109,7 +106,6 @@ export function App() {
   const [menu, setMenu] = useState(false);
   const mock = useMockMode();
   const session = useSession();
-  const roleHome = session ? ROLE_HOME[session.rola] : null;
   useEffect(() => { probeApi(); }, []);
   useEffect(() => { setMenu(false); window.scrollTo(0, 0); }, [path]);
   useEffect(() => {
@@ -134,10 +130,8 @@ export function App() {
           <nav id="main-nav" aria-label="Główna" className={`main-nav${menu ? ' is-open' : ''}`}>
             <ul>
               {NAV.map((n) => <li key={n.to}><Link to={n.to}>{n.label}</Link></li>)}
-              {session && (ROLE_NAV[session.rola] ?? []).map((n) => <li key={n.to} className="main-nav__role"><Link to={n.to}>{n.label}</Link></li>)}
-              {/* only after logging in (docs/MODEL_ROL.md §4) – the server checks permissions on every operation anyway */}
-              {roleHome && <li className="main-nav__role"><Link to={roleHome.to}>{roleHome.label}</Link></li>}
-              {session && <li><button type="button" className="main-nav__logout" onClick={() => { logout(); navigate('/'); }}>Wyloguj</button></li>}
+              {/* role items – the server checks permissions on every operation anyway */}
+              {(ROLE_NAV[session ? session.rola : 'gosc'] ?? []).map((n) => <li key={n.to} className={`main-nav__role${session ? '' : ' main-nav__login'}`}><Link to={n.to}>{n.label}</Link></li>)}
             </ul>
           </nav>
         </div>

@@ -1,5 +1,7 @@
 // Leaflet (BSD-2) used directly – react-leaflet is excluded (Hippocratic licence).
 import { useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import { AedSummary } from './AedSummary';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
@@ -308,33 +310,20 @@ function pointMarker(p: AedPoint, mode: MapMode): L.Marker {
   });
   const mk = L.marker([p.lat, p.lon], { icon, title: name, keyboard: true, riseOnHover: true });
   mk.on('add', () => mk.getElement()?.setAttribute('aria-label', name));
-  mk.bindPopup('<p class="map-popup__loading">Wczytuję dane AED…</p>', { maxWidth: 280, autoPanPadding: [24, 24] });
-  let loaded = false;
+  // preview after a click: the same information as the list next to the map (components/AedSummary)
+  mk.bindPopup('<p class="map-popup__loading">Wczytuję dane AED…</p>', { maxWidth: 340, minWidth: 260, autoPanPadding: [24, 24], className: 'aed-popup' });
+  let box: HTMLDivElement | null = null;
   mk.on('popupopen', async (e: L.PopupEvent) => {
-    const el = e.popup.getElement();
-    const wire = () => {
-      const a = el?.querySelector<HTMLAnchorElement>('a[data-aed]');
-      if (a) {
-        a.addEventListener('click', (ev) => { ev.preventDefault(); navigate(`/aed/${p.id_aed}`); });
-        a.focus(); // keyboard users land on the link (WCAG 2.4.3)
-      }
-    };
-    if (loaded) { wire(); return; }
+    const focusLink = () => box?.querySelector<HTMLAnchorElement>('.aed-sum__title a')?.focus(); // keyboard users land in the preview
+    if (box) { e.popup.setContent(box); setTimeout(focusLink, 0); return; }
     try {
       const d = await getAed(p.id_aed);
-      if (!d) { e.popup.setContent('<p>Nie znaleziono tego AED. Mogło zostać usunięte ze zbioru.</p>'); return; }
-      const a = d.aed;
-      const dl = dataLabel(a);
-      e.popup.setContent(
-        `<div class="map-popup"><p class="map-popup__title">${esc(a.nazwa_obiektu || 'AED bez nazwy')}</p>`
-        + (a.meta?.warstwa === 'pomocnicza' ? '<p class="map-popup__helper"><strong>Do sprawdzenia</strong> – punkt z OpenStreetMap, niepotwierdzony przez właściciela.</p>' : (a.meta?.dostawca ? `<p class="hint">Dane: ${esc(a.meta.dostawca)}</p>` : ''))
-        + `<p>${esc(address(a))}</p>`
-        + `<p>${esc(mode === 'dane' ? dl.long : availText(a))}</p>`
-        + (a.szafka_zamknieta ? '<p><strong>Szafka zamknięta</strong> – instrukcja na karcie AED.</p>' : '')
-        + `<p><a data-aed href="${toHref(`/aed/${encodeURIComponent(p.id_aed)}`)}">Karta AED: dojście, godziny, źródło</a></p></div>`,
-      );
-      loaded = true;
-      wire();
+      if (!d) { e.popup.setContent('<p>Nie znaleziono tego AED. Mogło zostać usunięte.</p>'); return; }
+      box = document.createElement('div');
+      box.className = 'map-popup';
+      createRoot(box).render(<AedSummary aed={d.aed} compact />);
+      e.popup.setContent(box);
+      setTimeout(() => { e.popup.update(); focusLink(); }, 30);
     } catch {
       e.popup.setContent('<p>Nie udało się wczytać danych. Spróbuj ponownie.</p>');
     }

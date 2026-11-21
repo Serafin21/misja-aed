@@ -1,7 +1,7 @@
 // Login: demo accounts (dysponent / moderator) or an institution account created by a moderator (/panel).
 // After POST /auth/login every request carries Authorization: Bearer <token>.
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { getSession, login, logout, onSessionChange, type Role, type Session } from '../api/client';
+import { changeMyPassword, getSession, login, logout, onSessionChange, type Role, type Session } from '../api/client';
 import { Link, navigate } from '../router';
 import { ErrorSummary, Req, RequiredNote, useValidation } from './form';
 
@@ -14,9 +14,59 @@ export function useSession(): Session {
 export const ROLE_LABEL: Record<Role, string> = { dysponent: 'dostawca danych (właściciel AED)', administrator: 'administrator (MC)' };
 /** Where each role works after logging in (docs/MODEL_ROL.md §4). */
 export const ROLE_HOME: Record<Role, { to: string; label: string }> = {
-  dysponent: { to: '/moje-aed', label: 'Moje AED' },
-  administrator: { to: '/panel', label: 'Panel administratora' },
+  dysponent: { to: '/zgloszenia-aed', label: 'Zgłoszenia AED' },
+  administrator: { to: '/zgloszenia-aed', label: 'Zgłoszenia AED' },
 };
+
+/** Top of every page of a logged-in user: who is logged in, "Wyloguj" (highlighted) and "Zmień hasło". */
+export function SessionBar() {
+  const s = useSession();
+  const [pw, setPw] = useState(false);
+  if (!s) return null;
+  const who = s.rola === 'dysponent' && s.dysponent_nazwa ? s.dysponent_nazwa : 'Administrator';
+  const builtIn = s.login === 'admin' || s.login === s.rola; // built-in account: password set on the server (.env)
+  return (
+    <>
+      <div className="session-bar">
+        <p className="session-bar__who">Zalogowano jako <strong>{who}</strong>{s.login ? <> · login <code>{s.login}</code></> : null}</p>
+        <div className="session-bar__actions">
+          {!builtIn && <button type="button" className="btn btn--secondary btn--small" aria-expanded={pw} onClick={() => setPw((x) => !x)}>Zmień hasło</button>}
+          <button type="button" className="btn btn--primary btn--small" onClick={() => { logout(); navigate('/'); }}>Wyloguj</button>
+        </div>
+      </div>
+      {builtIn && s.rola === 'administrator' && <p className="hint">Hasło wbudowanego konta <code>admin</code> ustawia się na serwerze (plik <code>.env</code>, <code>ADMIN_PASSWORD</code>).</p>}
+      {pw && <PasswordForm />}
+    </>
+  );
+}
+
+function PasswordForm() {
+  const [f, setF] = useState({ stare: '', nowe: '', nowe2: '' });
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  async function save(e: FormEvent) {
+    e.preventDefault(); setMsg(''); setErr('');
+    if (f.nowe.length < 10) { setErr('Nowe hasło musi mieć co najmniej 10 znaków.'); return; }
+    if (f.nowe !== f.nowe2) { setErr('Nowe hasła się różnią.'); return; }
+    try { await changeMyPassword(f.stare, f.nowe); setMsg('Hasło zmienione.'); setF({ stare: '', nowe: '', nowe2: '' }); }
+    catch (ex) { setErr((ex as Error).message); }
+  }
+  return (
+    <form className="panel password-form" onSubmit={save} aria-labelledby="h-pass" noValidate>
+      <h2 id="h-pass">Zmień hasło</h2>
+      {[['stare', 'Obecne hasło', 'current-password'], ['nowe', 'Nowe hasło (min. 10 znaków)', 'new-password'], ['nowe2', 'Powtórz nowe hasło', 'new-password']].map(([k, l, ac]) => (
+        <div className="field" key={k}>
+          <label htmlFor={`pw-${k}`}>{l}</label>
+          <input id={`pw-${k}`} type="password" autoComplete={ac} value={f[k as keyof typeof f]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />
+        </div>
+      ))}
+      {err && <p className="field-error" role="alert">{err}</p>}
+      <p role="status" className="status-line">{msg}</p>
+      <p className="form-actions"><button type="submit" className="btn btn--primary">Zapisz hasło</button></p>
+    </form>
+  );
+}
+
 
 /** Renders children only for a logged-in user with one of `roles`; otherwise a login form for `role`. */
 export function RequireLogin({ role, roles = [role], children }: { role: Role; roles?: Role[]; children: ReactNode }) {
@@ -38,7 +88,7 @@ export function RequireLogin({ role, roles = [role], children }: { role: Role; r
 
 function LoginForm({ role, wrongRole }: { role: Role; wrongRole: Role | null }) {
   const [haslo, setHaslo] = useState('');
-  const [name, setName] = useState<string>(role === 'administrator' ? 'administrator' : 'dysponent');
+  const [name, setName] = useState<string>(role === 'administrator' ? 'admin' : '');
   const [busy, setBusy] = useState(false);
   const v = useValidation({ haslo: () => (haslo ? '' : 'Wpisz hasło.') });
   const error = v.errors.haslo ?? '';
@@ -60,8 +110,8 @@ function LoginForm({ role, wrongRole }: { role: Role; wrongRole: Role | null }) 
       {wrongRole && <p>Jesteś zalogowany jako {ROLE_LABEL[wrongRole]}. Ta część wymaga konta: {ROLE_LABEL[role]}.</p>}
       <p className="hint">
         {role === 'dysponent'
-          ? <>Instytucja loguje się loginem i hasłem z zatwierdzonego wniosku (albo od administratora). Do pokazu: login <code>dysponent</code>, hasło <code>dysponent-demo</code>.</>
-          : <>Do pokazu: login <code>administrator</code>, hasło <code>administrator-demo</code>.</>}
+          ? <>Instytucja loguje się loginem i hasłem z zatwierdzonego wniosku (albo od administratora).</>
+          : <>Do pokazu: login <code>admin</code>, hasło <code>admin123</code>.</>}
       </p>
       <div className="field">
         <label htmlFor="login-name">Login</label>
@@ -111,8 +161,8 @@ export function LoginPage() {
   }
   return (
     <>
-      <h1 id="page-title">Logowanie dla dostawców danych i administratorów</h1>
-      <p className="lead">Strona dla instytucji, które publikują dane o swoich AED (urzędy, szkoły, szpitale, firmy), i dla administratorów w Ministerstwie Cyfryzacji. Mieszkańcy nie muszą się logować – mogą szukać AED i zgłaszać problemy bez konta.</p>
+      <h1 id="page-title">Logowanie dla instytucji i administratorów</h1>
+      <p className="lead">Zaloguj się, aby zgłaszać AED, za które odpowiada Twoja instytucja (urząd, szkoła, szpital, firma, fundacja). Mieszkańcy nie muszą się logować – mogą szukać AED i zgłaszać problemy bez konta.</p>
       <form className="panel login-box" onSubmit={submit} noValidate aria-labelledby="lp-title">
         <h2 id="lp-title">Zaloguj się</h2>
         <div className="field">
@@ -127,11 +177,8 @@ export function LoginPage() {
         </div>
         <p className="form-actions"><button type="submit" className="btn btn--primary" disabled={busy}>{busy ? 'Loguję…' : 'Zaloguj się'}</button></p>
         <details className="details">
-          <summary>Konta do pokazu (prototyp)</summary>
-          <ul>
-            <li>Dostawca „Urząd Gminy Przykładowo”: login <code>dysponent</code>, hasło <code>dysponent-demo</code></li>
-            <li>Administrator: login <code>administrator</code>, hasło <code>administrator-demo</code></li>
-          </ul>
+          <summary>Konto do pokazu (prototyp)</summary>
+          <p>Administrator: login <code>admin</code>, hasło <code>admin123</code>. Konta instytucji zakłada administrator albo powstają z zatwierdzonego wniosku.</p>
           <p className="hint">W wersji docelowej logowanie odbywa się przez login.gov.pl z drugim składnikiem (np. kod w telefonie).</p>
         </details>
       </form>

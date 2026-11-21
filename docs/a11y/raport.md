@@ -52,14 +52,29 @@ Interfejs przejmuje język wizualny serwisów gov.pl (bez ich znaków): Open San
 | tekst / pasek prototypu #F2F2F2 | 15,4:1 | 4,5:1 | ✅ |
 | tekst / tło E8 (szron #EDF2EC) | 15,2:1 | 4,5:1 | ✅ |
 
-Wartości kolorów do potwierdzenia przez TL z przewodnikiem Gov UI. Na telefonie (poniżej 700 px) tekst podstawowy ma 14 px – wymóg TL; treść można powiększyć do 200% bez utraty informacji (do sprawdzenia ręcznie).
+Wartości kolorów do potwierdzenia przez TL z przewodnikiem Gov UI. Tekst podstawowy ma 18 px na każdym ekranie (prosta strona, wymóg TL); powiększenie 200% – do sprawdzenia ręcznie.
+
+## Wyniki testów (sob 21.11, ok. 23:50, przeglądarka Claude na localhost:5173, dane przykładowe)
+
+Sprawdził Claude (Model B) narzędziami automatycznymi – **nie zastępuje to testu człowieka z czytnikiem ekranu**.
+
+| Test | Zakres | Wynik |
+|---|---|---|
+| axe-core 4.10 (reguły WCAG 2.0/2.1/2.2 A i AA) | 15 ekranów: strona główna, Znajdź AED, karta AED, Zgłoś AED (bez logowania), zgłoszenie problemu, pierwsza pomoc, o projekcie, akcja, dla instytucji, logowanie, wniosek o konto, eksport, dostawcy, kontakt, deklaracja | **0 naruszeń WCAG A/AA** na 14 ekranach; na karcie AED 1 naruszenie (`aria-required` na `fieldset`, 4.1.2) – **poprawione** (cc28003) |
+| axe – dobre praktyki | jw. | paski „Prototyp…” i „Tryb demonstracyjny” poza landmarkami; liczniki filtrów z `aria-label` na `span` – **poprawione** (cc28003) |
+| axe – „do sprawdzenia ręcznie” (kontrast) | karta AED | 11 elementów, których tła axe nie ustalił, bo nachodzi na nie przyklejony nagłówek przy przewijaniu – nie jest to błąd kontrastu |
+| Poziome przewijanie i elementy poza ekranem | 10 ekranów × 320, 768, 1024, 1440 px | 320 px: **„Znajdź AED” przewijała się w poziomie** (panel filtrów 368 px) – **poprawione** (cc28003); 768/1024/1440 px: bez problemów |
+| Cele dotykowe < 24 px (2.5.8) | jw. | tylko pola radio/checkbox 20–22 px w etykietach ≥ 48 px – wyjątek 2.5.8 (klikalna etykieta) |
+| Klawiatura | strona główna, Znajdź AED, Zgłoś AED, karta, akcja | link „Przejdź do treści głównej” na każdej stronie; fokus widoczny (obrys 3 px, `:focus-visible`) – sprawdzone klawiszem Tab; brak elementów klikalnych bez dostępu z klawiatury |
+
+Poprawki z cc28003 sprawdzone tylko składniowo – do potwierdzenia po `git pull` u B (ponowny test axe i 320 px).
 
 ## Do zrobienia przed finałem
 
-- [ ] axe DevTools (rozszerzenie przeglądarki) na E1–E9 – zrzuty do prezentacji.
-- [ ] Lighthouse (Accessibility) na E1, E2, E3 w widoku mobilnym – zrzuty.
-- [ ] NVDA na Windows: ścieżka „najbliższe AED → karta → potwierdzenie” i kreator dysponenta.
-- [ ] Prawdziwa mapa Leaflet: fokus na znacznikach, przyciski powiększenia (nazwy po polsku), atrybucja OSM.
+- [x] axe na wszystkich ekranach (powyżej).
+- [ ] Lighthouse (Accessibility) w Chrome na stronie głównej i „Znajdź AED” w widoku mobilnym – zrzut do prezentacji (człowiek B).
+- [ ] NVDA na Windows: ścieżka „Znajdź AED → karta → zgłoszenie problemu” i „Zgłoś AED” (człowiek B).
+- [ ] Mapa Leaflet: fokus na znacznikach, nazwy przycisków powiększenia po polsku.
 - [ ] Powiększenie 200% w przeglądarce (1.4.4) i orientacja pozioma na telefonie.
 
 ## Zrzuty

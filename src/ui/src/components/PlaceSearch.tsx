@@ -1,10 +1,12 @@
 // Place search with suggestions (ARIA combobox): voivodeships, gminy, localities, streets, addresses (GET /miejsca)
 // and – optionally – "search this text in AED names". Used on /mapa (zooms the map) and /znajdz (nearest AED).
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { searchPlaces } from '../api/client';
+import { reverseGeocode, searchPlaces } from '../api/client';
+import { Icon } from './ui';
 import type { Miejsce, TypMiejsca } from '../api/types';
 
-export type Wybor = Miejsce | { typ: 'tekst'; nazwa: string };
+/** `gps` = the device location ("Moja lokalizacja"), put into the search box like any other place */
+export type Wybor = (Miejsce & { gps?: boolean }) | { typ: 'tekst'; nazwa: string };
 
 const TYP: Record<TypMiejsca, string> = {
   wojewodztwo: 'Województwo', gmina: 'Gmina', miejscowosc: 'Miejscowość', ulica: 'Ulica', adres: 'Adres',
@@ -21,9 +23,13 @@ interface Props {
   textOption?: boolean;
   initial?: string;
   onSelect: (w: Wybor) => void;
+  /** show the "Moja lokalizacja" button inside the box: the location becomes the search text (not a separate filter) */
+  locate?: boolean;
+  /** called when the box is cleared */
+  onClear?: () => void;
 }
 
-export function PlaceSearch({ label, placeholder, hint, near, textOption = false, initial = '', onSelect }: Props) {
+export function PlaceSearch({ label, placeholder, hint, near, textOption = false, initial = '', onSelect, locate = false, onClear }: Props) {
   const id = useId();
   const [q, setQ] = useState(initial);
   const [items, setItems] = useState<Miejsce[]>([]);
@@ -31,6 +37,7 @@ export function PlaceSearch({ label, placeholder, hint, near, textOption = false
   const [active, setActive] = useState(-1);
   const [busy, setBusy] = useState(false);
   const [noHits, setNoHits] = useState(false);
+  const [geo, setGeo] = useState('');
   const req = useRef(0);
   const pendingEnter = useRef(false); // Enter pressed before the suggestions arrived → take the first one then
   const chooseRef = useRef<(w: Wybor) => void>(() => {});
@@ -88,12 +95,31 @@ export function PlaceSearch({ label, placeholder, hint, near, textOption = false
     }
   };
 
+  function useMyLocation() {
+    setGeo('');
+    if (!('geolocation' in navigator)) { setGeo('Ta przeglądarka nie podaje lokalizacji. Wpisz adres.'); return; }
+    setGeo('Ustalam Twoją lokalizację…');
+    navigator.geolocation.getCurrentPosition(async (g) => {
+      const lat = +g.coords.latitude.toFixed(6), lon = +g.coords.longitude.toFixed(6);
+      let name = 'Moja lokalizacja';
+      try {
+        const a = await reverseGeocode(lat, lon);
+        const street = [a.ulica, a.numer_budynku].filter(Boolean).join(' ');
+        if (street || a.miejscowosc) name = `Moja lokalizacja: ${[street, a.miejscowosc].filter(Boolean).join(', ')}`;
+      } catch { /* the address is only a label – the coordinates are enough */ }
+      setGeo('');
+      choose({ typ: 'adres', nazwa: name, opis: 'Twoja lokalizacja', lat, lon, bbox: null, gps: true });
+    }, (e) => setGeo(e.code === 1 ? 'Brak zgody na lokalizację. Wpisz adres albo miejscowość.' : 'Nie udało się ustalić lokalizacji. Wpisz adres.'),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+  }
+
   const listId = `${id}-list`;
   return (
     <div className="place-search">
       <label htmlFor={`${id}-in`}>{label}</label>
       {hint && <p id={`${id}-hint`} className="hint">{hint}</p>}
-      <div className="place-search__box">
+      <div className={`place-search__box${locate ? ' place-search__box--locate' : ''}`}>
+        <div className="place-search__field">
         <input
           id={`${id}-in`} type="text" role="combobox" autoComplete="off" spellCheck={false}
           aria-expanded={show} aria-controls={listId} aria-autocomplete="list"
@@ -105,8 +131,15 @@ export function PlaceSearch({ label, placeholder, hint, near, textOption = false
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           onKeyDown={onKey}
         />
-        {q && <button type="button" className="place-search__clear" aria-label="Wyczyść wyszukiwanie" onClick={() => { setQ(''); setItems([]); }}>×</button>}
+        {q && <button type="button" className="place-search__clear" aria-label="Wyczyść wyszukiwanie" onClick={() => { setQ(''); setItems([]); onClear?.(); }}>×</button>}
+        </div>
+        {locate && (
+          <button type="button" className="place-search__locate" onClick={useMyLocation}>
+            <Icon name="locate" /><span>Moja lokalizacja</span>
+          </button>
+        )}
       </div>
+      {locate && <p role="status" className="place-search__geo hint">{geo}</p>}
       {show && (
         <ul id={listId} role="listbox" className="place-search__list" aria-label="Podpowiedzi">
           {busy && !items.length && <li className="place-search__info" role="presentation">Szukam…</li>}

@@ -13,7 +13,10 @@ export function onMockModeChange(fn: (m: boolean) => void) { listeners.add(fn); 
 function setMock(v: boolean) { if (usingMocks !== v) { usingMocks = v; listeners.forEach((l) => l(v)); } }
 
 export class HttpError extends Error {
-  constructor(public status: number, public body: ApiError | null) { super(body?.message ?? `Błąd ${status}`); }
+  constructor(public status: number, public body: ApiError | null) {
+    // 404 without our error body = the running API is older than the app (e.g. not restarted after git pull)
+    super(body?.message ?? (status === 404 ? 'Serwer danych nie ma tej funkcji – uruchom go ponownie po pobraniu nowej wersji (git pull).' : `Błąd ${status}`));
+  }
   /** Field-level messages from a 422 response ({ pole: komunikat }). */
   get fields(): Record<string, string> { return this.body?.fields ?? {}; }
 }
@@ -335,7 +338,7 @@ export interface ImportDgp { kod_zrodla: string; status: string; dodane?: number
 export const searchDgp = (q: string, importuj: boolean) =>
   http<{ data: ZbiorDgp[]; meta: { count: number; importy: ImportDgp[]; pominiete_niezwiazane?: number; bledy: string[] } }>(`/zrodla/dane-gov-pl/szukaj`, json('POST', { q, importuj }));
 
-export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; dostawca_podstawa?: PodstawaPublikacji | null; email: string | null; aktywne: boolean; utworzono: string | null; utworzyl: string | null; liczba_aed: number }
+export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; dostawca_podstawa?: PodstawaPublikacji | null; email: string | null; telefon?: string | null; regon?: string | null; aktywne: boolean; oczekuje?: boolean; utworzono: string | null; utworzyl: string | null; liczba_aed: number }
 export const listAccounts = () => http<{ data: Konto[] }>(`/konta`).then((r) => r.data);
 export const createAccount = (b: { login: string; dysponent_nazwa: string; dostawca_podstawa: PodstawaPublikacji; email?: string }) =>
   http<{ data: Konto; haslo_jednorazowe: string }>(`/konta`, json('POST', b));
@@ -436,20 +439,22 @@ export const addEmployee = (login: string, email?: string) =>
   http<{ data: Konto; haslo_jednorazowe: string }>(`/konta/ja/uzytkownicy`, json('POST', { login, ...(email ? { email } : {}) }));
 
 export interface ZgloszenieAedIn {
+  typ?: 'nowe' | 'zmiana'; id_aed?: string | null; organizacja?: string | null;
   nazwa_obiektu: string; ulica: string | null; numer_budynku: string; kod_pocztowy: string; miejscowosc: string; szerokosc: number; dlugosc: number;
   opis_lokalizacji: string; wewnatrz_budynku: boolean; dostep: 'publiczny' | 'ograniczony' | 'prywatny'; dostepny_24h: boolean; godziny: string | null;
-  szafka_zamknieta: boolean; instrukcja_dostepu: string | null; zdjecie: string;
+  szafka_zamknieta: boolean; instrukcja_dostepu: string | null; zdjecie: string | null;
 }
 export interface ZgloszenieAed extends Omit<ZgloszenieAedIn, 'zdjecie'> {
-  id: string; status: 'oczekuje' | 'zatwierdzone' | 'do_poprawy'; nadawca_login: string; organizacja: string; utworzono: string; teryt_terc: string;
-  decyzja: 'zatwierdz' | 'do_poprawy' | null; komentarz: string | null; kto: string | null; kiedy: string | null; id_aed: string | null;
+  id: string; status: 'oczekuje' | 'zatwierdzone' | 'do_poprawy' | 'odrzucone'; nadawca_login: string; nadawca_rola?: Role; organizacja: string; utworzono: string; teryt_terc: string;
+  typ: 'nowe' | 'zmiana'; obecne?: Partial<Aed> | null;
+  decyzja: 'zatwierdz' | 'do_poprawy' | 'odrzuc' | null; komentarz: string | null; kto: string | null; kiedy: string | null; id_aed: string | null;
   zdjecie_url: string | null; historia: { decyzja: string; komentarz: string | null; kto: string | null; kiedy: string | null }[];
 }
 export const submitAed = (b: ZgloszenieAedIn) => http<{ id: string; data: ZgloszenieAed; meta: { komunikat: string } }>(`/zgloszenia-aed`, json('POST', b));
 export const resubmitAed = (id: string, b: ZgloszenieAedIn) => http<{ data: ZgloszenieAed }>(`/zgloszenia-aed/${encodeURIComponent(id)}`, json('PUT', b));
 export const mySubmissions = () => http<{ data: ZgloszenieAed[] }>(`/moje-zgloszenia`).then((r) => r.data);
 export const adminSubmissions = (status = 'oczekuje') => http<{ data: ZgloszenieAed[] }>(`/admin/zgloszenia-aed${qs({ status })}`).then((r) => r.data);
-export const decideSubmission = (id: string, decyzja: 'zatwierdz' | 'do_poprawy', komentarz?: string) =>
+export const decideSubmission = (id: string, decyzja: 'zatwierdz' | 'do_poprawy' | 'odrzuc', komentarz?: string) =>
   http<{ data: ZgloszenieAed }>(`/admin/zgloszenia-aed/${encodeURIComponent(id)}/decyzja`, json('POST', { decyzja, ...(komentarz ? { komentarz } : {}) }));
 /** photo links from the API are relative to the server root ("/api/v1/…") */
 export const apiUrl = (path: string) => (path.startsWith('/api/v1') ? API_BASE + path.slice('/api/v1'.length) : path);
@@ -460,3 +465,19 @@ export const reverseGeocode = (lat: number, lon: number) => http<{ data: Adres }
 /** address → candidates with coordinates (GET /miejsca; address results carry ulica / numer / kod / miejscowość) */
 export const geocodeAddress = (q: string) =>
   http<{ data: (Miejsce & Partial<Adres> & { teryt_terc?: string | null })[] }>(`/miejsca${qs({ q, limit: 5 })}`).then((r) => r.data);
+
+// ---------- owner's decision 22.11 (HANDOFF A #12): institution's AED, administrator's AED list and accounts ----------
+export interface MojeUrzadzenie { id: string; attributes: Aed; meta?: AedMeta; zgloszenie: { id: string; status: ZgloszenieAed['status']; komentarz: string | null } | null }
+export const myDevices = () => http<{ data: MojeUrzadzenie[] }>(`/moje-urzadzenia`).then((r) => r.data.map((d) => ({ ...d, aed: flat(d as unknown as JsonApiItem<AedView>) })));
+export interface AedAdmin { id_aed: string; nazwa_obiektu: string | null; adres: string; miejscowosc: string | null; gmina: string | null;
+  warstwa: 'lista' | 'pomocnicza' | 'aplikacja'; organizacja: string | null; edytowane: boolean; data_weryfikacji: string | null; szerokosc: number; dlugosc: number }
+export const adminAedList = (p: { q?: string; organizacja?: string; warstwa?: string; page?: number; per_page?: number }) =>
+  http<{ data: AedAdmin[]; meta: { count: number; page: number; per_page: number } }>(`/admin/aed${qs(p)}`);
+export const adminAedEdit = (id: string, pola: Record<string, unknown>) => http<{ data: unknown }>(`/admin/aed/${encodeURIComponent(id)}`, json('PATCH', { pola }));
+export const adminAedDelete = (id: string) => http<{ ok: boolean }>(`/admin/aed/${encodeURIComponent(id)}`, json('DELETE'));
+export const adminAedAssign = (id: string, organizacja: string | null) =>
+  http<{ data: { organizacja: string | null } }>(`/admin/aed/${encodeURIComponent(id)}/przypisanie`, json('PUT', { organizacja }));
+export const updateAccount = (login: string, ch: Partial<{ aktywne: boolean; dysponent_nazwa: string; email: string; telefon: string; regon: string;
+  dostawca_podstawa: PodstawaPublikacji; nowy_login: string; haslo: string }>) => http<{ data: Konto }>(`/konta/${encodeURIComponent(login)}`, json('PATCH', ch));
+export const deleteAccount = (login: string) => http<{ ok: boolean }>(`/konta/${encodeURIComponent(login)}`, json('DELETE'));
+
