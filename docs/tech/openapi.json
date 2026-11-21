@@ -419,7 +419,7 @@
           "aed"
         ],
         "summary": "Lekka warstwa punktów do mapy (GeoJSON, gzip, ETag)",
-        "description": "Cała Polska albo `bbox`. Każdy punkt: `id`, współrzędne i pola do kolorowania i filtrowania: `dostepny_teraz` (true/false/null), `stan_danych` (aktualne/nieaktualne), `osm` (true = warstwa ODbL), `dostep` (publiczny/ograniczony/prywatny), `wiek_danych_dni` (null = brak daty), `mobilny`, `wojewodztwo` (z położenia). Odpowiedź skompresowana gzip, gdy klient to obsługuje; nagłówek `ETag` – przy `If-None-Match` serwer zwraca 304. `dostepny_teraz` przeliczane co minutę.",
+        "description": "Cała Polska albo `bbox`. Każdy punkt: `id`, współrzędne i pola do kolorowania i filtrowania: `dostepny_teraz` (true/false/null), `stan_danych` (aktualne/nieaktualne), `osm` (true = warstwa ODbL), `dostep` (publiczny/ograniczony/prywatny), `wiek_danych_dni` (null = brak daty), `mobilny`, `wojewodztwo` i `gmina_teryt` (z położenia). Odpowiedź skompresowana gzip, gdy klient to obsługuje; nagłówek `ETag` – przy `If-None-Match` serwer zwraca 304. `dostepny_teraz` przeliczane co minutę.",
         "operationId": "aed_points_api_v1_aed_punkty_get",
         "parameters": [
           {
@@ -1338,8 +1338,8 @@
         "tags": [
           "aed"
         ],
-        "summary": "Wyszukiwanie miejscowości (środek rekordów AED) – CR-B2",
-        "description": "No geocoding: localities known from the dataset, centre = mean of their AED coordinates.",
+        "summary": "Wyszukiwarka miejsc: województwa, gminy, miejscowości, ulice, adresy",
+        "description": "Województwa i gminy z granic PRG (bez sieci, bez polskich znaków też działa: „lodz”), miejscowości, ulice („Kraków, Floriańska”) i adresy („Kraków, Floriańska 3”) z geokodera GUGiK. `blisko=lat,lon` (środek mapy): sama nazwa ulicy szuka jej w gminie na środku mapy. Każdy wynik: `typ`, `nazwa`, `opis`, `lat`, `lon`, `bbox` [minLon,minLat,maxLon,maxLat] albo null, dla gmin `teryt`, dla gmin i województw `liczba_aed`.",
         "operationId": "places_api_v1_miejsca_get",
         "parameters": [
           {
@@ -1358,11 +1358,29 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 50,
+              "maximum": 20,
               "minimum": 1,
-              "default": 10,
+              "default": 8,
               "title": "Limit"
             }
+          },
+          {
+            "name": "blisko",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "lat,lon środka mapy",
+              "title": "Blisko"
+            },
+            "description": "lat,lon środka mapy"
           }
         ],
         "responses": {

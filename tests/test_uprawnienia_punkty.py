@@ -73,7 +73,7 @@ def test_punkty_ksztalt(client):
     assert fc["type"] == "FeatureCollection" and fc["meta"]["count"] == len(fc["features"]) == 7
     f = fc["features"][0]
     assert set(f) == {"type", "id", "geometry", "properties"} and f["geometry"]["type"] == "Point"
-    assert set(f["properties"]) == {"dostepny_teraz", "stan_danych", "osm", "dostep", "wiek_danych_dni", "mobilny", "wojewodztwo"}
+    assert set(f["properties"]) == {"dostepny_teraz", "stan_danych", "osm", "dostep", "wiek_danych_dni", "mobilny", "wojewodztwo", "gmina_teryt"}
     assert any(x["properties"]["dostep"] == "prywatny" for x in fc["features"])
     assert sum(x["properties"]["osm"] for x in fc["features"]) == 2
 
