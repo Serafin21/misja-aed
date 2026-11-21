@@ -4,7 +4,8 @@ import { confirmAed, getAed, HttpError } from '../api/client';
 import type { AedDetail } from '../api/types';
 import { MapView } from '../components/MapView';
 import { QrSticker } from '../components/QrSticker';
-import { AvailabilityBadge, DataBadge, Emergency, ErrorBox, Icon, Loading, LockedCabinet } from '../components/ui';
+import { AvailabilityBadge, DataBadge, Emergency, ErrorBox, ExternalLink, Icon, Loading, LockedCabinet } from '../components/ui';
+import { ErrorSummary, Req, RequiredNote, useValidation } from '../components/form';
 import { address, date, dictMeaning, floor, label, osmDirections } from '../lib/format';
 import { describeHours } from '../lib/hours';
 import { useAsync } from '../lib/useAsync';
@@ -20,7 +21,7 @@ export function AedCard({ id }: { id: string }) {
       <>
         <h1>Nie znaleziono AED</h1>
         <p>W zbiorze nie ma urządzenia o identyfikatorze <code>{id}</code>. Mogło zostać usunięte albo scalone z innym rekordem.</p>
-        <p><Link to="/" className="btn btn--primary">Szukaj najbliższego AED</Link></p>
+        <p><Link to="/">Szukaj najbliższego AED</Link></p>
       </>
     );
   }
@@ -60,9 +61,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
             <dt>Dostęp</dt><dd>{label('dostep', a.dostep)} – {dictMeaning('dostep', a.dostep)}</dd>
           </dl>
           <p>
-            <a className="btn btn--primary" href={osmDirections(null, to)} target="_blank" rel="noopener noreferrer">
-              <Icon name="pin" />Pokaż na mapie OpenStreetMap<span className="visually-hidden"> (otwiera się w nowej karcie)</span>
-            </a>
+            <ExternalLink href={osmDirections(null, to)}>Pokaż na mapie OpenStreetMap</ExternalLink>
           </p>
         </section>
 
@@ -140,16 +139,16 @@ function Passport({ id, name, onDone }: { id: string; name: string; onDone: () =
   const [here, setHere] = useState<'' | 'tak' | 'nie'>('');
   const [cab, setCab] = useState<'' | 'tak' | 'nie' | 'nie_wiem'>('');
   const [comment, setComment] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const v = useValidation({ here: () => (here ? '' : 'Zaznacz, czy AED jest na miejscu.') });
+  const errors = v.errors;
+  const [formErr, setFormErr] = useState('');
   const [sent, setSent] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const er: Record<string, string> = {};
-    if (!here) er.here = 'Zaznacz, czy AED jest na miejscu.';
-    setErrors(er);
-    if (Object.keys(er).length) { document.getElementById('here-tak')?.focus(); return; }
+    setFormErr('');
+    if (!v.validateAll()) return;
     setBusy(true);
     try {
       await confirmAed(id, { jest_na_miejscu: here === 'tak', szafka_dostepna: cab === '' || cab === 'nie_wiem' ? null : cab === 'tak', komentarz: comment.trim() });
@@ -157,7 +156,8 @@ function Passport({ id, name, onDone }: { id: string; name: string; onDone: () =
       onDone();
     } catch (ex) {
       const body = ex instanceof HttpError ? ex.body : null;
-      setErrors({ form: body?.message ?? 'Nie udało się wysłać. Spróbuj ponownie.' , ...(body?.fields ?? {}) });
+      if (body?.fields && Object.keys(body.fields).length) v.showServerErrors(body.fields);
+      setFormErr(body?.message ?? 'Nie udało się wysłać. Spróbuj ponownie.');
     } finally { setBusy(false); }
   }
 
@@ -169,13 +169,16 @@ function Passport({ id, name, onDone }: { id: string; name: string; onDone: () =
         <p role="status" className="callout callout--ok">{sent}</p>
       ) : (
         <form onSubmit={submit} noValidate>
-          {errors.form && <p role="alert" className="field-error">{errors.form}</p>}
-          <fieldset aria-describedby={errors.here ? 'err-here' : undefined}>
-            <legend>Czy AED jest na miejscu? <span className="req">(wymagane)</span></legend>
+          <RequiredNote />
+          <ErrorSummary errors={v.summary} fieldIds={{ here: 'here-tak' }} focusToken={v.focusToken} />
+          {formErr && <p role="alert" className="field-error">{formErr}</p>}
+          <fieldset aria-describedby={errors.here ? 'err-here' : undefined} aria-required="true"
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) v.check('here'); }}>
+            <legend>Czy AED jest na miejscu?<Req /></legend>
             {errors.here && <p id="err-here" className="field-error">{errors.here}</p>}
             <div className="choices">
-              <label><input id="here-tak" type="radio" name="here" checked={here === 'tak'} onChange={() => setHere('tak')} /> Tak, jest</label>
-              <label><input type="radio" name="here" checked={here === 'nie'} onChange={() => setHere('nie')} /> Nie ma go</label>
+              <label><input id="here-tak" type="radio" name="here" required checked={here === 'tak'} onChange={() => setHere('tak')} /> Tak, jest</label>
+              <label><input type="radio" name="here" required checked={here === 'nie'} onChange={() => setHere('nie')} /> Nie ma go</label>
             </div>
           </fieldset>
           <fieldset>
@@ -186,12 +189,12 @@ function Passport({ id, name, onDone }: { id: string; name: string; onDone: () =
               <label><input type="radio" name="cab" checked={cab === 'nie_wiem'} onChange={() => setCab('nie_wiem')} /> Nie wiem</label>
             </div>
           </fieldset>
-          <label htmlFor="pass-comment">Uwagi (opcjonalnie)</label>
+          <label htmlFor="pass-comment">Uwagi</label>
           <p id="pass-hint" className="hint">Np. „przeniesiony do holu”. Nie wpisuj imion, nazwisk ani numerów telefonu.</p>
-          <textarea id="pass-comment" aria-describedby="pass-hint" maxLength={500} rows={3} value={comment} onChange={(e) => setComment(e.target.value)} />
+          <textarea id="pass-comment" aria-describedby="pass-hint" autoComplete="off" maxLength={500} rows={3} value={comment} onChange={(e) => setComment(e.target.value)} />
           <p className="form-actions">
             <button type="submit" className="btn btn--primary" disabled={busy}>{busy ? 'Wysyłam…' : 'Wyślij potwierdzenie'}</button>
-            <Link to={`/zglos?aed=${encodeURIComponent(id)}`} className="btn btn--secondary">Zgłoś problem</Link>
+            <Link to={`/zglos?aed=${encodeURIComponent(id)}`}>Zgłoś problem z tym AED</Link>
           </p>
         </form>
       )}

@@ -1,6 +1,7 @@
 // Demo login (dysponent / moderator). After POST /auth/login every request carries Authorization: Bearer <token>.
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { getSession, login, logout, onSessionChange, type Role, type Session } from '../api/client';
+import { ErrorSummary, Req, RequiredNote, useValidation } from './form';
 
 export function useSession(): Session {
   const [s, setS] = useState<Session>(getSession);
@@ -18,7 +19,7 @@ export function RequireLogin({ role, roles = [role], children }: { role: Role; r
       <>
         <p className="session-line">
           Zalogowano jako <strong>{ROLE_LABEL[s.rola]}</strong> (konto demo).{' '}
-          <button type="button" className="btn btn--secondary btn--sm" onClick={logout}>Wyloguj</button>
+          <button type="button" className="btn btn--tertiary" onClick={logout}>Wyloguj</button>
         </p>
         {children}
       </>
@@ -29,21 +30,24 @@ export function RequireLogin({ role, roles = [role], children }: { role: Role; r
 
 function LoginForm({ role, wrongRole }: { role: Role; wrongRole: Role | null }) {
   const [haslo, setHaslo] = useState('');
-  const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const v = useValidation({ haslo: () => (haslo ? '' : 'Wpisz hasło.') });
+  const error = v.errors.haslo ?? '';
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!haslo) { setError('Wpisz hasło.'); document.getElementById('login-pass')?.focus(); return; }
-    setBusy(true); setError('');
+    if (!v.validateAll()) return;
+    setBusy(true);
     try { await login(role, haslo); }
-    catch (ex) { setError((ex as Error).message || 'Nie udało się zalogować.'); document.getElementById('login-pass')?.focus(); }
+    catch (ex) { v.showServerErrors({ haslo: (ex as Error).message || 'Nie udało się zalogować.' }); }
     finally { setBusy(false); }
   }
 
   return (
     <form className="panel login-box" onSubmit={submit} noValidate aria-labelledby="login-title">
       <h2 id="login-title">Zaloguj się jako {ROLE_LABEL[role]}</h2>
+      <RequiredNote />
+      <ErrorSummary errors={v.summary} fieldIds={{ haslo: 'login-pass' }} focusToken={v.focusToken} />
       {wrongRole && <p>Jesteś zalogowany jako {ROLE_LABEL[wrongRole]}. Ta część wymaga konta: {ROLE_LABEL[role]}.</p>}
       <p className="hint">
         Prototyp ma dwa konta demonstracyjne. Hasła ustawia plik <code>.env</code> (domyślnie z <code>.env.example</code>:{' '}
@@ -54,8 +58,8 @@ function LoginForm({ role, wrongRole }: { role: Role; wrongRole: Role | null }) 
         <input id="login-name" type="text" value={role} readOnly autoComplete="username" />
       </div>
       <div className="field">
-        <label htmlFor="login-pass">Hasło</label>
-        <input id="login-pass" type="password" autoComplete="current-password" value={haslo} onChange={(e) => setHaslo(e.target.value)}
+        <label htmlFor="login-pass">Hasło<Req /></label>
+        <input id="login-pass" type="password" autoComplete="current-password" required onBlur={() => v.check('haslo')} value={haslo} onChange={(e) => setHaslo(e.target.value)}
           aria-invalid={!!error} aria-describedby={error ? 'login-err' : undefined} />
         {error && <p id="login-err" className="field-error">{error}</p>}
       </div>

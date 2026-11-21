@@ -1,7 +1,6 @@
 // E6 – Zbiór danych: files for dane.gov.pl, field dictionary, API, licences.
 import { useState } from 'react';
 import { API_BASE, exportUrl } from '../api/client';
-import { Icon } from '../components/ui';
 import { FIELDS } from '../lib/fields';
 import { useMockMode } from '../lib/useMockMode';
 import { usePageTitle } from '../router';
@@ -39,7 +38,7 @@ export function Dataset() {
             <tbody>
               {FILES.map((f) => (
                 <tr key={f.plik}>
-                  <td><a href={exportUrl(f.plik)} download><Icon name="download" /> {f.plik}</a></td>
+                  <td><a href={exportUrl(f.plik)} download>{f.plik}</a></td>
                   <td>{f.format}</td><td>{f.licencja}</td><td>{f.opis}</td>
                 </tr>
               ))}

@@ -1,7 +1,6 @@
 // "Paszport AED" sticker: QR code leading to the AED card (/aed/{id}). qrcode-generator – MIT licence.
 import qrcode from 'qrcode-generator';
 import { BRAND_NAME, BRAND_SLOGAN, heartRects } from './Brand';
-import { Icon } from './ui';
 
 export function aedCardUrl(id: string): string {
   return `${location.origin}/aed/${encodeURIComponent(id)}`;
@@ -38,7 +37,7 @@ export function QrSticker({ id, name }: { id: string; name: string }) {
       <summary>Dla dysponenta: naklejka „Paszport AED” z kodem QR</summary>
       <p>Wydrukuj i naklej na szafkę. Kod QR prowadzi do tej karty: <code>{url}</code></p>
       <img src={href} alt={`Naklejka Paszport AED dla „${name}” z kodem QR prowadzącym do karty urządzenia`} width={W / 1.5} height={H / 1.5} className="sticker" />
-      <p><a className="btn btn--secondary" href={href} download={`paszport_${id}.svg`}><Icon name="download" />Pobierz naklejkę (SVG)</a></p>
+      <p><a className="btn btn--secondary" href={href} download={`paszport_${id}.svg`}>Pobierz naklejkę (SVG)</a></p>
     </details>
   );
 }

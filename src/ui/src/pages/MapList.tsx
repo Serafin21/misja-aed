@@ -60,7 +60,7 @@ export function MapList() {
         <div className="filters__grid">
           <div className="field">
             <label htmlFor="f-q">Szukaj</label>
-            <input id="f-q" type="search" value={draft.q} onChange={(e) => set('q', e.target.value)} placeholder="nazwa, ulica, miejscowość" />
+            <input id="f-q" type="search" autoComplete="off" value={draft.q} onChange={(e) => set('q', e.target.value)} placeholder="nazwa, ulica, miejscowość" />
           </div>
           <div className="field">
             <label htmlFor="f-woj">Województwo</label>
@@ -71,7 +71,7 @@ export function MapList() {
           </div>
           <div className="field">
             <label htmlFor="f-gm">Gmina</label>
-            <input id="f-gm" type="text" value={draft.gmina} onChange={(e) => set('gmina', e.target.value)} />
+            <input id="f-gm" type="text" autoComplete="off" value={draft.gmina} onChange={(e) => set('gmina', e.target.value)} />
           </div>
           <div className="field">
             <label htmlFor="f-dost">Dostęp</label>

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { probeApi } from './api/client';
 import { useMockMode } from './lib/useMockMode';
 import { BRAND_NAME, BRAND_SLOGAN, LogoMark } from './components/Brand';
-import { Icon } from './components/ui';
+import { ExternalLink, Icon } from './components/ui';
+import { About, AccessibilityStatement, Contact, Cookies, Licenses, Privacy } from './pages/Info';
 import { AedCard } from './pages/AedCard';
 import { MapList } from './pages/MapList';
 import { Campaign } from './pages/Campaign';
@@ -24,6 +25,40 @@ const NAV = [
   { to: '/akcja', label: 'Akcja' },
 ];
 
+// Footer subpages (not E1–E9; routes for E1–E9 unchanged)
+const INFO_PAGES: Record<string, { title: string; el: () => ReactElement }> = {
+  '/o-projekcie': { title: 'O projekcie', el: About },
+  '/deklaracja-dostepnosci': { title: 'Deklaracja dostępności', el: AccessibilityStatement },
+  '/dane-osobowe': { title: 'Dane osobowe', el: Privacy },
+  '/cookies': { title: 'Pliki cookies i pamięć przeglądarki', el: Cookies },
+  '/licencje': { title: 'Licencje i atrybucje', el: Licenses },
+  '/kontakt': { title: 'Kontakt', el: Contact },
+};
+
+const REPO = 'https://github.com/Serafin21/misja-aed';
+
+/** Breadcrumbs (gov.pl pattern): home icon first, hidden below 700 px; not on the home page. */
+function Breadcrumbs({ path }: { path: string }) {
+  if (path === '/') return null;
+  const nav = NAV.find((n) => n.to === path);
+  const trail: { label: string; to?: string }[] = [];
+  if (matchPath('/aed/:id', path)) trail.push({ label: 'Mapa i lista', to: '/mapa' }, { label: 'Karta AED' });
+  else if (nav) trail.push({ label: nav.label });
+  else if (INFO_PAGES[path]) trail.push({ label: INFO_PAGES[path].title });
+  else if (path === '/moderacja') trail.push({ label: 'Moderacja zgłoszeń' });
+  else return null;
+  return (
+    <nav aria-label="Ścieżka okruszków" className="breadcrumbs">
+      <ol>
+        <li><Link to="/"><Icon name="home" /><span className="visually-hidden">Strona główna</span></Link></li>
+        {trail.map((t, i) => (
+          <li key={t.label}>{t.to ? <Link to={t.to}>{t.label}</Link> : <span aria-current={i === trail.length - 1 ? 'page' : undefined}>{t.label}</span>}</li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
 function NotFound() {
   usePageTitle('Nie ma takiej strony');
   return (<><h1>Nie ma takiej strony</h1><p><Link to="/">Wróć do wyszukiwania najbliższego AED</Link></p></>);
@@ -41,6 +76,8 @@ function Routes() {
   if (path === '/zrodla') return <Sources />;
   if (path === '/akcja') return <Campaign />;
   if (path === '/moderacja') return <Moderation />;
+  const info = INFO_PAGES[path];
+  if (info) { const Page = info.el; return <Page />; }
   return <NotFound />;
 }
 
@@ -59,7 +96,7 @@ export function App() {
 
   return (
     <>
-      <a className="skip-link" href="#main">Przejdź do treści</a>
+      <a className="skip-link" href="#main">Przejdź do treści głównej</a>
       <header className="site-header">
         <div className="container site-header__inner">
           <Link to="/" className="brand" aria-label={`${BRAND_NAME} – strona główna`}>
@@ -75,23 +112,52 @@ export function App() {
           </nav>
         </div>
       </header>
+      <div className="prototype-bar" role="note">
+        <div className="container"><p>Prototyp zespołu HackNation 2026 – nie jest serwisem administracji publicznej</p></div>
+      </div>
       {mock && (
         <div className="demo-banner" role="note">
           <div className="container">Tryb demonstracyjny: dane przykładowe (fikcyjne) z pliku <code>data/sample</code>. Nie używaj ich w prawdziwej sytuacji.</div>
         </div>
       )}
+      <div className="container"><Breadcrumbs path={path} /></div>
       <main id="main" className="container" tabIndex={-1}>
         <Routes />
       </main>
       <footer className="site-footer">
         <div className="container">
-          <p><strong>{BRAND_NAME}</strong> – {BRAND_SLOGAN}. Otwarty zbiór danych o defibrylatorach AED dla portalu dane.gov.pl. Prototyp na HackNation 2026 (zadanie Ministerstwa Cyfryzacji „Misja AED”).</p>
-          <ul className="footer-links">
-            <li><Link to="/dane">Pobierz dane (CSV, GeoJSON, API)</Link></li>
-            <li><Link to="/zrodla">Źródła i licencje</Link></li>
-            <li><Link to="/moderacja">Panel moderatora</Link></li>
-            <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">Mapa: © autorzy OpenStreetMap<span className="visually-hidden"> (otwiera się w nowej karcie)</span></a></li>
-          </ul>
+          <div className="footer-grid">
+            <section aria-labelledby="f-about">
+              <h2 id="f-about">{BRAND_NAME}</h2>
+              <p>{BRAND_SLOGAN}. Otwarty zbiór danych o defibrylatorach AED dla portalu dane.gov.pl.</p>
+              <p>Prototyp zespołu HackNation 2026 – nie jest serwisem administracji publicznej.</p>
+            </section>
+            <nav aria-labelledby="f-service">
+              <h2 id="f-service">Serwis</h2>
+              <ul className="footer-links">
+                <li><Link to="/o-projekcie">O projekcie</Link></li>
+                <li><Link to="/dane">Dane i API</Link></li>
+                <li><Link to="/zrodla">Źródła danych</Link></li>
+                <li><Link to="/licencje">Licencje i atrybucje</Link></li>
+                <li><ExternalLink href={REPO}>Kod źródłowy</ExternalLink></li>
+              </ul>
+            </nav>
+            <nav aria-labelledby="f-info">
+              <h2 id="f-info">Informacje</h2>
+              <ul className="footer-links">
+                <li><Link to="/deklaracja-dostepnosci">Deklaracja dostępności</Link></li>
+                <li><Link to="/dane-osobowe">Dane osobowe</Link></li>
+                <li><Link to="/cookies">Pliki cookies i pamięć przeglądarki</Link></li>
+                <li><Link to="/kontakt">Kontakt</Link></li>
+                <li><Link to="/moderacja">Panel moderatora</Link></li>
+              </ul>
+            </nav>
+            <section aria-labelledby="f-contact">
+              <h2 id="f-contact">Kontakt</h2>
+              <address className="footer-contact">[ADRES / KONTAKT ZESPOŁU]</address>
+            </section>
+          </div>
+          <p className="footer-legal">© 2026 Autorzy projektu „{BRAND_NAME}”, HackNation 2026. Mapa i dane OpenStreetMap: © autorzy OpenStreetMap (ODbL). Granice gmin: Państwowy Rejestr Granic – GUGiK.</p>
         </div>
       </footer>
     </>
