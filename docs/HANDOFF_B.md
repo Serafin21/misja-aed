@@ -333,7 +333,8 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 ## HANDOFF #29
 
 - Czas: sob 23:30
-- Zrobione: nowa księga znaku od zespołu (9 stron, `AED_w_danych_pakiet.zip`) w `src/ui/public/akcja/`: `ksiega_znaku.pdf`, `AED_w_danych_logo.zip` i `logo/{svg,png,jpg,pdf}/` (48 plików). Strona 9 księgi ma linki względne (`logo/svg/…`) – leżą obok PDF-a, więc kliknięcie formatu w PDF otwartym ze strony pobiera plik (sprawdzone: wszystkie 50 linków ma plik docelowy). Strona główna: na dole sekcja „Akcja „AED w danych” – księga znaku” (znak, „Otwórz księgę znaku (PDF)” w nowym oknie, „Pobierz wszystkie pliki logo (ZIP)”).
+- Zrobione: nowa księga znaku od zespołu (9 stron, `AED_w_danych_pakiet.zip`) w `src/ui/public/akcja/`: `ksiega_znaku.pdf` i `logo/{svg,png,jpg,pdf}/` (48 plików). Strona 9 księgi ma linki względne (`logo/svg/…`) – leżą obok PDF-a, więc kliknięcie formatu w PDF otwartym ze strony pobiera plik (sprawdzone: wszystkie 50 linków ma plik docelowy). Strona główna: na dole sekcja „Akcja „AED w danych” – księga znaku” (znak, „Otwórz księgę znaku (PDF)” w nowym oknie, „Pobierz wszystkie pliki logo (ZIP)”).
 - Do decyzji: `brand/ksiega_znaku.pdf` w repo to wciąż wcześniejsza wersja (generator) – podmienić na nową od zespołu?
 - Sprawdzone: składnia TS; linki PDF → pliki. Klikanie linków w przeglądarkowym podglądzie PDF – do sprawdzenia u B (Chrome).
 - Użycie AI (jedna linia): umieszczenie plików i sekcji na stronie głównej z Claude (Model B); księga i logo – zespół.
+- Poprawka (23:35, B): na stronie głównej tylko mały link „Księga znaku akcji „AED w danych” (PDF)”; bez przycisku i pliku ZIP. Uwaga: link „AED_w_danych_logo.zip” u góry strony 9 księgi nie ma teraz pliku (pozostałe 48 linków do formatów działa).

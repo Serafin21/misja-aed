@@ -1,5 +1,4 @@
 // Home: three big choices + first aid bar (TL: simple site for people who rarely use the internet).
-import { LogoMark } from '../components/Brand';
 import { Link, usePageTitle } from '../router';
 
 const TILES = [
@@ -28,17 +27,10 @@ export function Home() {
         <span>Ktoś stracił przytomność i nie oddycha? Dzwoń 112.</span>
         <Link to="/pierwsza-pomoc">Pierwsza pomoc: jak użyć AED</Link>
       </div>
-      <section className="brandbook" aria-labelledby="h-brandbook">
-        <LogoMark size={56} />
-        <div>
-          <h2 id="h-brandbook">Akcja „AED w danych” – księga znaku</h2>
-          <p>Logo, kolory i zasady używania znaku akcji. Na ostatniej stronie księgi kliknij format (SVG, PNG, JPG, PDF), aby pobrać wybraną wersję logo.</p>
-          <p className="brandbook__links">
-            <a className="btn btn--secondary" href="/akcja/ksiega_znaku.pdf" target="_blank" rel="noopener">Otwórz księgę znaku (PDF, 3,9 MB)<span className="visually-hidden"> – otwiera się w nowym oknie</span></a>
-            <a className="btn btn--tertiary" href="/akcja/AED_w_danych_logo.zip" download>Pobierz wszystkie pliki logo (ZIP)</a>
-          </p>
-        </div>
-      </section>
+      <p className="brandbook-link">
+        <a href="/akcja/ksiega_znaku.pdf" target="_blank" rel="noopener">Księga znaku akcji „AED w danych” (PDF)<span className="visually-hidden"> – otwiera się w nowym oknie</span></a>
+        <span className="hint"> – logo do pobrania na ostatniej stronie</span>
+      </p>
     </>
   );
 }
