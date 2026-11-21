@@ -18,13 +18,17 @@ import secrets
 from fastapi import Header, HTTPException
 
 SECRET = os.environ.get("AED_SECRET", "zmien-mnie-w-env")
-DEMO = {
-    "dysponent": os.environ.get("DEMO_DYSPONENT_PASSWORD", "dysponent-demo"),
-    "administrator": os.environ.get("DEMO_ADMINISTRATOR_PASSWORD", "administrator-demo"),
-    # older demo login, same role as "administrator"
-    "moderator": os.environ.get("DEMO_MODERATOR_PASSWORD", "moderator-demo"),
-}
-DEMO_ROLE = {"dysponent": "dysponent", "administrator": "administrator", "moderator": "administrator"}
+# Owner's decision (22.11): one built-in administrator account "admin" (password from ADMIN_PASSWORD, default admin123);
+# no institution accounts until the administrator creates them or approves a request. The old test accounts
+# (dysponent / administrator / moderator) exist only with AED_KONTA_TESTOWE=tak (automatic tests).
+DEMO = {"admin": os.environ.get("ADMIN_PASSWORD", "admin123")}
+DEMO_ROLE = {"admin": "administrator"}
+RESERVED = {"admin", "administrator", "moderator", "dysponent", "demo", "root"}
+if os.environ.get("AED_KONTA_TESTOWE") == "tak":
+    DEMO |= {"dysponent": os.environ.get("DEMO_DYSPONENT_PASSWORD", "dysponent-demo"),
+             "administrator": os.environ.get("DEMO_ADMINISTRATOR_PASSWORD", "administrator-demo"),
+             "moderator": os.environ.get("DEMO_MODERATOR_PASSWORD", "moderator-demo")}
+    DEMO_ROLE |= {"dysponent": "dysponent", "administrator": "administrator", "moderator": "administrator"}
 ACCOUNTS = DEMO  # backwards compatibility
 # TL decision: a provider (dysponent) may decide on citizen reports only for AED it operates.
 DYSPONENT_NAZWA = os.environ.get("DEMO_DYSPONENT_NAZWA", "Urząd Gminy Przykładowo")

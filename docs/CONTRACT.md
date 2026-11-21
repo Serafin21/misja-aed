@@ -1,4 +1,4 @@
-# CONTRACT v2.2 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
+# CONTRACT v2.3 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
 
 > Wspólny plik: edytuje tylko Team Leader. Zamrożenie: sob 15:00 (po konsultacji na stoisku danych). Zmiany wyłącznie przez CR (tabela na końcu).
 > **Od v2.0 obowiązuje model ról i odpowiedzialności: `docs/MODEL_ROL.md`.** Dane o AED publikuje wyłącznie właściciel urządzenia (dostawca) na własnym koncie w dane.gov.pl; wspólna lista łączy zbiory dostawców bez zmian; administrator (MC) nie wprowadza danych; OSM to tylko warstwa pomocnicza „Do sprawdzenia”.
@@ -95,6 +95,10 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 | `GET /konta/wnioski?status=`, `POST /konta/wnioski/{id}/decyzja` | administrator | `{decyzja: "zatwierdz" albo "odrzuc", uzasadnienie}` (uzasadnienie wymagane przy odrzuceniu); wpis w dzienniku |
 | `POST /konta/ja/uzytkownicy` | zatwierdzona instytucja | dodaje pracownika do swojej organizacji (te same uprawnienia; hasło jednorazowe) |
 | `POST /zgloszenia-aed`, `PUT /zgloszenia-aed/{id}` | instytucja (bez logowania 401, administrator 403) | `nazwa_obiektu`, `ulica`, `numer_budynku`, `kod_pocztowy`, `miejscowosc`, `szerokosc`, `dlugosc`, `opis_lokalizacji`, `wewnatrz_budynku`, `dostep`, `dostepny_24h` albo `godziny`, `szafka_zamknieta` (true/false), `instrukcja_dostepu` (gdy zamknięta), `zdjecie` (wymagane; metadane usuwane); PUT = poprawa po `do_poprawy` |
+| `GET /moje-urzadzenia` | instytucja | AED instytucji (z jej zbioru, dodane w aplikacji, przypisane przez administratora) z oczekującym zgłoszeniem zmiany (v2.3) |
+| `GET /admin/aed?q=&organizacja=&warstwa=&page=`, `PATCH /admin/aed/{id}` `{pola}`, `DELETE /admin/aed/{id}`, `PUT /admin/aed/{id}/przypisanie` `{organizacja}` | administrator | wszystkie AED: edycja dowolnych pól wzorca, usunięcie, przypisanie do instytucji; dziennik (v2.3) |
+| `PATCH /konta/{login}` `{aktywne, dysponent_nazwa, email, telefon, regon, dostawca_podstawa, nowy_login, haslo}`, `DELETE /konta/{login}` | administrator | zmiana danych, loginu i hasła konta instytucji, blokada, usunięcie (v2.3) |
+| `GET /aed/{id}/zdjecie` | publiczny | zdjęcie AED z zatwierdzonego zgłoszenia (bez metadanych) |
 | `GET /moje-zgloszenia` | instytucja | zgłoszenia AED organizacji: `status` (`oczekuje`/`zatwierdzone`/`do_poprawy`), `decyzja`, `komentarz`, `kto`, `kiedy`, `id_aed` (po zatwierdzeniu), `historia` |
 | `GET /admin/zgloszenia-aed?status=`, `POST /admin/zgloszenia-aed/{id}/decyzja` | administrator | kolejka ze zdjęciem (`zdjecie_url`, podpisany link) i nadawcą; `{decyzja: "zatwierdz" albo "do_poprawy", komentarz}` – inne pola → 403 |
 | `POST /aed`, `PATCH /aed/{id_aed}` | dostawca – tylko własne AED; administrator 403 | formularz kreatora → kopia robocza (K1, K2) |
@@ -149,3 +153,4 @@ Mapa ma dwa tryby. **Dostępność** – jak dotąd (§7, `dostepny_teraz`). **A
 | CR-TL-4 | Team Leader | Model ról i odpowiedzialności (`docs/MODEL_ROL.md`): publikuje tylko dostawca, wspólna lista bez scalania, administrator bez zapisu do danych, OSM jako warstwa pomocnicza, kreator kończy się pobraniem plików, dziennik zdarzeń; `teryt_terc` 7 cyfr | przyjęta | 2.0 |
 | CR-TL-5/6 | Team Leader | `GET /zbiory`, zbiory przejściowe (`meta.zgodnosc`), `meta.dostawca_podstawa` i podstawa publikacji przy koncie dostawcy | przyjęta | 2.1 |
 | CR-TL-8 | Team Leader | Zaufane konta instytucji (wniosek → zatwierdzenie, pracownicy), „Zgłoś AED” tylko po zalogowaniu z zatwierdzeniem formalnym przez administratora, `GET /miejsca/odwrotnie`, `teryt_terc` w `/miejsca` (MODEL_ROL v1.3) | przyjęta | 2.2 |
+| v2.3 | właściciel projektu | Konto `admin`/`admin123`, administrator edytuje / usuwa / przypisuje AED i konta, zgłoszenia nowych AED i zmian (także administratora) zatwierdzane przez administratora i od razu na mapie, `typ` i `id_aed` w `POST /zgloszenia-aed`, decyzja `odrzuc`, `nazwa` w `/aed/punkty`, przypomnienia w powiadomieniach (MODEL_ROL v1.4) | przyjęta | 2.3 |

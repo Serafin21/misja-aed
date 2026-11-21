@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS powiadomienia (
   czas TEXT NOT NULL, przeczytane INTEGER NOT NULL DEFAULT 0, UNIQUE (dostawca, typ, ref));
 -- small persistent state (e.g. the last aggregation report)
 CREATE TABLE IF NOT EXISTS stan (klucz TEXT PRIMARY KEY, data TEXT NOT NULL);
+-- decyzja właściciela projektu (22.11): AED dodane w aplikacji (zatwierdzone zgłoszenia), edycje administratora,
+-- przypisanie AED do konta instytucji, zdjęcia AED
+CREATE TABLE IF NOT EXISTS aed_aplikacja (id_aed TEXT PRIMARY KEY, organizacja TEXT, data TEXT NOT NULL, utworzono TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS edycje (id_aed TEXT PRIMARY KEY, data TEXT NOT NULL, czas TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS przypisania (id_aed TEXT PRIMARY KEY, organizacja TEXT NOT NULL, czas TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS zdjecia_aed (id_aed TEXT PRIMARY KEY, data TEXT NOT NULL, czas TEXT NOT NULL);
 -- CR-TL-8: wnioski instytucji o konto (zatwierdza administrator) i zgłoszenia nowych AED przez instytucje
 CREATE TABLE IF NOT EXISTS wnioski (id TEXT PRIMARY KEY, status TEXT NOT NULL, data TEXT NOT NULL, utworzono TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS zgloszenia_aed (id TEXT PRIMARY KEY, status TEXT NOT NULL, organizacja TEXT NOT NULL, data TEXT NOT NULL,

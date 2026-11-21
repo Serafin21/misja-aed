@@ -314,7 +314,7 @@ def aed_points(request: Request, bbox: Optional[str] = Query(None, description="
             feats.append({"type": "Feature", "id": r["id_aed"], "geometry": {"type": "Point", "coordinates": [x, y]},
                           "properties": {"dostepny_teraz": available_now(r, now), "stan_danych": coverage.stan_danych(r),
                                          "osm": warstwa(r) == "pomocnicza",  # older name: helper layer "Do sprawdzenia"
-                                         "warstwa": warstwa(r),
+                                         "warstwa": warstwa(r), "nazwa": r.get("nazwa_obiektu"),
                                          "zbior_nieaktualny": bool(st.lista.get(r["id_aed"], {}).get("zbior_nieaktualny")),
                                          "duplikat": bool(st.lista.get(r["id_aed"], {}).get("mozliwe_duplikaty")),
                                          "zgodnosc": (st.lista[r["id_aed"]].get("zgodnosc", "wzorzec") if r["id_aed"] in st.lista else None),
@@ -561,7 +561,16 @@ def my_package(body: OrgIn, role: str = Depends(require("dysponent", "administra
 @app.get(f"{API}/moje-aed/powiadomienia", tags=["kreator"], summary="Powiadomienia dostawcy: zgłoszenia, potwierdzenia, duplikaty, walidacja, przypomnienia")
 def my_notifications(role: str = Depends(require("dysponent", "administrator"))):
     from src.core import dziennik
-    return {"data": dziennik.powiadomienia(_dostawca(role))}
+    org = _dostawca(role)
+    st = get_store()
+    # reminders computed from the data: AED of the institution not checked for more than 12 months (P4)
+    stale = sorted((r for i, r in st.records.items() if _same(st.organizacja(i), org) and coverage.stan_danych(r) == "nieaktualne"),
+                   key=lambda r: r.get("data_weryfikacji") or "")
+    rem = [{"id": -n - 1, "typ": "przypomnienie", "czas": today(), "przeczytane": False, "id_aed": r["id_aed"],
+            "tresc": f"AED „{r.get('nazwa_obiektu')}”: " + (f"ostatnio sprawdzone {r['data_weryfikacji']}" if r.get("data_weryfikacji")
+                                                         else "brak daty sprawdzenia") + " – sprawdź je na miejscu i zgłoś aktualne dane."}
+           for n, r in enumerate(stale[:50])]
+    return {"data": rem + dziennik.powiadomienia(org), "meta": {"przypomnienia": len(stale)}}
 
 
 # ---------- import (F1) ----------
@@ -786,7 +795,8 @@ def create_report(body: ZgloszenieIn):
         err(404, "nie_znaleziono", "Nie ma takiego AED.", {"id_aed": "Nieznany identyfikator."})
     zid = uuid.uuid4().hex[:12]
     photo = _photo(body.zdjecie)
-    prov = st.lista.get(body.id_aed) if body.id_aed else None
+    org = st.organizacja(body.id_aed) if body.id_aed else None
+    prov = {"dostawca": org} if org else None  # the institution responsible for the AED (assignment, app or dataset)
     data = body.model_dump() | {"id": zid, "status": "do_weryfikacji", "czas": now_min(), "opis": filtr_tresci(body.opis),
                                 "dostawca": prov["dostawca"] if prov else None,
                                 "kolejka": "dostawca" if prov else "administrator"}
@@ -940,9 +950,11 @@ class KontoIn(BaseModel):
 
 
 def _konto_out(a: dict) -> dict:
+    st = get_store()
     return {k: a.get(k) for k in ("login", "rola", "dysponent_nazwa", "email", "aktywne", "utworzono", "utworzyl", "regon", "telefon")} | \
         {"aktywne": bool(a.get("aktywne")), "dostawca_podstawa": a.get("podstawa"),
-         "liczba_aed": sum(1 for p in get_store().lista.values() if _same(p["dostawca"], a.get("dysponent_nazwa")))}
+         "oczekuje": not a.get("aktywne") and str(a.get("utworzyl") or "").startswith("wniosek:"),
+         "liczba_aed": sum(1 for i in st.records if _same(st.organizacja(i), a.get("dysponent_nazwa")))}
 
 
 @app.get(f"{API}/konta", tags=["auth"], summary="Konta instytucji (moderator)")
@@ -954,7 +966,7 @@ def accounts_list(role: str = Depends(require("administrator"))):
 @app.post(f"{API}/konta", tags=["auth"], status_code=201, summary="Załóż konto instytucji (moderator) – hasło pokazywane raz")
 def account_create(body: KontoIn, role: str = Depends(require("administrator"))):
     login = body.login.strip().lower()
-    if not auth.LOGIN_RE.match(login) or login in auth.DEMO or login == "demo":
+    if not auth.LOGIN_RE.match(login) or login in auth.RESERVED:
         err(422, "walidacja", "Nieprawidłowy login.", {"login": "3–41 znaków: małe litery, cyfry, kropka, _ i -; inny niż konta demo."})
     if auth.account(login):
         err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
@@ -986,21 +998,68 @@ def account_reset(login: str, role: str = Depends(require("administrator"))):
     return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo}
 
 
-class AktywneIn(BaseModel):
-    aktywne: bool
+class KontoZmianaIn(BaseModel):
+    """Administrator: change anything in an institution account (e.g. after a lost or stolen password)."""
+    aktywne: Optional[bool] = None
+    dysponent_nazwa: Optional[str] = Field(None, min_length=3, max_length=200, description="nazwa instytucji – zmienia ją we wszystkich jej kontach i AED")
+    email: Optional[str] = Field(None, max_length=200)
+    telefon: Optional[str] = Field(None, max_length=30)
+    regon: Optional[str] = Field(None, pattern=r"^\d{9}(\d{5})?$")
+    dostawca_podstawa: Optional[str] = Field(None, pattern="^(wlasciciel|zarzadca|weryfikujacy)$")
+    nowy_login: Optional[str] = None
+    haslo: Optional[str] = Field(None, min_length=8, max_length=200, description="nowe hasło ustawione przez administratora")
 
 
-@app.patch(f"{API}/konta/{{login}}", tags=["auth"], summary="Zablokuj / odblokuj konto instytucji (moderator)")
-def account_toggle(login: str, body: AktywneIn, role: str = Depends(require("administrator"))):
-    if not auth.account(login):
+@app.patch(f"{API}/konta/{{login}}", tags=["auth"], summary="Zmień konto instytucji: dane, login, hasło, blokada (administrator)")
+def account_update(login: str, body: KontoZmianaIn, role: str = Depends(require("administrator"))):
+    from src.core import dziennik
+    a = auth.account(login)
+    if not a:
         err(404, "nie_znaleziono", "Nie ma takiego konta.")
     st = get_store()
-    przed = _konto_out(auth.account(login))
-    st.conn.execute("UPDATE konta SET aktywne=? WHERE login=?", (1 if body.aktywne else 0, login))
+    przed = _konto_out(a)
+    ch = body.model_dump(exclude_none=True)
+    if "nowy_login" in ch:
+        nl = ch["nowy_login"].strip().lower()
+        if nl != login:
+            if not auth.LOGIN_RE.match(nl) or nl in auth.RESERVED:
+                err(422, "walidacja", "Nieprawidłowy login.", {"nowy_login": "3–41 znaków: małe litery, cyfry, kropka, _ i -."})
+            if auth.account(nl):
+                err(409, "konto_istnieje", "Takie konto już istnieje.", {"nowy_login": "Login zajęty."})
+            st.conn.execute("UPDATE konta SET login=? WHERE login=?", (nl, login))
+            login = nl
+    if "dysponent_nazwa" in ch and ch["dysponent_nazwa"].strip() != a["dysponent_nazwa"]:
+        old, new = a["dysponent_nazwa"], ch["dysponent_nazwa"].strip()
+        st.conn.execute("UPDATE konta SET dysponent_nazwa=? WHERE lower(dysponent_nazwa)=lower(?)", (new, old))
+        st.conn.execute("UPDATE przypisania SET organizacja=? WHERE lower(organizacja)=lower(?)", (new, old))
+        st.conn.execute("UPDATE aed_aplikacja SET organizacja=? WHERE lower(organizacja)=lower(?)", (new, old))
+        for r in st.conn.execute("SELECT id, data FROM zgloszenia_aed WHERE lower(organizacja)=lower(?)", (old,)).fetchall():
+            z = db.loads(r["data"]) | {"organizacja": new}
+            st.conn.execute("UPDATE zgloszenia_aed SET organizacja=?, data=? WHERE id=?", (new, db.dumps(z), r["id"]))
+    cols = {"aktywne": "aktywne", "email": "email", "telefon": "telefon", "regon": "regon", "dostawca_podstawa": "podstawa"}
+    for k, c in cols.items():
+        if k in ch:
+            st.conn.execute(f"UPDATE konta SET {c}=? WHERE login=?", (int(ch[k]) if k == "aktywne" else ch[k], login))
+    if "haslo" in ch:
+        st.conn.execute("UPDATE konta SET haslo=? WHERE login=?", (auth.hash_password(ch["haslo"]), login))
     st.conn.commit()
-    from src.core import dziennik
-    dziennik.zapisz(role, "konto:odblokowanie" if body.aktywne else "konto:blokada", login, przed=przed, po=_konto_out(auth.account(login)))
+    st.load()
+    op = "konto:blokada" if ch.get("aktywne") is False else "konto:odblokowanie" if ch.get("aktywne") is True and len(ch) == 1 else "konto:zmiana"
+    dziennik.zapisz(role, op, login, przed=przed, po=_konto_out(auth.account(login)) | ({"haslo": "zmienione"} if "haslo" in ch else {}))
     return {"data": _konto_out(auth.account(login))}
+
+
+@app.delete(f"{API}/konta/{{login}}", tags=["auth"], summary="Usuń konto instytucji (administrator) – AED zostają na mapie")
+def account_delete(login: str, role: str = Depends(require("administrator"))):
+    from src.core import dziennik
+    a = auth.account(login)
+    if not a:
+        err(404, "nie_znaleziono", "Nie ma takiego konta.")
+    st = get_store()
+    st.conn.execute("DELETE FROM konta WHERE login=?", (login,))
+    st.conn.commit()
+    dziennik.zapisz(role, "konto:usuniecie", login, przed=_konto_out(a))
+    return {"ok": True}
 
 
 class ZmianaHasla(BaseModel):
@@ -1380,7 +1439,7 @@ def account_request(body: WniosekIn):
     from src.core import dziennik
     _bez_nie_wiem(body.model_dump())
     login = body.login.strip().lower()
-    if not auth.LOGIN_RE.match(login) or login in auth.DEMO or login == "demo":
+    if not auth.LOGIN_RE.match(login) or login in auth.RESERVED:
         err(422, "walidacja", "Nieprawidłowy login.", {"login": "3–41 znaków: małe litery, cyfry, kropka, _ i -; inny niż konta demo."})
     if auth.account(login):
         err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
@@ -1453,7 +1512,7 @@ def account_add_employee(body: PracownikIn, role: str = Depends(require("dyspone
     if not me or not me.get("aktywne"):
         err(403, "brak_uprawnien", "Pracowników dodaje zatwierdzone konto instytucji (nie konto demo).")
     login = body.login.strip().lower()
-    if not auth.LOGIN_RE.match(login) or login in auth.DEMO or login == "demo":
+    if not auth.LOGIN_RE.match(login) or login in auth.RESERVED:
         err(422, "walidacja", "Nieprawidłowy login.", {"login": "3–41 znaków: małe litery, cyfry, kropka, _ i -."})
     if auth.account(login):
         err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
@@ -1468,9 +1527,17 @@ def account_add_employee(body: PracownikIn, role: str = Depends(require("dyspone
             "meta": {"komunikat": "Przekaż login i hasło pracownikowi. Hasła nie da się później odczytać."}}
 
 
-# ---------- CR-TL-8: "Zgłoś AED" – only for a logged-in institution, formal approval by the administrator ----------
+# ---------- "Zgłoszenia AED": new AED and changes, by an institution or the administrator; every one approved by the administrator
+# Owner's decision (22.11, MODEL_ROL v1.4): an approved submission is on the map at once (source "aplikacja"); changes to an
+# existing AED are applied on top of its source. The administrator may also edit, delete and assign any AED directly.
+ADMIN_ORG = "Administrator (Ministerstwo Cyfryzacji)"
+
+
 class ZgloszenieAedIn(BaseModel):
     model_config = {"extra": "forbid"}
+    typ: str = Field("nowe", pattern="^(nowe|zmiana)$", description="nowe AED albo zmiana istniejącego (id_aed)")
+    id_aed: Optional[str] = Field(None, description="wymagane przy typ = zmiana")
+    organizacja: Optional[str] = Field(None, max_length=200, description="tylko administrator: instytucja, której przypisać nowe AED")
     nazwa_obiektu: str = Field(..., min_length=3, max_length=200)
     ulica: Optional[str] = Field(None, max_length=120, description="puste tylko w miejscowości bez ulic")
     numer_budynku: str = Field(..., min_length=1, max_length=20)
@@ -1478,69 +1545,91 @@ class ZgloszenieAedIn(BaseModel):
     miejscowosc: str = Field(..., min_length=2, max_length=100)
     szerokosc: float = Field(..., ge=49.0, le=54.9, description="z geokodowania adresu (GET /miejsca) albo z pinezki")
     dlugosc: float = Field(..., ge=14.1, le=24.2)
-    opis_lokalizacji: str = Field(..., min_length=5, max_length=250, description="gdzie dokładnie wisi urządzenie")
+    opis_lokalizacji: str = Field(..., min_length=5, max_length=250, description="jak dojść: np. parter, wypożyczalnia, koniec korytarza")
     wewnatrz_budynku: bool = True
     dostep: str = Field(..., pattern="^(publiczny|ograniczony|prywatny)$")
     dostepny_24h: StrictBool
     godziny: Optional[str] = Field(None, max_length=200, description="wymagane, gdy dostepny_24h = false; np. „pn-pt 8-16”")
     szafka_zamknieta: StrictBool = Field(..., description="true | false – bez „nie wiem”")
-    instrukcja_dostepu: Optional[str] = Field(None, max_length=250, description="wymagana, gdy szafka zamknięta")
-    zdjecie: str = Field(..., description="WYMAGANE: data:image/jpeg|png|webp;base64,… (maks. 1,5 MB); metadane (EXIF, GPS) są usuwane")
+    instrukcja_dostepu: Optional[str] = Field(None, max_length=250, description="wymagana, gdy szafka zamknięta (np. klucz w recepcji)")
+    zdjecie: Optional[str] = Field(None, description="data:image/jpeg|png|webp;base64,… (maks. 1,5 MB); wymagane dla nowego AED "
+                                                    "i dla AED bez zdjęcia; metadane (EXIF, GPS) są usuwane")
 
 
-def _sprawdz_zgloszenie_aed(body: ZgloszenieAedIn) -> tuple[dict, str]:
+def _ma_zdjecie(id_aed: str | None) -> bool:
+    return bool(id_aed) and get_store().conn.execute("SELECT 1 FROM zdjecia_aed WHERE id_aed=?", (id_aed,)).fetchone() is not None
+
+
+def _sprawdz_zgloszenie_aed(body: ZgloszenieAedIn, user) -> dict:
     from src.core import normalize as N, zdjecia
+    st = get_store()
     _bez_nie_wiem(body.model_dump(exclude={"zdjecie"}))
     fields, godziny = {}, "24/7"
+    if body.typ == "zmiana":
+        if not body.id_aed or body.id_aed not in st.records:
+            err(404, "nie_znaleziono", "Nie ma takiego AED.", {"id_aed": "Nieznany identyfikator."})
+        if str(user) != "administrator" and not _same(st.organizacja(body.id_aed), user.nazwa):
+            err(403, "brak_uprawnien", "To AED nie jest przypisane do Twojej instytucji – zgłoś je administratorowi.")
+    if body.organizacja and str(user) != "administrator":
+        err(403, "brak_uprawnien", "Instytucję wskazuje tylko administrator.", {"organizacja": "Pole tylko dla administratora."})
     if not body.dostepny_24h:
         godziny, _ = N.opening_hours(body.godziny or "")
         if not body.godziny:
             fields["godziny"] = "Podaj godziny dostępności (albo zaznacz „całą dobę”)."
-        elif not godziny or hours.is_open(godziny) is None:  # not interpretable → ask for a clear form
+        elif not godziny or hours.is_open(godziny) is None:
             fields["godziny"] = "Nie rozumiem godzin – wpisz np. „pn-pt 8-16; sob 9-13”."
     if body.szafka_zamknieta and not (body.instrukcja_dostepu or "").strip():
-        fields["instrukcja_dostepu"] = "Szafka jest zamknięta – napisz, jak ją otworzyć (np. kod podaje dyspozytor 112)."
-    if not body.zdjecie:
+        fields["instrukcja_dostepu"] = "Szafka jest zamknięta – napisz, jak ją otworzyć (np. klucz w recepcji, kod podaje dyspozytor 112)."
+    need_photo = body.typ == "nowe" or not (_ma_zdjecie(body.id_aed) or st.records[body.id_aed].get("zdjecie_url"))
+    if not body.zdjecie and need_photo:
         fields["zdjecie"] = "Zdjęcie jest wymagane."
     teryt = coverage.index().teryt(body.dlugosc, body.szerokosc)
     if not teryt:
         fields["szerokosc"] = "Położenie poza granicami gmin w Polsce."
     if fields:
         err(422, "walidacja", "Zgłoszenie jest niekompletne.", fields)
-    photo = _photo(body.zdjecie)
-    if not photo or photo[0] == "url":
-        err(422, "walidacja", "Dołącz zdjęcie urządzenia (plik JPEG, PNG albo WebP).", {"zdjecie": "Wymagany plik zdjęcia."})
-    try:
-        clean = zdjecia.bez_metadanych(photo[0], photo[1])
-    except Exception:  # noqa: BLE001 – any parsing error = broken file
-        err(422, "walidacja", "Plik nie jest poprawnym zdjęciem.", {"zdjecie": "Uszkodzony plik."})
-    d = body.model_dump() | {"godziny": godziny, "teryt_terc": teryt, "zdjecie": zdjecia.data_uri(photo[0], clean)}
-    return d, teryt
+    foto = None
+    if body.zdjecie:
+        photo = _photo(body.zdjecie)
+        if not photo or photo[0] == "url":
+            err(422, "walidacja", "Dołącz zdjęcie urządzenia (plik JPEG, PNG albo WebP).", {"zdjecie": "Wymagany plik zdjęcia."})
+        try:
+            foto = zdjecia.data_uri(photo[0], zdjecia.bez_metadanych(photo[0], photo[1]))
+        except Exception:  # noqa: BLE001 – any parsing error = broken file
+            err(422, "walidacja", "Plik nie jest poprawnym zdjęciem.", {"zdjecie": "Uszkodzony plik."})
+    return body.model_dump() | {"godziny": godziny, "teryt_terc": teryt, "zdjecie": foto}
 
 
 def _zgl_aed_out(z: dict) -> dict:
     out = {k: v for k, v in z.items() if k != "zdjecie"}
     out["zdjecie_url"] = f"{API}/zgloszenia-aed/{z['id']}/zdjecie?t={_photo_token('aed:' + z['id'])}" if z.get("zdjecie") else None
+    if z.get("typ") == "zmiana" and z.get("id_aed") in get_store().records:  # what the change replaces (for the approval screen)
+        r = get_store().records[z["id_aed"]]
+        out["obecne"] = {k: r.get(k) for k in ("nazwa_obiektu", "ulica", "numer_budynku", "kod_pocztowy", "miejscowosc", "opis_lokalizacji",
+                                               "dostep", "godziny_dostepnosci", "szafka_zamknieta", "instrukcja_dostepu", "zdjecie_url")}
     return out
 
 
-@app.post(f"{API}/zgloszenia-aed", tags=["zgloszenia-aed"], status_code=201, summary="Zgłoś AED (tylko zalogowana instytucja)",
-          description="Nowe AED zgłasza instytucja (właściciel, zarządca albo podmiot weryfikujący) po zalogowaniu; bez logowania 401. "
-                      "Wszystkie pola konkretne (bez „nie wiem”), zdjęcie wymagane (metadane usuwane). Administrator sprawdza zgłoszenie "
-                      "formalnie i zatwierdza albo odsyła do poprawy; zatwierdzone AED trafia do kopii roboczej instytucji, która publikuje je sama.")
-def aed_submission_create(body: ZgloszenieAedIn, role: str = Depends(require("dysponent"))):
+@app.post(f"{API}/zgloszenia-aed", tags=["zgloszenia-aed"], status_code=201, summary="Zgłoś nowe AED albo zmianę AED (instytucja lub administrator)",
+          description="Nowe AED (`typ = nowe`) albo zmiana istniejącego (`typ = zmiana`, `id_aed` – instytucja tylko swoich AED). "
+                      "Bez logowania 401. Wszystkie pola konkretne (bez „nie wiem”), zdjęcie wymagane dla nowego AED (metadane usuwane). "
+                      "Każde zgłoszenie – także administratora – trafia do zatwierdzenia; zatwierdzone jest od razu na mapie.")
+def aed_submission_create(body: ZgloszenieAedIn, role: str = Depends(require("dysponent", "administrator"))):
     from src.core import dziennik
-    org = _dostawca(role)
-    d, _ = _sprawdz_zgloszenie_aed(body)
+    org = ((body.organizacja or "").strip() or None) if str(role) == "administrator" else _dostawca(role)
+    if str(role) == "administrator" and body.typ == "zmiana":
+        org = get_store().organizacja(body.id_aed or "") or org
+    d = _sprawdz_zgloszenie_aed(body, role)
     st = get_store()
     zid = uuid.uuid4().hex[:12]
-    z = d | {"id": zid, "status": "oczekuje", "nadawca_login": role.login, "organizacja": org, "utworzono": now_min(),
-             "decyzja": None, "komentarz": None, "kto": None, "kiedy": None, "id_aed": None, "historia": []}
-    st.conn.execute("INSERT INTO zgloszenia_aed VALUES (?,?,?,?,?)", (zid, "oczekuje", org, db.dumps(z), now_min()))
+    z = d | {"id": zid, "status": "oczekuje", "nadawca_login": role.login, "nadawca_rola": str(role), "organizacja": org or ADMIN_ORG,
+             "utworzono": now_min(), "decyzja": None, "komentarz": None, "kto": None, "kiedy": None,
+             "id_aed": body.id_aed if body.typ == "zmiana" else None, "historia": []}
+    st.conn.execute("INSERT INTO zgloszenia_aed VALUES (?,?,?,?,?)", (zid, "oczekuje", z["organizacja"], db.dumps(z), now_min()))
     st.conn.commit()
-    dziennik.zapisz(role, "zgloszenie_aed:nowe", zid, po=_zgl_aed_out(z))
+    dziennik.zapisz(role, f"zgloszenie_aed:{body.typ}", zid, po=_zgl_aed_out(z))
     return {"id": zid, "status": "oczekuje", "data": _zgl_aed_out(z),
-            "meta": {"komunikat": "Zgłoszenie wysłane do administratora. Po zatwierdzeniu AED pojawi się w „Moje AED” – opublikujesz je sam na dane.gov.pl."}}
+            "meta": {"komunikat": "Zgłoszenie wysłane do zatwierdzenia. Po zatwierdzeniu zmiany będą od razu widoczne na mapie."}}
 
 
 def _zgl_aed(zid: str) -> dict:
@@ -1556,21 +1645,23 @@ def _zapisz_zgl(z: dict) -> None:
     st.conn.commit()
 
 
-@app.put(f"{API}/zgloszenia-aed/{{zid}}", tags=["zgloszenia-aed"], summary="Popraw i wyślij ponownie (instytucja, status do_poprawy)",
-         description="Tylko instytucja, która zgłosiła AED. Administrator nie edytuje pól zgłoszenia (403).")
+@app.put(f"{API}/zgloszenia-aed/{{zid}}", tags=["zgloszenia-aed"], summary="Popraw i wyślij ponownie (nadawca, status do_poprawy)")
 def aed_submission_fix(zid: str, body: ZgloszenieAedIn, role: str = Depends(require("dysponent", "administrator"))):
     from src.core import dziennik
-    if str(role) == "administrator":
-        err(403, "brak_uprawnien", "Administrator nie zmienia danych zgłoszenia – może je zatwierdzić albo odesłać do poprawy z komentarzem.")
-    org = _dostawca(role)
     z = _zgl_aed(zid)
-    if not _same(z["organizacja"], org):
+    if str(role) == "administrator":
+        if z.get("nadawca_rola") != "administrator":
+            err(403, "brak_uprawnien", "Administrator nie zmienia zgłoszenia instytucji – zatwierdza je albo odsyła do poprawy z komentarzem.")
+    elif not _same(z["organizacja"], _dostawca(role)):
         err(403, "brak_uprawnien", "To zgłoszenie innej instytucji.")
     if z["status"] != "do_poprawy":
         err(409, "zly_status", "Poprawić można tylko zgłoszenie odesłane do poprawy.")
-    d, _ = _sprawdz_zgloszenie_aed(body)
+    d = _sprawdz_zgloszenie_aed(body, role)
     przed = _zgl_aed_out(z)
     z["historia"].append({"decyzja": z["decyzja"], "komentarz": z["komentarz"], "kto": z["kto"], "kiedy": z["kiedy"]})
+    if not d.get("zdjecie"):
+        d.pop("zdjecie")  # keep the photo sent earlier
+    d.pop("organizacja", None)
     z.update(d)
     z.update(status="oczekuje", decyzja=None, komentarz=None, kto=None, kiedy=None, nadawca_login=role.login, poprawiono=now_min())
     _zapisz_zgl(z)
@@ -1581,25 +1672,44 @@ def aed_submission_fix(zid: str, body: ZgloszenieAedIn, role: str = Depends(requ
 @app.patch(f"{API}/zgloszenia-aed/{{zid}}", tags=["zgloszenia-aed"], include_in_schema=False)
 @app.patch(f"{API}/admin/zgloszenia-aed/{{zid}}", tags=["zgloszenia-aed"], include_in_schema=False)
 def aed_submission_patch(zid: str, role: str = Depends(require("dysponent", "administrator"))):
-    err(403, "brak_uprawnien", "Pól zgłoszenia nie edytuje się: instytucja poprawia całe zgłoszenie (PUT), administrator tylko decyduje.")
+    err(403, "brak_uprawnien", "Pól zgłoszenia nie edytuje się: nadawca poprawia całe zgłoszenie (PUT), administrator decyduje "
+                               "(a dane AED po zatwierdzeniu może zmienić w „Wszystkie AED”).")
 
 
 @app.get(f"{API}/moje-zgloszenia", tags=["zgloszenia-aed"], summary="Zgłoszenia AED mojej instytucji: status, decyzja, komentarz, kto i kiedy")
-def my_aed_submissions(role: str = Depends(require("dysponent"))):
+def my_aed_submissions(role: str = Depends(require("dysponent", "administrator"))):
+    st = get_store()
+    if str(role) == "administrator":
+        rows = st.conn.execute("SELECT data FROM zgloszenia_aed ORDER BY utworzono DESC").fetchall()
+        data = [_zgl_aed_out(z) for z in (db.loads(r["data"]) for r in rows) if z.get("nadawca_rola") == "administrator"]
+    else:
+        data = [_zgl_aed_out(db.loads(r["data"])) for r in st.conn.execute(
+            "SELECT data FROM zgloszenia_aed WHERE lower(organizacja)=lower(?) ORDER BY utworzono DESC", (_dostawca(role),))]
+    return {"data": data, "meta": {"count": len(data)}}
+
+
+@app.get(f"{API}/moje-urzadzenia", tags=["zgloszenia-aed"], summary="AED mojej instytucji (przypisane, z jej zbioru albo dodane w aplikacji)")
+def my_devices(role: str = Depends(require("dysponent"))):
     org = _dostawca(role)
-    rows = [_zgl_aed_out(db.loads(r["data"])) for r in get_store().conn.execute(
-        "SELECT data FROM zgloszenia_aed WHERE lower(organizacja)=lower(?) ORDER BY utworzono DESC", (org,))]
-    return {"data": rows, "meta": {"count": len(rows)}}
+    st = get_store()
+    pending = {}
+    for r in st.conn.execute("SELECT data FROM zgloszenia_aed WHERE lower(organizacja)=lower(?) AND status!='zatwierdzone'", (org,)):
+        z = db.loads(r["data"])
+        if z.get("id_aed"):
+            pending[z["id_aed"]] = {"id": z["id"], "status": z["status"], "komentarz": z.get("komentarz")}
+    items = [resource(rec) | {"zgloszenie": pending.get(i)} for i, rec in st.records.items() if _same(st.organizacja(i), org)]
+    items.sort(key=lambda x: (x["attributes"].get("nazwa_obiektu") or "").lower())
+    return {"data": items, "meta": {"count": len(items), "organizacja": org}}
 
 
-@app.get(f"{API}/admin/zgloszenia-aed", tags=["zgloszenia-aed"], summary="Zgłoszenia AED instytucji do zatwierdzenia (administrator)")
-def admin_aed_submissions(status: Optional[str] = Query("oczekuje", description="oczekuje | zatwierdzone | do_poprawy | wszystkie"),
+@app.get(f"{API}/admin/zgloszenia-aed", tags=["zgloszenia-aed"], summary="Zgłoszenia AED do zatwierdzenia (administrator)")
+def admin_aed_submissions(status: Optional[str] = Query("oczekuje", description="oczekuje | zatwierdzone | do_poprawy | odrzucone | wszystkie"),
                           role: str = Depends(require("administrator"))):
     q, args = "SELECT data FROM zgloszenia_aed", ()
     if status and status != "wszystkie":
         q, args = q + " WHERE status=?", (status,)
     rows = [_zgl_aed_out(db.loads(r["data"])) for r in get_store().conn.execute(q + " ORDER BY utworzono", args)]
-    return {"data": rows, "meta": {"count": len(rows), "kryteria": "kompletność, zdjęcie, położenie zgodne z adresem – bez edycji danych"}}
+    return {"data": rows, "meta": {"count": len(rows), "kryteria": "kompletność, zdjęcie, położenie zgodne z adresem"}}
 
 
 @app.get(f"{API}/zgloszenia-aed/{{zid}}/zdjecie", tags=["zgloszenia-aed"], summary="Zdjęcie ze zgłoszenia AED (podpisany link)")
@@ -1609,68 +1719,215 @@ def aed_submission_photo(zid: str, t: str = ""):
     if not _h.compare_digest(t, _photo_token("aed:" + zid)):
         err(403, "brak_uprawnien", "Nieprawidłowy link do zdjęcia.")
     z = _zgl_aed(zid)
+    if not z.get("zdjecie"):
+        err(404, "nie_znaleziono", "Zgłoszenie nie ma zdjęcia.")
     mime, b64 = z["zdjecie"].split(";base64,")
     return Response(base64.b64decode(b64), media_type=mime[5:], headers={"Cache-Control": "private, max-age=3600"})
 
 
+@app.get(f"{API}/aed/{{id_aed}}/zdjecie", tags=["aed"], summary="Zdjęcie AED (z zatwierdzonego zgłoszenia, bez metadanych)")
+def aed_photo(id_aed: str):
+    import base64
+    row = get_store().conn.execute("SELECT data FROM zdjecia_aed WHERE id_aed=?", (id_aed,)).fetchone()
+    if not row:
+        err(404, "nie_znaleziono", "To AED nie ma zdjęcia.")
+    mime, b64 = row["data"].split(";base64,")
+    return Response(base64.b64decode(b64), media_type=mime[5:], headers={"Cache-Control": "public, max-age=86400"})
+
+
 class DecyzjaZglAedIn(BaseModel):
     model_config = {"extra": "allow"}
-    decyzja: str = Field(..., pattern="^(zatwierdz|do_poprawy)$")
+    decyzja: str = Field(..., pattern="^(zatwierdz|do_poprawy|odrzuc)$")
     komentarz: Optional[str] = Field(None, max_length=500)
 
 
-def _rekord_ze_zgloszenia(z: dict) -> dict:
+def _pola_ze_zgloszenia(z: dict) -> dict:
     from src.core import normalize as N
-    rec = schema.empty_record()
     cecha, ulica = N.street(z["ulica"]) if z.get("ulica") else (None, None)
-    rec.update(id_aed=dedup.make_id(f"dostawca:{z['organizacja']}", f"zgloszenie:{z['id']}"), nazwa_obiektu=z["nazwa_obiektu"],
-               opis_lokalizacji=z["opis_lokalizacji"], wewnatrz_budynku=z.get("wewnatrz_budynku", True),
-               ulica_cecha=cecha, ulica=ulica, numer_budynku=z["numer_budynku"], kod_pocztowy=z["kod_pocztowy"],
-               miejscowosc=z["miejscowosc"], gmina=None, teryt_terc=z["teryt_terc"],
-               szerokosc_geograficzna=round(z["szerokosc"], 6), dlugosc_geograficzna=round(z["dlugosc"], 6),
-               dostep=z["dostep"], godziny_dostepnosci=z["godziny"], dostepny_24h=z["dostepny_24h"],
-               szafka_zamknieta=z["szafka_zamknieta"], instrukcja_dostepu=z.get("instrukcja_dostepu") or None, mobilny=False,
-               status_urzadzenia="sprawny", dysponent_nazwa=z["organizacja"], dysponent_typ="inny", zrodlo_danych="dysponent",
-               licencja="CC0-1.0", data_weryfikacji=z["utworzono"][:10], metoda_weryfikacji="zdjecie",
-               data_aktualizacji=now_min())
-    gm = next((i["nazwa"] for _, i in __import__("src.core.geocode", fromlist=["x"])._offline_index() if i.get("teryt") == z["teryt_terc"]), None)
-    rec["gmina"] = gm
-    rec["wojewodztwo"] = coverage.WOJ_KOD.get(z["teryt_terc"][:2])
-    return rec
+    t = z["teryt_terc"]
+    gm = next((i["nazwa"] for _, i in __import__("src.core.geocode", fromlist=["x"])._offline_index() if i.get("teryt") == t), None)
+    return {"nazwa_obiektu": z["nazwa_obiektu"], "opis_lokalizacji": z["opis_lokalizacji"], "wewnatrz_budynku": z.get("wewnatrz_budynku", True),
+            "ulica_cecha": cecha, "ulica": ulica, "numer_budynku": z["numer_budynku"], "kod_pocztowy": z["kod_pocztowy"],
+            "miejscowosc": z["miejscowosc"], "gmina": gm, "wojewodztwo": coverage.WOJ_KOD.get(t[:2]), "teryt_terc": t,
+            "szerokosc_geograficzna": round(z["szerokosc"], 6), "dlugosc_geograficzna": round(z["dlugosc"], 6),
+            "dostep": z["dostep"], "godziny_dostepnosci": z["godziny"], "dostepny_24h": z["dostepny_24h"],
+            "szafka_zamknieta": z["szafka_zamknieta"], "instrukcja_dostepu": z.get("instrukcja_dostepu") or None,
+            "data_weryfikacji": z["utworzono"][:10], "metoda_weryfikacji": "zdjecie", "data_aktualizacji": now_min()}
+
+
+def _zapisz_edycje(id_aed: str, pola: dict) -> None:
+    """Write fields of an AED: into the app record for app AED, otherwise as an edit applied on top of its source."""
+    st = get_store()
+    row = st.conn.execute("SELECT data FROM aed_aplikacja WHERE id_aed=?", (id_aed,)).fetchone()
+    if row:
+        st.conn.execute("UPDATE aed_aplikacja SET data=? WHERE id_aed=?", (db.dumps({**db.loads(row["data"]), **pola}), id_aed))
+    else:
+        old = st.conn.execute("SELECT data FROM edycje WHERE id_aed=?", (id_aed,)).fetchone()
+        e = db.loads(old["data"]) if old else {"pola": {}}
+        e["pola"] = {**(e.get("pola") or {}), **pola}
+        e.pop("usuniete", None)
+        st.conn.execute("INSERT OR REPLACE INTO edycje VALUES (?,?,?)", (id_aed, db.dumps(e), now_min()))
 
 
 @app.post(f"{API}/admin/zgloszenia-aed/{{zid}}/decyzja", tags=["zgloszenia-aed"],
-          summary="Zatwierdź albo odeślij do poprawy (administrator – bez edycji pól)",
-          description="Zatwierdzenie formalne (kompletność, zdjęcie, położenie). `do_poprawy` wymaga komentarza. Próba zmiany pól → 403. "
-                      "Zatwierdzone AED trafia do kopii roboczej instytucji nadawcy; publikuje ona sama, odpowiedzialność zostaje po jej stronie.")
+          summary="Zatwierdź, odeślij do poprawy albo odrzuć zgłoszenie AED (administrator)",
+          description="Zatwierdzenie: nowe AED od razu na mapie (źródło „aplikacja”, przypisane do instytucji nadawcy), zmiana od razu "
+                      "w danych AED. `do_poprawy` i `odrzuc` wymagają komentarza. Pola zgłoszenia w decyzji → 403 (dane AED "
+                      "administrator zmienia w „Wszystkie AED”).")
 def admin_aed_submission_decide(zid: str, body: DecyzjaZglAedIn, role: str = Depends(require("administrator"))):
-    from src.core import dostawcy, dziennik
+    from src.core import dziennik
     extra = sorted(set((body.model_extra or {}).keys()))
     if extra:
-        err(403, "brak_uprawnien", "Administrator nie edytuje danych zgłoszenia – tylko decyzja i komentarz.", {k: "Pole tylko do odczytu." for k in extra})
+        err(403, "brak_uprawnien", "W decyzji nie zmienia się pól zgłoszenia – tylko decyzja i komentarz.", {k: "Pole tylko do odczytu." for k in extra})
     z = _zgl_aed(zid)
     if z["status"] != "oczekuje":
         err(409, "zly_status", f"Zgłoszenie ma status {z['status']} – decyzję podejmuje się dla oczekujących.")
-    if body.decyzja == "do_poprawy" and not (body.komentarz or "").strip():
-        err(422, "walidacja", "Napisz, co trzeba poprawić.", {"komentarz": "Wymagany przy odesłaniu do poprawy."})
+    if body.decyzja in ("do_poprawy", "odrzuc") and not (body.komentarz or "").strip():
+        err(422, "walidacja", "Napisz, co trzeba poprawić albo dlaczego odrzucasz.", {"komentarz": "Wymagany przy tej decyzji."})
     przed = _zgl_aed_out(z)
-    z.update(decyzja=body.decyzja, komentarz=(body.komentarz or "").strip() or None, kto=getattr(role, "login", str(role)), kiedy=now_min(),
-             status="zatwierdzone" if body.decyzja == "zatwierdz" else "do_poprawy")
+    status = {"zatwierdz": "zatwierdzone", "do_poprawy": "do_poprawy", "odrzuc": "odrzucone"}[body.decyzja]
+    z.update(decyzja=body.decyzja, komentarz=(body.komentarz or "").strip() or None, kto=getattr(role, "login", str(role)), kiedy=now_min(), status=status)
     st = get_store()
     if body.decyzja == "zatwierdz":
-        rec = dostawcy.uzupelnij(_rekord_ze_zgloszenia(z))
-        st.conn.execute("INSERT OR REPLACE INTO robocze VALUES (?,?,?,?)", (z["organizacja"], rec["id_aed"], db.dumps(rec), now_min()))
-        z["id_aed"] = rec["id_aed"]
-        dziennik.zapisz(role, "zgloszenie_aed:do_kopii_roboczej", rec["id_aed"], po={"organizacja": z["organizacja"], "zgloszenie": zid})
-        tresc = (f"Zgłoszenie AED „{z['nazwa_obiektu']}” zatwierdzone. Urządzenie jest w „Moje AED” – pobierz pliki i opublikuj je "
-                 "na swoim koncie w dane.gov.pl.")
-    else:
+        pola = _pola_ze_zgloszenia(z)
+        if z.get("typ") == "zmiana":
+            id_aed = z["id_aed"]
+            if id_aed not in st.records:
+                err(409, "aed_usuniete", "To AED zostało w międzyczasie usunięte.")
+        else:
+            id_aed = dedup.make_id("aplikacja", z["id"])
+            org = None if z["organizacja"] == ADMIN_ORG else z["organizacja"]
+            rec = schema.empty_record() | pola | {
+                "id_aed": id_aed, "mobilny": False, "status_urzadzenia": "sprawny", "dysponent_nazwa": org or ADMIN_ORG,
+                "dysponent_typ": "inny", "zrodlo_danych": "dysponent", "licencja": "CC0-1.0"}
+            st.conn.execute("INSERT OR REPLACE INTO aed_aplikacja VALUES (?,?,?,?)", (id_aed, org, db.dumps(rec), now_min()))
+        if z.get("zdjecie"):
+            st.conn.execute("INSERT OR REPLACE INTO zdjecia_aed VALUES (?,?,?)", (id_aed, z["zdjecie"], now_min()))
+            pola["zdjecie_url"] = f"{API}/aed/{id_aed}/zdjecie"
+        przed_aed = dict(st.records.get(id_aed) or {})
+        _zapisz_edycje(id_aed, pola)
+        st.conn.commit()
+        st.reload_one(id_aed)
+        z["id_aed"] = id_aed
+        dziennik.zapisz(role, "aed:zmiana_ze_zgloszenia" if z.get("typ") == "zmiana" else "aed:nowe_ze_zgloszenia", id_aed,
+                        przed=przed_aed or None, po=st.records.get(id_aed))
+        tresc = f"Zgłoszenie AED „{z['nazwa_obiektu']}” zatwierdzone – dane są już na mapie."
+    elif body.decyzja == "do_poprawy":
         tresc = f"Zgłoszenie AED „{z['nazwa_obiektu']}” wymaga poprawy: {z['komentarz']}"
+    else:
+        tresc = f"Zgłoszenie AED „{z['nazwa_obiektu']}” odrzucone: {z['komentarz']}"
     _zapisz_zgl(z)
-    dziennik.powiadom(z["organizacja"], "zgloszenie_aed", tresc, f"{zid}:{z['kiedy']}:{z['status']}")
+    if z["organizacja"] != ADMIN_ORG:
+        dziennik.powiadom(z["organizacja"], "zgloszenie_aed", tresc, f"{zid}:{z['kiedy']}:{z['status']}")
     dziennik.zapisz(role, f"zgloszenie_aed:{z['status']}", zid, przed=przed, po=_zgl_aed_out(z))
     return {"data": _zgl_aed_out(z)}
 
+
+# ---------- administrator: every AED (owner's decision 22.11: the administrator may edit, delete and assign any AED) ----------
+@app.get(f"{API}/admin/aed", tags=["administrator"], summary="Wszystkie AED (lista i warstwa pomocnicza) z wyszukiwaniem")
+def admin_aed_list(q: Optional[str] = None, organizacja: Optional[str] = None,
+                   warstwa_: Optional[str] = Query("wszystkie", alias="warstwa", description="wszystkie | lista | pomocnicza | aplikacja"),
+                   page: int = Query(1, ge=1), per_page: int = Query(50, ge=1, le=500), role: str = Depends(require("administrator"))):
+    st = get_store()
+    edited = {r["id_aed"] for r in st.conn.execute("SELECT id_aed FROM edycje")}
+    qn = (q or "").strip().lower()
+    out = []
+    for i, r in st.records.items():
+        org = st.organizacja(i)
+        if warstwa_ == "aplikacja" and i not in st.aplikacja:
+            continue
+        if warstwa_ in ("lista", "pomocnicza") and warstwa(r) != warstwa_:
+            continue
+        if organizacja is not None and not (_same(org, organizacja) if organizacja else org is None):
+            continue
+        if qn and qn not in " ".join(str(r.get(k) or "") for k in ("id_aed", "nazwa_obiektu", "miejscowosc", "ulica", "gmina", "dysponent_nazwa")).lower():
+            continue
+        out.append((r.get("nazwa_obiektu") or "", i, r, org))
+    out.sort(key=lambda x: (x[0].lower(), x[1]))
+    total = len(out)
+    rows = [{"id_aed": i, "nazwa_obiektu": r.get("nazwa_obiektu"), "adres": " ".join(str(x) for x in (r.get("ulica"), r.get("numer_budynku")) if x),
+             "miejscowosc": r.get("miejscowosc"), "gmina": r.get("gmina"), "warstwa": "aplikacja" if i in st.aplikacja else warstwa(r),
+             "organizacja": org, "edytowane": i in edited, "data_weryfikacji": r.get("data_weryfikacji"),
+             "szerokosc": r["szerokosc_geograficzna"], "dlugosc": r["dlugosc_geograficzna"]}
+            for _, i, r, org in out[(page - 1) * per_page: page * per_page]]
+    return {"data": rows, "meta": {"count": total, "page": page, "per_page": per_page}}
+
+
+class AedEdycjaIn(BaseModel):
+    pola: dict[str, Any]
+
+
+@app.patch(f"{API}/admin/aed/{{id_aed}}", tags=["administrator"], summary="Edytuj dane AED (administrator)",
+           description="Dowolne pola wzorca (oprócz `id_aed`). Zmiana jest nakładana na źródło (przetrwa odświeżenie danych) "
+                       "i zapisana w dzienniku (kto, kiedy, przed, po).")
+def admin_aed_edit(id_aed: str, body: AedEdycjaIn, role: str = Depends(require("administrator"))):
+    from src.core import dziennik
+    st = get_store()
+    if id_aed not in st.records:
+        err(404, "nie_znaleziono", "Nie ma takiego AED.")
+    allowed = set(schema.field_order()) - {"id_aed"}
+    bad = [k for k in body.pola if k not in allowed]
+    if bad:
+        err(422, "walidacja", "Nieznane pola.", {k: "Pole spoza wzorca AED." for k in bad})
+    from src.core import normalize as N
+    pola = dict(body.pola)
+    if pola.get("godziny_dostepnosci"):
+        pola["godziny_dostepnosci"], _ = N.opening_hours(pola["godziny_dostepnosci"])
+    merged = {**st.records[id_aed], **pola}
+    probs = {p["pole"]: p["komunikat"] for p in validate.validate_record(merged) if p["poziom"] == "blad" and p["pole"] in pola}
+    if probs:
+        err(422, "walidacja", "Popraw zaznaczone pola.", probs)
+    if "szerokosc_geograficzna" in pola or "dlugosc_geograficzna" in pola:
+        t = coverage.index().teryt(merged["dlugosc_geograficzna"], merged["szerokosc_geograficzna"])
+        if t:
+            pola["teryt_terc"] = t
+    pola["data_aktualizacji"] = now_min()
+    przed = dict(st.records[id_aed])
+    _zapisz_edycje(id_aed, pola)
+    st.conn.commit()
+    st.reload_one(id_aed)
+    dziennik.zapisz(role, "aed:edycja_administratora", id_aed, przed=przed, po=st.records[id_aed])
+    return {"data": resource(st.records[id_aed])}
+
+
+@app.delete(f"{API}/admin/aed/{{id_aed}}", tags=["administrator"], summary="Usuń AED (administrator)")
+def admin_aed_delete(id_aed: str, role: str = Depends(require("administrator"))):
+    from src.core import dziennik
+    st = get_store()
+    if id_aed not in st.records:
+        err(404, "nie_znaleziono", "Nie ma takiego AED.")
+    przed = dict(st.records[id_aed])
+    if id_aed in st.aplikacja:
+        st.conn.execute("DELETE FROM aed_aplikacja WHERE id_aed=?", (id_aed,))
+    else:
+        st.conn.execute("INSERT OR REPLACE INTO edycje VALUES (?,?,?)", (id_aed, db.dumps({"usuniete": True}), now_min()))
+    st.conn.execute("DELETE FROM przypisania WHERE id_aed=?", (id_aed,))
+    st.conn.commit()
+    st.reload_one(id_aed)
+    dziennik.zapisz(role, "aed:usuniecie", id_aed, przed=przed)
+    return {"ok": True}
+
+
+class PrzypisanieIn(BaseModel):
+    organizacja: Optional[str] = Field(None, max_length=200, description="nazwa instytucji (jak w koncie); null = usuń przypisanie")
+
+
+@app.put(f"{API}/admin/aed/{{id_aed}}/przypisanie", tags=["administrator"], summary="Przypisz AED do instytucji (administrator)",
+         description="Instytucja widzi przypisane AED w „Zgłoszenia AED”, może zgłaszać ich zmiany i dostaje zgłoszenia mieszkańców o nich.")
+def admin_aed_assign(id_aed: str, body: PrzypisanieIn, role: str = Depends(require("administrator"))):
+    from src.core import dziennik
+    st = get_store()
+    if id_aed not in st.records:
+        err(404, "nie_znaleziono", "Nie ma takiego AED.")
+    przed = st.organizacja(id_aed)
+    if body.organizacja and body.organizacja.strip():
+        st.conn.execute("INSERT OR REPLACE INTO przypisania VALUES (?,?,?)", (id_aed, body.organizacja.strip(), now_min()))
+    else:
+        st.conn.execute("DELETE FROM przypisania WHERE id_aed=?", (id_aed,))
+    st.conn.commit()
+    st.reload_one(id_aed)
+    dziennik.zapisz(role, "aed:przypisanie", id_aed, przed={"organizacja": przed}, po={"organizacja": st.organizacja(id_aed)})
+    return {"data": {"id_aed": id_aed, "organizacja": st.organizacja(id_aed)}}
 
 
 @app.get("/api/docs", include_in_schema=False)

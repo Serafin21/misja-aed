@@ -1,4 +1,4 @@
-> Źródło: dokument zespołu „Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności” (21.11.2026). Wiążący dla CONTRACT.md od wersji 2.0. Stan wdrożenia w prototypie: sekcja „Wdrożenie” na końcu. **Wersja 1.3** (22.11.2026, CR-TL-8): zaufane konta instytucji (wniosek → zatwierdzenie), „Zgłoś AED” tylko po zalogowaniu, zatwierdzanie formalne przez administratora (§4, §5 P1a, P2a), kryteria K13–K16.
+> Źródło: dokument zespołu „Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności” (21.11.2026). Wiążący dla CONTRACT.md od wersji 2.0. Stan wdrożenia w prototypie: sekcja „Wdrożenie” na końcu. **Wersja 1.4** (22.11.2026, decyzja właściciela projektu – sekcja „Zmiany v1.4” na końcu; zastępuje K2 i K11 tam, gdzie są sprzeczne). Wersja 1.3 (CR-TL-8): zaufane konta instytucji (wniosek → zatwierdzenie), „Zgłoś AED” tylko po zalogowaniu, zatwierdzanie formalne przez administratora (§4, §5 P1a, P2a), kryteria K13–K16.
 
 # Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności
 
@@ -284,3 +284,18 @@ Do czasu odpowiedzi MC zespół stosuje założenia robocze z tabeli.
 | K16 | decyzja administratora z polami danych, `PUT`/`PATCH` zgłoszenia przez administratora → 403; `GET /moje-zgloszenia`: status, decyzja, komentarz, kto, kiedy | `test_zglos_aed_zatwierdzenie…`, `test_zglos_aed_do_poprawy…` |
 
 Dane prototypu: 3 fikcyjnych dostawców w `data/dostawcy/` (odpowiedzi w kształcie API 1.4; `python -m scripts.build_dostawcy`). Prawdziwe zbiory AED samorządów z dane.gov.pl opublikowane przed wzorcem (Krosno, Przemyśl, Marki) są na liście jako **zbiory przejściowe** (CR-TL-5: rekordy bez zmian, etykieta, zaproszenie do wzorca); Warszawa (brak pliku do odczytu) – `poza_lista`. Logowanie: konta testowe (`dysponent`, `administrator`), konta instytucji z zatwierdzonego wniosku albo założone przez administratora, pracownicy dodani przez instytucję; docelowo login.gov.pl i 2FA (§9, §11).
+
+## Zmiany v1.4 – decyzja właściciela projektu (22.11.2026)
+
+Właściciel projektu zdecydował, że prototyp ma działać od razu, bez czekania na publikację w dane.gov.pl, a administrator ma pełne prawa do danych. Zmiany względem wcześniejszych zasad:
+
+| Temat | Wcześniej | Od v1.4 |
+|---|---|---|
+| Konta | konta testowe `dysponent`, `administrator` | jedno konto wbudowane **`admin`** (hasło z `ADMIN_PASSWORD`, domyślnie `admin123`); konta instytucji tylko z zatwierdzonego wniosku albo zakładane przez administratora |
+| Edycja danych przez administratora (K2) | administrator nigdy nie zmienia danych AED | administrator **może edytować, usuwać i przypisywać do instytucji każde AED** (także z OpenStreetMap); każda zmiana w dzienniku (kto, kiedy, przed, po), bez oznaczenia na karcie AED; edycje są nakładane na źródło i przetrwają odświeżenie danych |
+| Zgłoszenia AED | tylko nowe AED instytucji; po zatwierdzeniu – do kopii roboczej, na mapie dopiero po publikacji w dane.gov.pl (K11) | zgłoszenia **nowych AED i zmian** istniejących (poprawki, nowe zdjęcie) od instytucji i od administratora; **każde** zatwierdza administrator; zatwierdzone jest **od razu na mapie** (źródło „aplikacja”, dopisek „czeka na publikację w dane.gov.pl”); decyzje: zatwierdź / do poprawy / odrzuć (z komentarzem) |
+| Instytucja a AED | AED z jej zbioru w dane.gov.pl | AED z jej zbioru, dodane przez nią w aplikacji i **przypisane jej przez administratora**; zgłoszenia mieszkańców o tych AED trafiają do niej; przypomnienia o AED niesprawdzanych od roku |
+| Interfejs | — | gość: Znajdź AED, Pierwsza pomoc, O projekcie, „Zaloguj się, aby dodać AED”; instytucja: dodatkowo „Zgłoszenia AED”; administrator: „Zgłoszenia AED” (wnioski o konto, zgłoszenia AED) i „Panel administratora” (instytucje i konta – edycja danych, loginu i hasła; wszystkie AED – edycja, usuwanie, przypisanie) |
+
+Pakiet plików do publikacji w dane.gov.pl (`POST /moje-aed/pakiet`) i agregacja zbiorów dostawców działają dalej. Testy: `tests/test_admin_edycja.py`.
+

@@ -101,10 +101,12 @@ def test_zglos_aed_walidacja(client):
     assert r.status_code == 422 and "godziny" in r.json()["error"]["fields"]
     r = client.post("/api/v1/zgloszenia-aed", headers=inst, json=_aed(godziny="czasem rano"))
     assert r.status_code == 422 and "godziny" in r.json()["error"]["fields"]
-    assert client.post("/api/v1/zgloszenia-aed", headers=adm, json=_aed()).status_code == 403  # the administrator does not enter data
+    # the administrator may report too – the submission goes to the same approval queue
+    assert client.post("/api/v1/zgloszenia-aed", headers=adm, json=_aed()).status_code == 201
+    assert client.post("/api/v1/zgloszenia-aed", headers=inst, json=_aed(organizacja="Inna")).status_code == 403
 
 
-def test_zglos_aed_zatwierdzenie_do_kopii_roboczej(client):
+def test_zglos_aed_zatwierdzenie_od_razu_na_mapie(client):
     inst, adm = _konto(client)
     r = client.post("/api/v1/zgloszenia-aed", headers=inst, json=_aed())
     assert r.status_code == 201
@@ -127,10 +129,16 @@ def test_zglos_aed_zatwierdzenie_do_kopii_roboczej(client):
     id_aed = r.json()["data"]["id_aed"]
     mine = client.get("/api/v1/moje-zgloszenia", headers=inst).json()["data"][0]
     assert mine["status"] == "zatwierdzone" and mine["decyzja"] == "zatwierdz" and mine["kto"] == "administrator" and mine["kiedy"]
-    rob = {a["id"]: a for a in client.get("/api/v1/moje-aed", headers=inst).json()["data"]}
-    assert id_aed in rob and rob[id_aed]["meta"]["zgodny_ze_wzorcem"], rob[id_aed]["meta"]["problemy"]
-    assert rob[id_aed]["attributes"]["metoda_weryfikacji"] == "zdjecie" and rob[id_aed]["attributes"]["teryt_terc"] == "1261011"
-    assert id_aed not in [a["id"] for a in client.get("/api/v1/aed?per_page=1000&warstwa=wszystkie").json()["data"]]  # not published by the app
+    # owner's decision (22.11): approved = on the map at once, in the institution's list, with the cleaned photo
+    a = client.get(f"/api/v1/aed/{id_aed}").json()["data"]
+    assert a["attributes"]["metoda_weryfikacji"] == "zdjecie" and a["attributes"]["teryt_terc"] == "1261011"
+    assert a["meta"]["warstwa"] == "lista" and a["meta"]["dostawca"] == "Fundacja Serce Przykładowe"
+    assert a["attributes"]["dysponent_nazwa"] == "Fundacja Serce Przykładowe"
+    ph = client.get(a["attributes"]["zdjecie_url"])
+    assert ph.status_code == 200 and b"Exif" not in ph.content
+    assert id_aed in [x["id"] for x in client.get("/api/v1/aed/punkty?warstwa=lista").json()["features"]]
+    mine_dev = client.get("/api/v1/moje-urzadzenia", headers=inst).json()["data"]
+    assert [d["id"] for d in mine_dev] == [id_aed]
     notes = client.get("/api/v1/moje-aed/powiadomienia", headers=inst).json()["data"]
     assert any(n["typ"] == "zgloszenie_aed" and "zatwierdzone" in n["tresc"] for n in notes)
 

@@ -26,6 +26,8 @@ class Store:
         self.by_key: dict[tuple[str, str], str] = {}  # (kod_zrodla, id_w_zrodle) -> id_aed
         self.master: dict[str, str] = {}  # id_aed -> kod_zrodla of master
         self.lista: dict[str, dict] = {}  # id_aed -> provider provenance (common list records only)
+        self.przypisania: dict[str, str] = {}  # id_aed -> institution (account organisation) responsible for it
+        self.aplikacja: set[str] = set()  # AED added in the app (approved submissions)
         self.grid = dedup.GridIndex()
         self.version = 0  # bumped on every change of records (ETag of GET /aed/punkty)
         self.load()
@@ -46,11 +48,82 @@ class Store:
             for row in self.conn.execute("SELECT id_aed, data FROM aed"):
                 rec = db.loads(row["data"])
                 self.records[row["id_aed"]] = rec
-                self.grid.add(row["id_aed"], rec["szerokosc_geograficzna"], rec["dlugosc_geograficzna"])
             for id_aed, srcs in self.sources.items():
                 if id_aed in self.records:
                     _, m = dedup.merge(id_aed, srcs)
                     self.master[id_aed] = m
+            self._app_layer()
+
+    def _app_layer(self):
+        """Owner's decision (22.11): AED approved in the app are on the map at once (common list, source "aplikacja");
+        the administrator's edits and deletions are applied on top of every source (they survive refreshes and
+        aggregation, because they are re-applied on every load); AED can be assigned to an institution account."""
+        self.aplikacja = set()
+        for row in self.conn.execute("SELECT id_aed, organizacja, data, utworzono FROM aed_aplikacja"):
+            rec = db.loads(row["data"])
+            self.records[row["id_aed"]] = rec
+            self.aplikacja.add(row["id_aed"])
+            org = row["organizacja"] or "Administrator (Ministerstwo Cyfryzacji)"
+            self.lista[row["id_aed"]] = {
+                "dostawca": org, "regon": rec.get("dysponent_regon"), "zbior_id": "aplikacja", "zasob_id": None, "zasob_url": None,
+                "zbior_tytul": "Dodane w aplikacji – zatwierdzone przez administratora, czeka na publikację w dane.gov.pl",
+                "zbior_url": None, "data_danych": (row["utworzono"] or "")[:10], "zbior_zmodyfikowany": (row["utworzono"] or "")[:10],
+                "czestotliwosc": None, "zbior_nieaktualny": False, "licencja_zbioru": rec.get("licencja"), "fikcyjny": False,
+                "mozliwe_duplikaty": [], "zgodnosc": "wzorzec", "aplikacja": True}
+        for row in self.conn.execute("SELECT id_aed, data FROM edycje"):
+            e = db.loads(row["data"])
+            if row["id_aed"] not in self.records:
+                continue
+            if e.get("usuniete"):
+                self.records.pop(row["id_aed"], None)
+                self.lista.pop(row["id_aed"], None)
+                continue
+            self.records[row["id_aed"]] = {**self.records[row["id_aed"]], **(e.get("pola") or {})}
+        self.przypisania = {r["id_aed"]: r["organizacja"] for r in self.conn.execute("SELECT id_aed, organizacja FROM przypisania")}
+        self.grid = dedup.GridIndex()
+        for i, rec in self.records.items():
+            self.grid.add(i, rec["szerokosc_geograficzna"], rec["dlugosc_geograficzna"])
+
+    def reload_one(self, id_aed: str) -> None:
+        """Re-read one AED after an administrator's edit, deletion, assignment or an approved submission (fast path of load)."""
+        with self.lock:
+            self.version += 1
+            app = self.conn.execute("SELECT organizacja, data, utworzono FROM aed_aplikacja WHERE id_aed=?", (id_aed,)).fetchone()
+            base = self.conn.execute("SELECT data FROM aed WHERE id_aed=?", (id_aed,)).fetchone()
+            lst = self.conn.execute("SELECT data FROM lista WHERE id_aed=?", (id_aed,)).fetchone()
+            ed = self.conn.execute("SELECT data FROM edycje WHERE id_aed=?", (id_aed,)).fetchone()
+            pr = self.conn.execute("SELECT organizacja FROM przypisania WHERE id_aed=?", (id_aed,)).fetchone()
+            self.records.pop(id_aed, None)
+            self.lista.pop(id_aed, None)
+            self.aplikacja.discard(id_aed)
+            self.grid.remove(id_aed)
+            if pr:
+                self.przypisania[id_aed] = pr["organizacja"]
+            else:
+                self.przypisania.pop(id_aed, None)
+            if app:
+                self.load()  # app AED: rebuild provenance the same way as on load (rare)
+                return
+            if not base:
+                return
+            rec = db.loads(base["data"])
+            if lst:
+                self.lista[id_aed] = db.loads(lst["data"])
+            if ed:
+                e = db.loads(ed["data"])
+                if e.get("usuniete"):
+                    self.lista.pop(id_aed, None)
+                    return
+                rec = {**rec, **(e.get("pola") or {})}
+            self.records[id_aed] = rec
+            self.grid.add(id_aed, rec["szerokosc_geograficzna"], rec["dlugosc_geograficzna"])
+
+    def organizacja(self, id_aed: str) -> str | None:
+        """Institution responsible for the AED: explicit assignment > app owner > provider of the dataset."""
+        if id_aed in self.przypisania:
+            return self.przypisania[id_aed]
+        p = self.lista.get(id_aed)
+        return p["dostawca"] if p and not p["dostawca"].startswith("Administrator") else None
 
     # ---------- writes ----------
     def find_duplicate(self, rec: dict, kod_zrodla: str, exclude: str | None = None) -> tuple[str | None, float | None]:

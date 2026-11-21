@@ -1,5 +1,15 @@
 # HANDOFF – Model A
 
+## 2026-11-22 – HANDOFF #12: decyzja właściciela projektu – konto admin, pełne prawa administratora, zgłoszenia zmian, od razu na mapie (MODEL_ROL v1.4, CONTRACT v2.3)
+
+- **Konta:** wbudowane tylko `admin` / `admin123` (`ADMIN_PASSWORD`); konta testowe `dysponent`/`administrator`/`moderator` tylko z `AED_KONTA_TESTOWE=tak` (włączone w `tests/conftest.py`). Zarezerwowane loginy: admin, administrator, moderator, dysponent, demo, root. `PATCH /konta/{login}`: dane instytucji, `nowy_login`, `haslo`, `aktywne` (zmiana nazwy instytucji przenosi jej przypisania, AED z aplikacji i zgłoszenia); `DELETE /konta/{login}`; `_konto_out` z `oczekuje` i liczbą AED instytucji.
+- **AED administratora:** `GET /admin/aed` (szukanie, filtr instytucji i warstwy, strony), `PATCH /admin/aed/{id}` (`{pola}` – dowolne pola wzorca, walidacja zmienionych pól, godziny normalizowane, TERYT z położenia), `DELETE /admin/aed/{id}`, `PUT /admin/aed/{id}/przypisanie`. Edycje i usunięcia w tabeli `edycje`, nakładane w `Store.load()` (przetrwają agregację i odświeżenie OSM – `osm.refresh` kończy się `store.load()`); szybka ścieżka `Store.reload_one`.
+- **Zgłoszenia AED:** `typ` `nowe|zmiana` (+`id_aed`; instytucja tylko swoich AED), administrator też zgłasza (`organizacja` – komu przypisać), decyzja `zatwierdz|do_poprawy|odrzuc`. Zatwierdzone nowe → tabela `aed_aplikacja` → od razu na liście (`meta.zbior_id = aplikacja`); zmiana → nakładka na źródło; zdjęcie → `zdjecia_aed`, `zdjecie_url = /api/v1/aed/{id}/zdjecie`. Zdjęcie przy zmianie nieobowiązkowe, jeśli AED już je ma. `GET /moje-urzadzenia`, `GET /moje-zgloszenia` (administrator – swoje).
+- **Instytucja a AED:** `Store.organizacja(id)` = przypisanie > właściciel AED z aplikacji > dostawca zbioru; zgłoszenia mieszkańców trafiają do tej instytucji. `GET /moje-aed/powiadomienia` – na początku przypomnienia o AED niesprawdzanych > 12 mies. (`meta.przypomnienia`).
+- `/aed/punkty` – `nazwa` (sortowanie listy alfabetycznie).
+- **Testy:** 101 (nowy `tests/test_admin_edycja.py`; zmieniony test zatwierdzenia – od razu na mapie).
+- **CR:** – · **Znane błędy:** – · **Użycie AI:** kod, testy, dokumentacja z Claude.
+
 ## 2026-11-22 – HANDOFF #11: CR-TL-8 – zaufane konta instytucji, „Zgłoś AED” z zatwierdzaniem, adres zamiast współrzędnych
 
 - **Zrobione (od świeżego main po #10):**

@@ -1504,8 +1504,8 @@
         "tags": [
           "auth"
         ],
-        "summary": "Zablokuj / odblokuj konto instytucji (moderator)",
-        "operationId": "account_toggle_api_v1_konta__login__patch",
+        "summary": "Zmień konto instytucji: dane, login, hasło, blokada (administrator)",
+        "operationId": "account_update_api_v1_konta__login__patch",
         "parameters": [
           {
             "name": "login",
@@ -1538,11 +1538,65 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AktywneIn"
+                "$ref": "#/components/schemas/KontoZmianaIn"
               }
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Usuń konto instytucji (administrator) – AED zostają na mapie",
+        "operationId": "account_delete_api_v1_konta__login__delete",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Login"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2749,8 +2803,8 @@
         "tags": [
           "zgloszenia-aed"
         ],
-        "summary": "Zgłoś AED (tylko zalogowana instytucja)",
-        "description": "Nowe AED zgłasza instytucja (właściciel, zarządca albo podmiot weryfikujący) po zalogowaniu; bez logowania 401. Wszystkie pola konkretne (bez „nie wiem”), zdjęcie wymagane (metadane usuwane). Administrator sprawdza zgłoszenie formalnie i zatwierdza albo odsyła do poprawy; zatwierdzone AED trafia do kopii roboczej instytucji, która publikuje je sama.",
+        "summary": "Zgłoś nowe AED albo zmianę AED (instytucja lub administrator)",
+        "description": "Nowe AED (`typ = nowe`) albo zmiana istniejącego (`typ = zmiana`, `id_aed` – instytucja tylko swoich AED). Bez logowania 401. Wszystkie pola konkretne (bez „nie wiem”), zdjęcie wymagane dla nowego AED (metadane usuwane). Każde zgłoszenie – także administratora – trafia do zatwierdzenia; zatwierdzone jest od razu na mapie.",
         "operationId": "aed_submission_create_api_v1_zgloszenia_aed_post",
         "parameters": [
           {
@@ -2807,8 +2861,7 @@
         "tags": [
           "zgloszenia-aed"
         ],
-        "summary": "Popraw i wyślij ponownie (instytucja, status do_poprawy)",
-        "description": "Tylko instytucja, która zgłosiła AED. Administrator nie edytuje pól zgłoszenia (403).",
+        "summary": "Popraw i wyślij ponownie (nadawca, status do_poprawy)",
         "operationId": "aed_submission_fix_api_v1_zgloszenia_aed__zid__put",
         "parameters": [
           {
@@ -2916,12 +2969,59 @@
         }
       }
     },
+    "/api/v1/moje-urzadzenia": {
+      "get": {
+        "tags": [
+          "zgloszenia-aed"
+        ],
+        "summary": "AED mojej instytucji (przypisane, z jej zbioru albo dodane w aplikacji)",
+        "operationId": "my_devices_api_v1_moje_urzadzenia_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/zgloszenia-aed": {
       "get": {
         "tags": [
           "zgloszenia-aed"
         ],
-        "summary": "Zgłoszenia AED instytucji do zatwierdzenia (administrator)",
+        "summary": "Zgłoszenia AED do zatwierdzenia (administrator)",
         "operationId": "admin_aed_submissions_api_v1_admin_zgloszenia_aed_get",
         "parameters": [
           {
@@ -2937,11 +3037,11 @@
                   "type": "null"
                 }
               ],
-              "description": "oczekuje | zatwierdzone | do_poprawy | wszystkie",
+              "description": "oczekuje | zatwierdzone | do_poprawy | odrzucone | wszystkie",
               "default": "oczekuje",
               "title": "Status"
             },
-            "description": "oczekuje | zatwierdzone | do_poprawy | wszystkie"
+            "description": "oczekuje | zatwierdzone | do_poprawy | odrzucone | wszystkie"
           },
           {
             "name": "authorization",
@@ -3032,13 +3132,53 @@
         }
       }
     },
+    "/api/v1/aed/{id_aed}/zdjecie": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Zdjęcie AED (z zatwierdzonego zgłoszenia, bez metadanych)",
+        "operationId": "aed_photo_api_v1_aed__id_aed__zdjecie_get",
+        "parameters": [
+          {
+            "name": "id_aed",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Aed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/zgloszenia-aed/{zid}/decyzja": {
       "post": {
         "tags": [
           "zgloszenia-aed"
         ],
-        "summary": "Zatwierdź albo odeślij do poprawy (administrator – bez edycji pól)",
-        "description": "Zatwierdzenie formalne (kompletność, zdjęcie, położenie). `do_poprawy` wymaga komentarza. Próba zmiany pól → 403. Zatwierdzone AED trafia do kopii roboczej instytucji nadawcy; publikuje ona sama, odpowiedzialność zostaje po jej stronie.",
+        "summary": "Zatwierdź, odeślij do poprawy albo odrzuć zgłoszenie AED (administrator)",
+        "description": "Zatwierdzenie: nowe AED od razu na mapie (źródło „aplikacja”, przypisane do instytucji nadawcy), zmiana od razu w danych AED. `do_poprawy` i `odrzuc` wymagają komentarza. Pola zgłoszenia w decyzji → 403 (dane AED administrator zmienia w „Wszystkie AED”).",
         "operationId": "admin_aed_submission_decide_api_v1_admin_zgloszenia_aed__zid__decyzja_post",
         "parameters": [
           {
@@ -3099,6 +3239,315 @@
         }
       }
     },
+    "/api/v1/admin/aed": {
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Wszystkie AED (lista i warstwa pomocnicza) z wyszukiwaniem",
+        "operationId": "admin_aed_list_api_v1_admin_aed_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "organizacja",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Organizacja"
+            }
+          },
+          {
+            "name": "warstwa",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "wszystkie | lista | pomocnicza | aplikacja",
+              "default": "wszystkie",
+              "title": "Warstwa"
+            },
+            "description": "wszystkie | lista | pomocnicza | aplikacja"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Per Page"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/aed/{id_aed}": {
+      "patch": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Edytuj dane AED (administrator)",
+        "description": "Dowolne pola wzorca (oprócz `id_aed`). Zmiana jest nakładana na źródło (przetrwa odświeżenie danych) i zapisana w dzienniku (kto, kiedy, przed, po).",
+        "operationId": "admin_aed_edit_api_v1_admin_aed__id_aed__patch",
+        "parameters": [
+          {
+            "name": "id_aed",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Aed"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AedEdycjaIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Usuń AED (administrator)",
+        "operationId": "admin_aed_delete_api_v1_admin_aed__id_aed__delete",
+        "parameters": [
+          {
+            "name": "id_aed",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Aed"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/aed/{id_aed}/przypisanie": {
+      "put": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Przypisz AED do instytucji (administrator)",
+        "description": "Instytucja widzi przypisane AED w „Zgłoszenia AED”, może zgłaszać ich zmiany i dostaje zgłoszenia mieszkańców o nich.",
+        "operationId": "admin_aed_assign_api_v1_admin_aed__id_aed__przypisanie_put",
+        "parameters": [
+          {
+            "name": "id_aed",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Aed"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrzypisanieIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/health": {
       "get": {
         "tags": [
@@ -3121,6 +3570,20 @@
   },
   "components": {
     "schemas": {
+      "AedEdycjaIn": {
+        "properties": {
+          "pola": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Pola"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pola"
+        ],
+        "title": "AedEdycjaIn"
+      },
       "AedIn": {
         "properties": {
           "kod_zrodla": {
@@ -3139,19 +3602,6 @@
         "additionalProperties": true,
         "type": "object",
         "title": "AedIn"
-      },
-      "AktywneIn": {
-        "properties": {
-          "aktywne": {
-            "type": "boolean",
-            "title": "Aktywne"
-          }
-        },
-        "type": "object",
-        "required": [
-          "aktywne"
-        ],
-        "title": "AktywneIn"
       },
       "Body_import_file_api_v1_import_post": {
         "properties": {
@@ -3321,7 +3771,7 @@
         "properties": {
           "decyzja": {
             "type": "string",
-            "pattern": "^(zatwierdz|do_poprawy)$",
+            "pattern": "^(zatwierdz|do_poprawy|odrzuc)$",
             "title": "Decyzja"
           },
           "komentarz": {
@@ -3421,6 +3871,111 @@
           "dysponent_nazwa"
         ],
         "title": "KontoIn"
+      },
+      "KontoZmianaIn": {
+        "properties": {
+          "aktywne": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aktywne"
+          },
+          "dysponent_nazwa": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dysponent Nazwa",
+            "description": "nazwa instytucji – zmienia ją we wszystkich jej kontach i AED"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "telefon": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telefon"
+          },
+          "regon": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{9}(\\d{5})?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regon"
+          },
+          "dostawca_podstawa": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(wlasciciel|zarzadca|weryfikujacy)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dostawca Podstawa"
+          },
+          "nowy_login": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nowy Login"
+          },
+          "haslo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Haslo",
+            "description": "nowe hasło ustawione przez administratora"
+          }
+        },
+        "type": "object",
+        "title": "KontoZmianaIn",
+        "description": "Administrator: change anything in an institution account (e.g. after a lost or stolen password)."
       },
       "Login": {
         "properties": {
@@ -3585,6 +4140,25 @@
         ],
         "title": "PracownikIn"
       },
+      "PrzypisanieIn": {
+        "properties": {
+          "organizacja": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizacja",
+            "description": "nazwa instytucji (jak w koncie); null = usuń przypisanie"
+          }
+        },
+        "type": "object",
+        "title": "PrzypisanieIn"
+      },
       "Szukaj": {
         "properties": {
           "q": {
@@ -3696,6 +4270,38 @@
       },
       "ZgloszenieAedIn": {
         "properties": {
+          "typ": {
+            "type": "string",
+            "pattern": "^(nowe|zmiana)$",
+            "title": "Typ",
+            "description": "nowe AED albo zmiana istniejącego (id_aed)",
+            "default": "nowe"
+          },
+          "id_aed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id Aed",
+            "description": "wymagane przy typ = zmiana"
+          },
+          "organizacja": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organizacja",
+            "description": "tylko administrator: instytucja, której przypisać nowe AED"
+          },
           "nazwa_obiektu": {
             "type": "string",
             "maxLength": 200,
@@ -3750,7 +4356,7 @@
             "maxLength": 250,
             "minLength": 5,
             "title": "Opis Lokalizacji",
-            "description": "gdzie dokładnie wisi urządzenie"
+            "description": "jak dojść: np. parter, wypożyczalnia, koniec korytarza"
           },
           "wewnatrz_budynku": {
             "type": "boolean",
@@ -3795,12 +4401,19 @@
               }
             ],
             "title": "Instrukcja Dostepu",
-            "description": "wymagana, gdy szafka zamknięta"
+            "description": "wymagana, gdy szafka zamknięta (np. klucz w recepcji)"
           },
           "zdjecie": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Zdjecie",
-            "description": "WYMAGANE: data:image/jpeg|png|webp;base64,… (maks. 1,5 MB); metadane (EXIF, GPS) są usuwane"
+            "description": "data:image/jpeg|png|webp;base64,… (maks. 1,5 MB); wymagane dla nowego AED i dla AED bez zdjęcia; metadane (EXIF, GPS) są usuwane"
           }
         },
         "additionalProperties": false,
@@ -3815,8 +4428,7 @@
           "opis_lokalizacji",
           "dostep",
           "dostepny_24h",
-          "szafka_zamknieta",
-          "zdjecie"
+          "szafka_zamknieta"
         ],
         "title": "ZgloszenieAedIn"
       },

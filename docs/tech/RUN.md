@@ -30,7 +30,7 @@ uvicorn src.api.main:app --reload                       # http://localhost:8000/
 | `python scripts/check_licenses.py` | licencje zależności |
 
 ## Konta demo
-`POST /api/v1/auth/login` z `{"login": "dysponent", "haslo": "dysponent-demo"}` albo `moderator` / `moderator-demo` (zmiana w `.env`). Token przekazujesz w nagłówku `Authorization: Bearer <token>`. W trybie `AED_AUTH_MODE=demo` (domyślnym na czas prezentacji) żądanie bez tokenu działa jako konto demo, a błędny token zawsze daje 401. Po podłączeniu logowania w UI ustaw `AED_AUTH_MODE=wymagane`.
+`POST /api/v1/auth/login` z `{"login": "admin", "haslo": "admin123"}` (hasło: `ADMIN_PASSWORD` w `.env` – zmień przed udostępnieniem strony). Konta instytucji zakłada administrator (panel) albo powstają z zatwierdzonego wniosku (`POST /api/v1/konta/wnioski`). Token przekazujesz w nagłówku `Authorization: Bearer <token>`; każdy zapis wymaga zalogowania.
 
 ## Najważniejsze adresy dla interfejsu
 - Mapa (zalecane): `GET /api/v1/aed/punkty` – cała Polska w jednym żądaniu (339 KB gzip, `ETag`), opcjonalnie `?bbox=`; szczegóły rekordu po kliknięciu z `GET /api/v1/aed/{id}`. Pełne rekordy z filtrami: `GET /api/v1/aed?bbox=…&per_page=1000`.

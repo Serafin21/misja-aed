@@ -165,4 +165,5 @@ def refresh(store: Store, source: str | None = None) -> dict:
                                 "obszar": "Polska", "odrzucone": counts["odrzucone"], "url": URL,
                                 "odrzucone_powody": powody, "wynik_importu": counts | {"liczba_obiektow": len(feats)},
                                 "data_importu": now_min()})
+    store.load()  # re-apply the administrator's edits and deletions on top of the refreshed layer
     return counts | {"zrodlo": origin, "liczba_obiektow": len(feats), "ostrzezenia": problems, "odrzucone_powody": powody}

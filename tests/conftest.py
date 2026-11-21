@@ -7,7 +7,8 @@ import pytest
 
 os.environ.setdefault("AED_GEOKODER", "brak")  # tests never call the GUGiK geocoder
 os.environ.setdefault("AED_ODSWIEZANIE", "wylaczone")  # no background refresh in tests
-os.environ.setdefault("AED_DGP", "brak")  # aggregation reads only the fictional providers in data/dostawcy
+os.environ.setdefault("AED_DGP", "brak")
+os.environ.setdefault("AED_KONTA_TESTOWE", "tak")  # test accounts dysponent / administrator / moderator (off in the app)  # aggregation reads only the fictional providers in data/dostawcy
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
