@@ -63,7 +63,8 @@
     "zasob_url": "https://dane.gov.pl/media/resources/fikcyjne/aed-mpk-przykladowo-sp-z-o-o.csv",
     "data_danych": "2026-11-15",
     "licencja_zbioru": "CC0-1.0",
-    "mozliwy_duplikat": "AED-PL-AED495CA3B"
+    "mozliwy_duplikat": "AED-PL-AED495CA3B",
+    "zgodnosc": "wzorzec"
    }
   },
   {
@@ -128,7 +129,206 @@
     "zasob_url": "https://dane.gov.pl/media/resources/fikcyjne/aed-mpk-przykladowo-sp-z-o-o.csv",
     "data_danych": "2026-11-15",
     "licencja_zbioru": "CC0-1.0",
-    "mozliwy_duplikat": ""
+    "mozliwy_duplikat": "",
+    "zgodnosc": "wzorzec"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "AED-PL-1BF54D982A",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     19.4463,
+     51.75702
+    ]
+   },
+   "properties": {
+    "id_aed": "AED-PL-1BF54D982A",
+    "id_dysponenta_aed": null,
+    "nazwa_obiektu": "Szkoła Podstawowa nr 1 Przykładowa",
+    "opis_lokalizacji": "Brak opisu w zbiorze – sprawdź na miejscu",
+    "pietro": null,
+    "wewnatrz_budynku": true,
+    "wojewodztwo": "łódzkie",
+    "powiat": "Łódź",
+    "gmina": "Łódź",
+    "miejscowosc": "Łódź",
+    "ulica_cecha": "ul.",
+    "ulica": "Kopernika",
+    "numer_budynku": "32",
+    "numer_lokalu": null,
+    "kod_pocztowy": "90-552",
+    "teryt_terc": "1061011",
+    "teryt_simc": null,
+    "szerokosc_geograficzna": 51.75702,
+    "dlugosc_geograficzna": 19.4463,
+    "dostep": "ograniczony",
+    "godziny_dostepnosci": "Mo-Fr 07:00-18:00",
+    "dostepny_24h": false,
+    "szafka_zamknieta": false,
+    "instrukcja_dostepu": null,
+    "mobilny": false,
+    "status_urzadzenia": "nieznany",
+    "tryb_pediatryczny": null,
+    "producent": null,
+    "model": null,
+    "data_waznosci_elektrod": null,
+    "data_ostatniego_przegladu": null,
+    "dysponent_nazwa": "Gmina Przykładowa Druga",
+    "dysponent_typ": "administracja_publiczna",
+    "dysponent_regon": "999000044",
+    "kontakt_telefon": null,
+    "kontakt_email": null,
+    "zrodlo_danych": "dysponent",
+    "licencja": "CC-BY-4.0",
+    "data_weryfikacji": "2026-03-10",
+    "metoda_weryfikacji": "deklaracja_dysponenta",
+    "data_aktualizacji": "2026-11-21T21:48",
+    "kompletnosc": 69,
+    "zdjecie_url": null,
+    "uwagi": null,
+    "dostawca": "Gmina Przykładowa Druga",
+    "dostawca_regon": "999000044",
+    "zbior_id": "990004",
+    "zbior_url": "https://dane.gov.pl/pl/dataset/990004,wykaz-defibrylatorow-gmina-przykladowa-druga",
+    "zasob_url": "https://dane.gov.pl/media/resources/fikcyjne/gmina-przykladowa-druga.csv",
+    "data_danych": "2026-03-10",
+    "licencja_zbioru": "CC-BY-4.0",
+    "mozliwy_duplikat": "",
+    "zgodnosc": "przejsciowy"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "AED-PL-26AAEDA67A",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     19.45786,
+     51.759145
+    ]
+   },
+   "properties": {
+    "id_aed": "AED-PL-26AAEDA67A",
+    "id_dysponenta_aed": null,
+    "nazwa_obiektu": "Urząd Gminy Przykładowa Druga",
+    "opis_lokalizacji": "Brak opisu w zbiorze – sprawdź na miejscu",
+    "pietro": null,
+    "wewnatrz_budynku": true,
+    "wojewodztwo": "łódzkie",
+    "powiat": "Łódź",
+    "gmina": "Łódź",
+    "miejscowosc": "Łódź",
+    "ulica_cecha": "ul.",
+    "ulica": "Piotrkowska",
+    "numer_budynku": "104",
+    "numer_lokalu": null,
+    "kod_pocztowy": "90-926",
+    "teryt_terc": "1061011",
+    "teryt_simc": null,
+    "szerokosc_geograficzna": 51.759145,
+    "dlugosc_geograficzna": 19.45786,
+    "dostep": "ograniczony",
+    "godziny_dostepnosci": "Mo-Fr 08:00-16:00",
+    "dostepny_24h": false,
+    "szafka_zamknieta": false,
+    "instrukcja_dostepu": null,
+    "mobilny": false,
+    "status_urzadzenia": "nieznany",
+    "tryb_pediatryczny": null,
+    "producent": null,
+    "model": null,
+    "data_waznosci_elektrod": null,
+    "data_ostatniego_przegladu": null,
+    "dysponent_nazwa": "Gmina Przykładowa Druga",
+    "dysponent_typ": "administracja_publiczna",
+    "dysponent_regon": "999000044",
+    "kontakt_telefon": null,
+    "kontakt_email": null,
+    "zrodlo_danych": "dysponent",
+    "licencja": "CC-BY-4.0",
+    "data_weryfikacji": "2026-03-10",
+    "metoda_weryfikacji": "deklaracja_dysponenta",
+    "data_aktualizacji": "2026-11-21T21:48",
+    "kompletnosc": 69,
+    "zdjecie_url": null,
+    "uwagi": null,
+    "dostawca": "Gmina Przykładowa Druga",
+    "dostawca_regon": "999000044",
+    "zbior_id": "990004",
+    "zbior_url": "https://dane.gov.pl/pl/dataset/990004,wykaz-defibrylatorow-gmina-przykladowa-druga",
+    "zasob_url": "https://dane.gov.pl/media/resources/fikcyjne/gmina-przykladowa-druga.csv",
+    "data_danych": "2026-03-10",
+    "licencja_zbioru": "CC-BY-4.0",
+    "mozliwy_duplikat": "",
+    "zgodnosc": "przejsciowy"
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "AED-PL-691737FA13",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     19.4189,
+     51.7587
+    ]
+   },
+   "properties": {
+    "id_aed": "AED-PL-691737FA13",
+    "id_dysponenta_aed": null,
+    "nazwa_obiektu": "Hala sportowa gminna",
+    "opis_lokalizacji": "Brak opisu w zbiorze – sprawdź na miejscu",
+    "pietro": null,
+    "wewnatrz_budynku": true,
+    "wojewodztwo": "łódzkie",
+    "powiat": "Łódź",
+    "gmina": "Łódź",
+    "miejscowosc": "Łódź",
+    "ulica_cecha": "al.",
+    "ulica": "Unii Lubelskiej",
+    "numer_budynku": "2",
+    "numer_lokalu": null,
+    "kod_pocztowy": "94-020",
+    "teryt_terc": "1061011",
+    "teryt_simc": null,
+    "szerokosc_geograficzna": 51.7587,
+    "dlugosc_geograficzna": 19.4189,
+    "dostep": "ograniczony",
+    "godziny_dostepnosci": "codziennie 6-22",
+    "dostepny_24h": false,
+    "szafka_zamknieta": false,
+    "instrukcja_dostepu": null,
+    "mobilny": false,
+    "status_urzadzenia": "nieznany",
+    "tryb_pediatryczny": null,
+    "producent": null,
+    "model": null,
+    "data_waznosci_elektrod": null,
+    "data_ostatniego_przegladu": null,
+    "dysponent_nazwa": "Gmina Przykładowa Druga",
+    "dysponent_typ": "administracja_publiczna",
+    "dysponent_regon": "999000044",
+    "kontakt_telefon": null,
+    "kontakt_email": null,
+    "zrodlo_danych": "dysponent",
+    "licencja": "CC-BY-4.0",
+    "data_weryfikacji": "2026-03-10",
+    "metoda_weryfikacji": "deklaracja_dysponenta",
+    "data_aktualizacji": "2026-11-21T21:48",
+    "kompletnosc": 69,
+    "zdjecie_url": null,
+    "uwagi": null,
+    "dostawca": "Gmina Przykładowa Druga",
+    "dostawca_regon": "999000044",
+    "zbior_id": "990004",
+    "zbior_url": "https://dane.gov.pl/pl/dataset/990004,wykaz-defibrylatorow-gmina-przykladowa-druga",
+    "zasob_url": "https://dane.gov.pl/media/resources/fikcyjne/gmina-przykladowa-druga.csv",
+    "data_danych": "2026-03-10",
+    "licencja_zbioru": "CC-BY-4.0",
+    "mozliwy_duplikat": "",
+    "zgodnosc": "przejsciowy"
    }
   },
   {
@@ -193,7 +393,8 @@
     "zasob_url": "https://dane.gov.pl/media/resources/fikcyjne/aed-uczelnia-testowa.csv",
     "data_danych": "2025-06-30",
     "licencja_zbioru": "CC-BY-4.0",
-    "mozliwy_duplikat": ""
+    "mozliwy_duplikat": "",
+    "zgodnosc": "wzorzec"
    }
   },
   {
@@ -258,7 +459,8 @@
     "zasob_url": "https://dane.gov.pl/media/resources/fikcyjne/aed-uczelnia-testowa.csv",
     "data_danych": "2025-06-30",
     "licencja_zbioru": "CC-BY-4.0",
-    "mozliwy_duplikat": "AED-PL-0000C00001"
+    "mozliwy_duplikat": "AED-PL-0000C00001",
+    "zgodnosc": "wzorzec"
    }
   },
   {
@@ -323,7 +525,8 @@
     "zasob_url": "https://dane.gov.pl/media/resources/fikcyjne/aed-urzad-gminy-przykladowo.csv",
     "data_danych": "2026-11-02",
     "licencja_zbioru": "CC0-1.0",
-    "mozliwy_duplikat": ""
+    "mozliwy_duplikat": "",
+    "zgodnosc": "wzorzec"
    }
   },
   {
@@ -388,7 +591,8 @@
     "zasob_url": "https://dane.gov.pl/media/resources/fikcyjne/aed-urzad-gminy-przykladowo.csv",
     "data_danych": "2026-11-02",
     "licencja_zbioru": "CC0-1.0",
-    "mozliwy_duplikat": ""
+    "mozliwy_duplikat": "",
+    "zgodnosc": "wzorzec"
    }
   },
   {
@@ -453,7 +657,8 @@
     "zasob_url": "https://dane.gov.pl/media/resources/fikcyjne/aed-urzad-gminy-przykladowo.csv",
     "data_danych": "2026-11-02",
     "licencja_zbioru": "CC0-1.0",
-    "mozliwy_duplikat": ""
+    "mozliwy_duplikat": "",
+    "zgodnosc": "wzorzec"
    }
   }
  ],

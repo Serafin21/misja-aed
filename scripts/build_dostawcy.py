@@ -6,7 +6,10 @@ Scenarios for the acceptance criteria:
 - Urząd Gminy Przykładowo – up-to-date dataset, 3 AED (Warszawa);
 - Uczelnia Testowa – dataset past its update deadline (K9: "zbiór nieaktualny"), 2 AED (Kraków);
 - MPK Przykładowo – one AED 12 m from an AED of Uczelnia Testowa (K6: possible duplicate, not merged), one AED verified
-  more than 12 months ago (K9: "rekord do weryfikacji") and one record breaking the standard (P5: left out, reported).
+  more than 12 months ago (K9: "rekord do weryfikacji") and one record breaking the standard (P5: left out, reported);
+- Gmina Przykładowa Druga – dataset published BEFORE the template (CR-TL-5: status "przejsciowy"): own CSV columns, no
+  list keyword; records with coordinates are shown unchanged with the label "Zbiór przejściowy";
+- Miasto Przykładowe – AED list only as a PDF (status "poza_lista": not machine-readable, not on the list).
 All names, REGON numbers, phones and e-mails are fictional.
 """
 from __future__ import annotations
@@ -80,6 +83,43 @@ PROVIDERS.append({
     ]})
 
 
+# CR-TL-5: datasets published before the template (Łódź area; fictional)
+LEGACY = [
+    {"id": 990004, "nazwa": "Gmina Przykładowa Druga", "regon": "999000044", "freq": "yearly", "modified": "2026-03-10",
+     "licencja": "CC BY 4.0", "format": "csv", "plik": "aed.csv", "csv": (
+        "Lp;Nazwa obiektu;Adres;Szerokość geograficzna;Długość geograficzna;Godziny otwarcia\n"
+        "1;Urząd Gminy Przykładowa Druga;ul. Piotrkowska 104, 90-926 Łódź;51.759145;19.457860;pn-pt 8-16\n"
+        "2;Szkoła Podstawowa nr 1 Przykładowa;ul. Kopernika 32, 90-552 Łódź;51.757020;19.446300;pn-pt 7-18\n"
+        "3;Hala sportowa gminna;al. Unii Lubelskiej 2, 94-020 Łódź;51.758700;19.418900;codziennie 6-22\n"
+        "4;Remiza OSP Przykładowa;ul. Strażacka 5, 90-001 Łódź;;;24h\n")},
+    {"id": 990005, "nazwa": "Miasto Przykładowe", "regon": "999000055", "freq": "irregular", "modified": "2024-09-01",
+     "licencja": "CC BY 4.0", "format": "pdf", "plik": None, "csv": None},
+]
+
+
+def legacy():
+    for p in LEGACY:
+        s = slug(p["nazwa"])
+        d = LOCAL / s
+        d.mkdir(parents=True, exist_ok=True)
+        title = f"{'Wykaz defibrylatorów' if p['format'] == 'csv' else 'Lokalizacje AED'} – {p['nazwa']}"
+        ds = {"data": {"type": "dataset", "id": str(p["id"]), "attributes": {
+            "title": title, "slug": slug(title), "notes": f"Zbiór FIKCYJNY (prototyp HackNation 2026), opublikowany przed wzorcem AED przez {p['nazwa']}.",
+            "keywords": ["defibrylator", "AED"], "categories": [{"code": "HEAL"}], "update_frequency": p["freq"],
+            "modified": f"{p['modified']}T08:00:00Z", "license_name": p["licencja"],
+            "institution": {"title": p["nazwa"], "regon": p["regon"]}},
+            "links": {"self": f"{PORTAL}/pl/dataset/{p['id']},{slug(title)}"}}}
+        attrs = {"title": f"{title} – {p['format'].upper()}", "format": p["format"], "data_date": p["modified"],
+                 "file_url": f"https://dane.gov.pl/media/resources/fikcyjne/{s}.{p['format']}"}
+        if p["plik"]:
+            attrs["_plik_prototypu"] = p["plik"]
+            (d / p["plik"]).write_text(p["csv"], encoding="utf-8")
+        res = {"data": [{"type": "resource", "id": str(p["id"] * 10), "attributes": attrs}]}
+        (d / "dataset.json").write_text(json.dumps(ds, ensure_ascii=False, indent=1), encoding="utf-8")
+        (d / "resources.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"{d.relative_to(ROOT)}: {p['format']}")
+
+
 def main():
     for p in PROVIDERS:
         s = slug(p["nazwa"])
@@ -102,6 +142,7 @@ def main():
         (d / "resources.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
         (d / "aed.csv").write_bytes(to_csv(recs, schema.field_order()))
         print(f"{d.relative_to(ROOT)}: {len(recs)} AED")
+    legacy()
 
 
 if __name__ == "__main__":

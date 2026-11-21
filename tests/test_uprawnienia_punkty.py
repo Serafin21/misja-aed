@@ -33,14 +33,14 @@ def test_punkty_ksztalt(client):
     r = client.get("/api/v1/aed/punkty", headers={"Accept-Encoding": "identity"})
     assert r.status_code == 200 and r.headers["content-type"].startswith("application/geo+json")
     fc = r.json()
-    assert fc["type"] == "FeatureCollection" and fc["meta"]["count"] == len(fc["features"]) == 10  # list 7 + helper 3
+    assert fc["type"] == "FeatureCollection" and fc["meta"]["count"] == len(fc["features"]) == 13  # list 10 + helper 3
     f = fc["features"][0]
     assert set(f) == {"type", "id", "geometry", "properties"} and f["geometry"]["type"] == "Point"
     assert set(f["properties"]) >= {"dostepny_teraz", "stan_danych", "osm", "warstwa", "zbior_nieaktualny", "duplikat", "dostep",
                                     "wiek_danych_dni", "mobilny", "wojewodztwo", "gmina_teryt"}
     assert any(x["properties"]["dostep"] == "prywatny" for x in fc["features"])
     assert sum(x["properties"]["warstwa"] == "pomocnicza" for x in fc["features"]) == 3
-    assert client.get("/api/v1/aed/punkty?warstwa=lista").json()["meta"]["count"] == 7
+    assert client.get("/api/v1/aed/punkty?warstwa=lista").json()["meta"]["count"] == 10
 
 
 def test_punkty_bbox(client):
@@ -53,7 +53,7 @@ def test_punkty_gzip_i_etag(client):
     r = client.get("/api/v1/aed/punkty", headers={"Accept-Encoding": "gzip"})
     assert r.headers["content-encoding"] == "gzip" and "Accept-Encoding" in r.headers["vary"]
     etag = r.headers["etag"]
-    assert json.loads(r.content if r.content[:1] == b"{" else gzip.decompress(r.content))["meta"]["count"] == 10
+    assert json.loads(r.content if r.content[:1] == b"{" else gzip.decompress(r.content))["meta"]["count"] == 13
     r304 = client.get("/api/v1/aed/punkty", headers={"Accept-Encoding": "gzip", "If-None-Match": etag})
     assert r304.status_code == 304 and not r304.content
     # a change that affects the points (stan_danych) changes the ETag; others (e.g. uwagi) keep it

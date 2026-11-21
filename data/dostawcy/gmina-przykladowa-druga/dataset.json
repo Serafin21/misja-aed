@@ -1,0 +1,30 @@
+{
+ "data": {
+  "type": "dataset",
+  "id": "990004",
+  "attributes": {
+   "title": "Wykaz defibrylatorów – Gmina Przykładowa Druga",
+   "slug": "wykaz-defibrylatorow-gmina-przykladowa-druga",
+   "notes": "Zbiór FIKCYJNY (prototyp HackNation 2026), opublikowany przed wzorcem AED przez Gmina Przykładowa Druga.",
+   "keywords": [
+    "defibrylator",
+    "AED"
+   ],
+   "categories": [
+    {
+     "code": "HEAL"
+    }
+   ],
+   "update_frequency": "yearly",
+   "modified": "2026-03-10T08:00:00Z",
+   "license_name": "CC BY 4.0",
+   "institution": {
+    "title": "Gmina Przykładowa Druga",
+    "regon": "999000044"
+   }
+  },
+  "links": {
+   "self": "https://dane.gov.pl/pl/dataset/990004,wykaz-defibrylatorow-gmina-przykladowa-druga"
+  }
+ }
+}

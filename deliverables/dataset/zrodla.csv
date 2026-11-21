@@ -2,3 +2,4 @@ kod_zrodla,nazwa,typ_zrodla,format,licencja,czestotliwosc_aktualizacji,liczba_re
 dostawca:990001,Defibrylatory AED – Urząd Gminy Przykładowo (Urząd Gminy Przykładowo),dostawca,CSV (wzorzec AED),CC0-1.0,monthly,3,3,100,50,Urząd Gminy Przykładowo
 dostawca:990002,Defibrylatory AED – Uczelnia Testowa (Uczelnia Testowa),dostawca,CSV (wzorzec AED),CC-BY-4.0,quarterly,2,2,100,54,Uczelnia Testowa
 dostawca:990003,Defibrylatory AED – MPK Przykładowo sp. z o.o. (MPK Przykładowo sp. z o.o.),dostawca,CSV (wzorzec AED),CC0-1.0,monthly,3,2,100,61,MPK Przykładowo sp. z o.o.
+dostawca:990004,Wykaz defibrylatorów – Gmina Przykładowa Druga (Gmina Przykładowa Druga),dostawca,zbiór przejściowy (przed wzorcem),CC-BY-4.0,yearly,4,3,100,36,Gmina Przykładowa Druga

@@ -380,6 +380,12 @@
         "titles": "mozliwy_duplikat",
         "datatype": "string",
         "dc:description": "pochodzenie rekordu (wspólna lista)"
+      },
+      {
+        "name": "zgodnosc",
+        "titles": "zgodnosc",
+        "datatype": "string",
+        "dc:description": "pochodzenie rekordu (wspólna lista)"
       }
     ],
     "primaryKey": "id_aed"

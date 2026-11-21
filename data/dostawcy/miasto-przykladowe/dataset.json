@@ -1,0 +1,30 @@
+{
+ "data": {
+  "type": "dataset",
+  "id": "990005",
+  "attributes": {
+   "title": "Lokalizacje AED – Miasto Przykładowe",
+   "slug": "lokalizacje-aed-miasto-przykladowe",
+   "notes": "Zbiór FIKCYJNY (prototyp HackNation 2026), opublikowany przed wzorcem AED przez Miasto Przykładowe.",
+   "keywords": [
+    "defibrylator",
+    "AED"
+   ],
+   "categories": [
+    {
+     "code": "HEAL"
+    }
+   ],
+   "update_frequency": "irregular",
+   "modified": "2024-09-01T08:00:00Z",
+   "license_name": "CC BY 4.0",
+   "institution": {
+    "title": "Miasto Przykładowe",
+    "regon": "999000055"
+   }
+  },
+  "links": {
+   "self": "https://dane.gov.pl/pl/dataset/990005,lokalizacje-aed-miasto-przykladowe"
+  }
+ }
+}

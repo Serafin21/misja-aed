@@ -61,6 +61,10 @@ def connect(path: Path | str | None = None) -> sqlite3.Connection:
             _conn.row_factory = sqlite3.Row
             _conn.execute("PRAGMA journal_mode=WAL")
             _conn.executescript(DDL)
+            cols = {r[1] for r in _conn.execute("PRAGMA table_info(konta)")}
+            for c in ("podstawa", "regon", "telefon"):  # CR-TL-6 / CR-TL-8 – older databases get the new columns
+                if c not in cols:
+                    _conn.execute(f"ALTER TABLE konta ADD COLUMN {c} TEXT")
         return _conn
 
 

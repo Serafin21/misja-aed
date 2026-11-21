@@ -8,7 +8,7 @@ from tests.conftest import ROOT
 def test_list_and_paging(client):
     r = client.get("/api/v1/aed?per_page=3")
     j = r.json()
-    assert r.status_code == 200 and j["meta"]["count"] == 7 and len(j["data"]) == 3
+    assert r.status_code == 200 and j["meta"]["count"] == 10 and len(j["data"]) == 3
     assert j["links"]["next"] and j["links"]["prev"] is None
     assert j["data"][0]["type"] == "aed"
 
@@ -18,7 +18,7 @@ def test_filters(client):
     assert client.get("/api/v1/aed?wojewodztwo=małopolskie").json()["meta"]["count"] == 4
     assert client.get("/api/v1/aed?bbox=19.9,50.0,20.0,50.1").json()["meta"]["count"] == 4
     assert client.get("/api/v1/aed?warstwa=pomocnicza").json()["meta"]["count"] == 3
-    assert client.get("/api/v1/aed?warstwa=wszystkie").json()["meta"]["count"] == 10
+    assert client.get("/api/v1/aed?warstwa=wszystkie").json()["meta"]["count"] == 13
 
 
 def test_nearest(client):
@@ -53,7 +53,7 @@ def test_import_flow(client, auth):
     res = client.post(f"/api/v1/import/{iid}/zatwierdz", headers=auth).json()
     # goes to the provider's working copy – the common list does not change until the files are published (P2, P3)
     assert res["dodane"] == 3 and "kopii roboczej" in res["komunikat"]
-    assert client.get("/api/v1/aed").json()["meta"]["count"] == 7
+    assert client.get("/api/v1/aed").json()["meta"]["count"] == 10
     assert client.get("/api/v1/moje-aed", headers=auth).json()["meta"]["w_kopii_roboczej"] == 3
 
 
@@ -100,9 +100,9 @@ def test_exports_standard(client, tmp_path):
     from src.core import schema
     from src.core.publish import PROV_COLS
     assert rows[0] == schema.field_order() + PROV_COLS  # compilation: every record carries its provider and dataset (§7)
-    assert len(rows) == 8 and all(r[schema.field_order().index("licencja")] != "ODbL-1.0" for r in rows[1:])
+    assert len(rows) == 11 and all(r[schema.field_order().index("licencja")] != "ODbL-1.0" for r in rows[1:])
     gj = client.get("/api/v1/eksport/aed.geojson").json()
-    assert gj["type"] == "FeatureCollection" and len(gj["features"]) == 7 and "Kompilacja" in gj["description"]
+    assert gj["type"] == "FeatureCollection" and len(gj["features"]) == 10 and "Kompilacja" in gj["description"]
     for gone in ("aed_osm_odbl.csv", "dane_gov_pl_import.xml", "metadane.jsonld"):  # the list is not a dataset of its own
         assert client.get(f"/api/v1/eksport/{gone}").status_code == 404
 

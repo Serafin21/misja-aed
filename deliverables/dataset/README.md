@@ -2,11 +2,11 @@
 
 Model ról: `docs/MODEL_ROL.md`. Wspólna lista **nie jest zbiorem danych i nie ma dostawcy** – to widok łączący zbiory AED opublikowane przez ich właścicieli na dane.gov.pl. Za każdy rekord odpowiada wskazany dostawca; warunki ponownego wykorzystywania – jak w zbiorze źródłowym.
 
-Wygenerowano z prototypu (`python -m scripts.seed --reset --lista lokalna && python -m scripts.publish`; na żywo `GET /api/v1/eksport/{plik}`). **Dostawcy są fikcyjni** (`data/dostawcy/`): Urząd Gminy Przykładowo, Uczelnia Testowa (zbiór po terminie aktualizacji), MPK Przykładowo (jeden rekord odrzucony przez walidację, jeden „do weryfikacji”, jeden możliwy duplikat z AED uczelni – oba pozostają).
+Wygenerowano z prototypu (`python -m scripts.seed --reset --lista lokalna && python -m scripts.publish`; na żywo `GET /api/v1/eksport/{plik}`). **Dostawcy są fikcyjni** (`data/dostawcy/`): Urząd Gminy Przykładowo, Uczelnia Testowa (zbiór po terminie aktualizacji), MPK Przykładowo (jeden rekord odrzucony przez walidację, jeden „do weryfikacji”, jeden możliwy duplikat z AED uczelni – oba pozostają) i Gmina Przykładowa Druga – **zbiór przejściowy** (opublikowany przed wzorcem; 3 AED pokazane bez zmian, kolumna `zgodnosc = przejsciowy`).
 
 | Plik | Zawartość |
 |---|---|
-| `aed.csv` | 44 pola wzorca AED + pochodzenie: `dostawca, dostawca_regon, zbior_id, zbior_url, zasob_url, data_danych, licencja_zbioru, mozliwy_duplikat` (UTF-8, przecinek, CRLF) |
+| `aed.csv` | 44 pola wzorca AED + pochodzenie: `dostawca, dostawca_regon, zbior_id, zbior_url, zasob_url, data_danych, licencja_zbioru, mozliwy_duplikat, zgodnosc` (UTF-8, przecinek, CRLF) |
 | `aed.geojson`, `aed.jsonld` | te same rekordy jako punkty WGS 84 i dane powiązane (schema.org) |
 | `aed_pochodzenie.csv` | rekord → dostawca, zbiór, zasób, data danych, aktualność zbioru |
 | `zrodla.csv` | zbiory dostawców składające się na listę |
