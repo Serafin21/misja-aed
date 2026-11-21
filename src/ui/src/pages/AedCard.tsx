@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { confirmAed, getAed, HttpError } from '../api/client';
 import type { AedDetail } from '../api/types';
 import { MapView } from '../components/MapView';
+import { QrSticker } from '../components/QrSticker';
 import { AvailabilityBadge, Emergency, ErrorBox, Icon, Loading, LockedCabinet } from '../components/ui';
 import { address, date, dictMeaning, floor, label, osmDirections } from '../lib/format';
 import { describeHours } from '../lib/hours';
@@ -102,6 +103,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
       </div>
 
       <Passport id={a.id_aed} name={a.nazwa_obiektu} onDone={onConfirmed} />
+      <QrSticker id={a.id_aed} name={a.nazwa_obiektu} />
 
       <section aria-labelledby="h-src" className="panel">
         <h2 id="h-src">Źródło danych i licencja</h2>

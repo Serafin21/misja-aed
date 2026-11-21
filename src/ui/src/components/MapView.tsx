@@ -56,7 +56,8 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
 
   useEffect(() => {
     if (!el.current || map.current) return;
-    const m = L.map(el.current, { keyboard: true, zoomControl: true, scrollWheelZoom: false, maxBounds: [[47, 12], [56.5, 26.5]] });
+    const m = L.map(el.current, { keyboard: true, zoomControl: false, scrollWheelZoom: false, maxBounds: [[47, 12], [56.5, 26.5]] });
+    L.control.zoom({ zoomInTitle: 'Przybliż mapę', zoomOutTitle: 'Oddal mapę' }).addTo(m);
     m.fitBounds(POLAND);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,

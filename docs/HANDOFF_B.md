@@ -48,3 +48,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: jak w #2 (Leaflet i typecheck niesprawdzone na prawdziwych pakietach).
 - Użycie AI (jedna linia): ekrany E4–E9 i wdrożenie znaku w UI wygenerowane z Claude (Model B); znak, nazwa i hasło – zespół (TL).
 - Następny krok: przełączenie na API A, audyt WCAG (axe/Lighthouse/NVDA), README v1, `docs/a11y/raport.md`.
+
+## HANDOFF #4
+
+- Czas: sob 13:55
+- Zrobione: `SUBMISSION.md` do draftu (nazwa projektu, link do repo, opis postępu – brakuje nazwy zespołu), `README.md` v1 (szybki start, ścieżki dla jury, architektura mermaid, dostępność, licencje), `docs/a11y/raport.md` (automatyczne sprawdzenie E1–E9 w 1280 i 320 px: kontrast, nazwy, cele 24 px, nagłówki – 0 problemów; lista testów do zrobienia: axe, Lighthouse, NVDA), naklejka „Paszport AED” z kodem QR na karcie E3 (zależność `qrcode-generator`, MIT), polskie podpisy przycisków powiększania mapy.
+- Jak uruchomić / zobaczyć: `cd src/ui && npm install && npm run dev`; podgląd online (dla zespołu): artefakt „AED w danych – podgląd”.
+- Założenia: README opisuje `docker compose up` jako „w toku” – czekam na `docker-compose.yml` i `.env.example` od A.
+- CR: bez zmian.
+- Znane błędy: QR, Leaflet i typecheck niesprawdzone na prawdziwych pakietach (brak sieci w środowisku B).
+- Użycie AI (jedna linia): README, SUBMISSION, raport dostępności i skrypt kontroli dostępności przygotowane z Claude (Model B).
+- Następny krok: przełączenie na API A po jego pushu; SYNC #1 o 17:00.
