@@ -1,8 +1,7 @@
 // E10 – Pierwsza pomoc. Text given by the team VERBATIM (do not add medical advice here).
-// Illustrations: own SVG scenes, one per step (components/aidScenes.ts; not ERC/PRR or vendor graphics). Content to be checked by a rescuer or mentor.
-import { Icon } from '../components/ui';
+// Steps in words only; one side photo of a real AED (CC0, Wikimedia Commons, source in the caption). Content to be checked by a rescuer or mentor.
+import { ExternalLink, Icon } from '../components/ui';
 import { usePageTitle } from '../router';
-import { AID_SCENES_ORDER, aidSceneSvg, type AidScene } from '../components/aidScenes';
 
 const ADULT_STEPS = [
   'Upewnij się, że jest bezpiecznie dla ciebie i poszkodowanego.',
@@ -16,10 +15,25 @@ const ADULT_STEPS = [
   'Nie przerywaj, dopóki nie przejmą ratownicy albo poszkodowany nie zacznie się ruszać i normalnie oddychać.',
 ];
 
-/** One own illustration per step. Decorative (aria-hidden) – the step text says everything. */
-function Scene({ kind }: { kind: AidScene }) {
-  // Static markup from aidScenes.ts (constants only, no user input).
-  return <div className="aid-scene" dangerouslySetInnerHTML={{ __html: aidSceneSvg(kind) }} />;
+const PHOTO_PAGE = 'https://commons.wikimedia.org/wiki/File:Automated_external_defibrillator_(AED)_Automatyczny_defibrylator_zewn%C4%99trzny,_Tomasz%C3%B3w_Mazowiecki,_Poland.jpg';
+
+/** Side photo (CC0, Wikimedia Commons). Hidden when the file is missing. */
+function AedPhoto() {
+  return (
+    <figure className="aid-photo">
+      <img
+        src="/img/aed-tomaszow-mazowiecki.jpg"
+        width={800}
+        height={450}
+        alt="Zielona okrągła szafka z AED zawieszona na drewnianej ścianie przy chodniku. Na szafce biały znak: serce z błyskawicą."
+        onError={(e) => { (e.currentTarget.closest('figure') as HTMLElement | null)?.setAttribute('hidden', ''); }}
+      />
+      <figcaption>
+        Tak może wyglądać AED w miejscu publicznym (Tomaszów Mazowiecki).
+        Zdjęcie: WrS.tm.pl, <ExternalLink href={PHOTO_PAGE}>Wikimedia Commons</ExternalLink>, CC0 (domena publiczna).
+      </figcaption>
+    </figure>
+  );
 }
 
 export function FirstAid() {
@@ -30,9 +44,11 @@ export function FirstAid() {
       <p className="firstaid__call"><a href="tel:112" className="btn-call btn-call--big"><Icon name="phone" />Dzwoń 112</a></p>
       <p className="lead">Każdy może pomóc. Każdy może użyć AED, także bez szkolenia. Urządzenie mówi, co robić, i samo sprawdza, czy potrzebne jest wyładowanie. Uciskając klatkę piersiową, nie wyrządzisz poważnej krzywdy.</p>
 
+      <AedPhoto />
+
       <h2>Dorosły – krok po kroku</h2>
       <ol className="steps-aid">
-        {ADULT_STEPS.map((s, i) => <li key={s}><span className="steps-aid__text">{s}</span><Scene kind={AID_SCENES_ORDER[i]} /></li>)}
+        {ADULT_STEPS.map((s) => <li key={s}><span>{s}</span></li>)}
       </ol>
 
       <h2>Drgawki</h2>

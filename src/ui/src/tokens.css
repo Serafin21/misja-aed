@@ -36,14 +36,6 @@
   --color-success-tint: #E8F3EC;
   --color-warning: #7A4F00;        /* 7.1:1 on white */
   --color-warning-tint: #FFF4D6;
-  /* First-aid illustrations (decorative, text carries the meaning) */
-  --aid-rescuer: #0052A5;
-  --aid-victim: #6B7570;
-  --aid-skin: #E8D5C4;
-  --aid-helper: #B9791A;
-  --aid-device: #1A7A50;
-  --aid-shock: #E2A23B;
-  --aid-floor: #D2D2D2;
   --color-info: #0052A5;
   --color-info-tint: #E5EEF8;
 

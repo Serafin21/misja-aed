@@ -216,3 +216,15 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - **Treść i rysunki „Pierwszej pomocy” do sprawdzenia przez ratownika lub mentora** (zwłaszcza położenie elektrod).
 - Użycie AI (jedna linia): ilustracje SVG z Claude (Model B), podgląd sprawdzony na wyrenderowanych obrazkach.
 - Następny krok: test w przeglądarce (klawiatura, 320 px).
+
+## HANDOFF #19
+
+- Czas: sob 18:20
+- Zrobione: **E10 Pierwsza pomoc – same kroki słowne + jedno zdjęcie ze źródłem** (decyzja człowieka B, zastępuje ilustracje z #18). Usunięte rysunki SVG (`components/aidScenes.ts`, zmienne `--aid-*`). Kroki tylko tekstem (bez zmian treści). Jedno zdjęcie z boku (na szerokim ekranie po prawej, na wąskim nad krokami): szafka AED w Tomaszowie Mazowieckim, autor WrS.tm.pl, Wikimedia Commons, **CC0 1.0** – podpis ze źródłem i linkiem pod zdjęciem, wpis na stronie „Licencje i atrybucje”, opis alternatywny. Plik: `src/ui/public/img/aed-tomaszow-mazowiecki.jpg` (miniatura 1280 px z Commons); gdy pliku brak, zdjęcie z podpisem się ukrywa.
+- Jak uruchomić / zobaczyć: `npm run dev` → `/pierwsza-pomoc`.
+- Założenia: CC0 = domena publiczna, zgodne z zasadą licencji projektu (bez obowiązku podawania autora – podajemy i tak).
+- CR do TL: dopisać zdjęcie (CC0) do listy zasobów w `docs/` przy przeglądzie licencji.
+- Znane błędy: –
+- **Treść „Pierwszej pomocy” do sprawdzenia przez ratownika lub mentora.**
+- Użycie AI (jedna linia): wyszukanie zdjęcia na wolnej licencji i zmiana strony z Claude (Model B); wybór zdjęcia sprawdzony przez Claude na stronie pliku w Commons.
+- Następny krok: test w przeglądarce.
