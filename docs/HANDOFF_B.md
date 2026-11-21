@@ -193,3 +193,15 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - **Treść „Pierwszej pomocy” do sprawdzenia przez ratownika lub mentora.**
 - Użycie AI (jedna linia): przebudowa na prostą stronę (kafle, kreatory E4/E5, pierwsza pomoc – układ i piktogramy, treść medyczna od TL), prosty język i dokumentacja z Claude (Model B).
 - Następny krok: typecheck/build u człowieka, test klawiaturą i przy 320 px na nowych ekranach, zrzuty.
+
+## HANDOFF #17
+
+- Czas: sob 18:15
+- Zrobione: **E10 Pierwsza pomoc – nowe ilustracje** (uwaga człowieka B: piktogramy były zbyt uproszczone). Zamiast 4 ikon jest 9 własnych scenek SVG, po jednej przy każdym kroku dla dorosłego: bezpieczeństwo, „Halo?” i dłonie na ramionach, telefon 112, sprawdzanie oddechu, wysłanie drugiej osoby po AED, uciskanie (proste ręce, dłonie jedna na drugiej), elektrody na gołej klatce (pod prawym obojczykiem i pod lewą pachą) z kablami do AED, „nikt nie dotyka” podczas analizy, uciskanie dalej. Postacie mają głowę, tułów, ręce i nogi, a dłonie są w kształcie owalu (bez rysowania palców). Rysunki są ozdobne (`aria-hidden`), bo wszystko mówi tekst kroku; tekst bez zmian. Kolory z nowych zmiennych `--aid-*` w tokens.css. Na ekranie poniżej 640 px obrazek jest nad tekstem kroku.
+- Jak uruchomić / zobaczyć: `npm run dev` → `/pierwsza-pomoc`.
+- Założenia: rysunki własne, narysowane od zera, wzorowane tylko na ogólnym układzie „krok + obrazek”; bez grafik ERC/PRR ani producentów (np. AEDMAX).
+- CR: –
+- Znane błędy: niesprawdzone jeszcze w przeglądarce u człowieka B.
+- **Treść i rysunki „Pierwszej pomocy” do sprawdzenia przez ratownika lub mentora** (zwłaszcza położenie elektrod).
+- Użycie AI (jedna linia): ilustracje SVG z Claude (Model B), podgląd sprawdzony na wyrenderowanych obrazkach.
+- Następny krok: test w przeglądarce (klawiatura, 320 px).
