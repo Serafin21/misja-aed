@@ -365,3 +365,10 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Użycie AI (jedna linia): trzy poprawki interfejsu z Claude (Model B) według zrzutu od B.
 - Następny krok: build i ocena B.
 - Scalenie: połączone z pracą drugiej sesji B (#27–#30: dostępność, księga znaku, bez okruszków). Na prośbę właściciela projektu przywrócone: nowy „Znajdź AED” (lista/mapa, filtry, podgląd), role i „Zgłoszenia AED”, panel administratora. Pliki strefy A (`src/api`, `tests`) – bez cofnięcia z 09e8034 (poprawka godzin zostaje).
+
+## HANDOFF #32
+
+- Czas: nd 00:35
+- Zrobione (uwagi właściciela projektu): **administrator ma w menu tylko „Zgłoszenia AED” i „Panel administratora”** (bez Znajdź AED, Pierwsza pomoc, O projekcie). Panel → „Instytucje i konta”: zakładki z licznikami **Wszystkie / Aktywne / Czekają na zatwierdzenie / Zablokowane / Administratorzy**, w tabeli także wbudowane konto `admin` (tylko do odczytu – hasło w `.env`), zakładanie konta **instytucji albo administratora** (rodzaj konta). `/zglos` po zalogowaniu przenosi do „Zgłoszenia AED”. Tytuł karty przeglądarki „Mapa AED”.
+- Sprawdzone: przegląd 17 podstron jako gość, instytucja i administrator (bez błędów strony); nowe konto administratora loguje się i ma to samo menu.
+- CR do A: błąd 500 przy równoczesnych zapytaniach – naprawiony w HANDOFF A #13.
