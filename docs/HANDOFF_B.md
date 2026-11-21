@@ -92,6 +92,9 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: –
 - Użycie AI (jedna linia): test integracji i poprawki z Claude.
 - Następny krok: ręczne sprawdzenie mapy i QR telefonem.
+
+## HANDOFF #8
+
 - Czas: sob 15:30
 - Zrobione: komplet plików akcji w `brand/` (za zgodą TL): `logo.svg/png/jpg/pdf`, `warianty/` (pionowe i poziome: kolor, odwrócona, achromatyczna, czarna, biała; sam znak; ikony; znaczniki mapy), `ksiega_znaku.pdf` (10 stron A4, wektor, 452 kB), `haslo.txt`, generatory w `brand/zrodla/`. Nowe hasło „Dane prosto z serca” (decyzja zespołu) w aplikacji, README, SUBMISSION, opisie, scenariuszu i JURY_QA. Geometria komórek w UI wyrównana do księgi (0,8 x, promień 0,14 x), favikona = ikona aplikacji, hasło w UI krojem bezszeryfowym zamiast monospace.
 - Jak uruchomić / zobaczyć: otwórz `brand/ksiega_znaku.pdf`; odtworzenie: `python brand/zrodla/generuj.py && python brand/zrodla/ksiega.py`.
