@@ -147,7 +147,11 @@ export function listSources() {
 }
 
 export function getStats() {
-  return withFallback(() => http<Record<string, unknown>>(`/statystyki`), () => mock.mockStats() as Promise<Record<string, unknown>>);
+  return withFallback(async () => {
+    // API answers { data: {...} } (JSON API style); older drafts returned the object directly.
+    const r = await http<Record<string, unknown>>(`/statystyki`);
+    return (r && typeof r.data === 'object' && r.data !== null && !Array.isArray(r.data) ? r.data : r) as Record<string, unknown>;
+  }, () => mock.mockStats() as Promise<Record<string, unknown>>);
 }
 
 export type ImportMeta = { kodZrodla: string; licencja: string; dysponentNazwa: string; dysponentTyp: string };

@@ -81,3 +81,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: zmiany NIESPRAWDZONE w przeglądarce ani na żywym API (środowisko B bez sieci npm/pip); sprawdzona tylko składnia TS. Docker nadal nie budowany.
 - Użycie AI (jedna linia): logowanie, formularz moderatora i pola importu z Claude (Model B).
 - Następny krok: `npm run typecheck && npm run build` u człowieka, `docker compose up --build`, przejście ścieżek z README.
+
+## HANDOFF #7
+
+- Czas: sob 21.11.2026
+- Zrobione: sprawdzenie UI na żywym API (wszystkie 9 ekranów, każde wywołanie z `client.ts`) – kształty odpowiedzi zgodne. Naprawione 2 błędy: 1) liczniki na E7 (Akcja) i E8 (Źródła) pokazywały „–”, bo `GET /statystyki` zwraca `{data: {...}}` – `getStats()` rozpakowuje `data`; 2) karta i lista AED pokazywały „null null, null null” dla rekordów OSM bez adresu – `address()` pomija puste części, a gdy adresu nie ma wcale, pokazuje „Brak adresu w danych – sprawdź położenie na mapie”; linia „Zapis w danych” przy godzinach ukryta, gdy godzin brak.
+- Jak uruchomić / zobaczyć: `docker compose up --build` → http://localhost/zrodla i karta rekordu OSM.
+- Założenia: –
+- CR: do TL – `docs/CONTRACT.md` §6 mówi, że zgłoszenia zatwierdza „moderator albo dysponent”, a tabela uprawnień (§ endpointy) tylko moderator; API dopuszcza obie role.
+- Znane błędy: –
+- Użycie AI (jedna linia): test integracji i poprawki z Claude.
+- Następny krok: ręczne sprawdzenie mapy i QR telefonem.
