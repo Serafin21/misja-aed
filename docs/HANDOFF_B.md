@@ -159,3 +159,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: `npm run typecheck` po przebudowie gov.pl nie był pokazany – do potwierdzenia u człowieka.
 - Użycie AI (jedna linia): test w przeglądarce i poprawka stopki z Claude (Model B).
 - Następny krok: typecheck, przegląd pozostałych ekranów (E5, E9, karta AED), zrzuty do prezentacji.
+
+## HANDOFF #14
+
+- Czas: sob 18:30
+- Zrobione: **pierwszy test UI na żywym API (Windows, Python 3.12, `seed --osm full`, uvicorn + `npm run dev`), sprawdzone w przeglądarce:** `/statystyki` – 18 040 AED (18 035 OSM + 5 przykładowych), aktualne 3 155, nieaktualne 14 885, 351 gmin bez danych (zgodne z LICZBY.md); E2 bez trybu demo, mapa całej Polski z `/aed/punkty` (18 040 punktów w klastrach), podpowiedź „Lista pokazuje pierwsze 500 z 18 040”; tryb „Aktualność danych”: pinezki aktualne i nieaktualne (zegar), warstwa 144 gmin kujawsko-pomorskiego, 27 zakreskowanych, atrybucja PRG, lista gmin bez danych; kliknięcie pinezki → okienko ze szczegółami z `/aed/{id}`, fokus na linku do karty. Poprawka: filtr województwa nie przełącza już mapy na listę (pokazywała 1 AED) – mapa zostaje na warstwie punktów, a warstwa gmin przybliża się do województwa; lista ma dopisek, że pokazuje tylko AED z wpisanym województwem.
+- Jak uruchomić / zobaczyć (Windows, bez Dockera): `py -m venv .venv`, `.venv\Scripts\python -m pip install -r requirements.txt tzdata`, `.venv\Scripts\python -m scripts.seed --reset --osm full`, `.venv\Scripts\python -m uvicorn src.api.main:app --port 8000`; w drugim oknie `cd src\ui && npm run dev`.
+- Założenia: –
+- CR do A: (1) **`tzdata; sys_platform == "win32"` w requirements.txt** (Apache-2.0) – bez tego na Windows API nie startuje: `ZoneInfoNotFoundError: Europe/Warsaw`; (2) **`GET /aed?wojewodztwo=` filtrować po położeniu** (jak `wg_wojewodztw_polozenie`), bo 17 996 rekordów OSM nie ma pola `wojewodztwo` – teraz filtr zwraca 1 AED dla kujawsko-pomorskiego; (3) bez zmian: `prywatny` w `/aed/punkty`, OFL-1.1 w `check_licenses.py`.
+- Znane błędy: lista E2 przy filtrze województwa – do czasu CR (2).
+- Użycie AI (jedna linia): test na żywym API i poprawka filtra z Claude (Model B); uruchomienie środowiska – człowiek.
+- Następny krok: zrzuty ekranu do prezentacji z żywego API.

@@ -44,7 +44,9 @@ export function MapList() {
   const cov = useCoverage(mode, f.wojewodztwo);
   // CR-TL-2: without filters the map shows the whole of Poland from GET /aed/punkty (light, gzip);
   // with filters it shows the filtered list. "Tylko dostępne teraz" also works on the point layer.
-  const filtered = !!(f.q || f.wojewodztwo || f.gmina || f.dostep || f.pokaz_mobilne === false);
+  // Województwo is not a "filter" for the map: OSM records rarely have the field filled (API filters by field),
+  // so the map keeps the whole point layer and the coverage layer zooms to the chosen voivodeship (CR to A: filter by location).
+  const filtered = !!(f.q || f.gmina || f.dostep || f.pokaz_mobilne === false);
   const pts = useAsync(() => (filtered ? Promise.resolve(null) : listPoints()), [filtered]);
   const mapPoints = pts.data ? (f.dostepne_teraz ? pts.data.filter((p) => p.dostepny_teraz === true) : pts.data) : null;
 
@@ -117,6 +119,9 @@ export function MapList() {
           {view !== 'mapa' && (
             <section aria-labelledby="list-title" className="split__list">
               <h2 id="list-title">Lista</h2>
+              {f.wojewodztwo && !filtered && (
+                <p className="hint">Lista pokazuje AED, które mają województwo wpisane w danych. Mapa pokazuje wszystkie AED – większość rekordów z OpenStreetMap nie ma adresu.</p>
+              )}
               {st.data.items.length < st.data.meta.count && (
                 <p className="hint">Lista pokazuje pierwsze {st.data.items.length} z {st.data.meta.count.toLocaleString('pl-PL')} AED. Zawęź wyniki filtrem, np. województwem albo miejscowością.</p>
               )}
