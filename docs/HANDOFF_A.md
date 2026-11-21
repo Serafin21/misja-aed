@@ -1,5 +1,17 @@
 # HANDOFF – Model A
 
+## 2026-11-21 15:00 – HANDOFF #3: CR-TL-1 (tryb „aktualność danych”), pełny OSM, porządki
+
+- **Czas:** sob 14:30–15:00
+- **Zrobione:** CR-TL-1 dopisana do `docs/CONTRACT.md` (§8, wersja 1.1). API: `meta.stan_danych` (`aktualne` ≤ 365 dni od `data_weryfikacji`, inaczej i przy braku daty `nieaktualne`) i `meta.wiek_danych_dni` w każdym rekordzie; filtr `GET /aed?stan_danych=`; nowy `GET /pokrycie?wojewodztwo=` – GeoJSON 144 gmin kujawsko-pomorskiego (PRG GUGiK przez WFS, uproszczone do 431 KB, `data/granice/`, skrypt `scripts/build_granice.py`) z `teryt, gmina, liczba_aed, aktualne, nieaktualne, stan`; `/statystyki` + `aktualne`, `nieaktualne`, `gminy_bez_danych`. Licencja i atrybucja PRG w `zrodla.csv` (źródło `prg-gugik:gminy-kujawsko-pomorskie`). **Poprawka:** OSM bez `check_date` dostawał dzisiejszą datę weryfikacji – teraz pole jest puste (inaczej cała mapa byłaby „aktualna”). Pełny import OSM Polska: 18 297 obiektów → 18 057 rekordów, 22 odrzucone; `deliverables/dataset/` przebudowany. `.gitignore` (+ `git rm -r --cached` dla `__pycache__/`, baza i `data/cache/` poza repo). 50 testów (15 nowych: próg 0/364/365/366 dni, brak i błędna data, OSM bez daty, filtr, `/pokrycie`, przypisanie do gminy, statystyki, `zrodla`).
+- **Wyniki na pełnych danych:** 3 154 AED aktualne, 14 885 nieaktualne (17%). Kujawsko-pomorskie: 27 gmin bez danych, 113 nieaktualne, 4 aktualne.
+- **Jak uruchomić:** `python -m scripts.seed --reset --osm full && uvicorn src.api.main:app` → `/api/v1/pokrycie`; `pytest`.
+- **Założenia:** stan gminy = `nieaktualne`, gdy choć jeden AED w gminie jest nieaktualny (ostrożnie: zachęca do weryfikacji); AED przypisany do gminy po położeniu, nie po polu `gmina`. PRG: dane PZGiK bez opłat i ograniczeń (art. 40a ust. 2 pkt 1 Pgik). Dla źródła referencyjnego pokrycie pól w `zrodla.csv` = 0 (nie dotyczy rekordu AED).
+- **CR do B:** ekran mapy – przełącznik trybów „dostępność / aktualność danych”; w trybie aktualności warstwa gmin z `GET /pokrycie` (kolor wg `stan`, legenda, atrybucja z `meta.atrybucja`) i punkty wg `meta.stan_danych`. Liczniki do E7/E8: `aktualne`, `nieaktualne`, `gminy_bez_danych`.
+- **Znane błędy:** granice uproszczone niezależnie dla każdej gminy – na styku mogą być wąskie szczeliny (AED w szczelinie nie trafia do żadnej gminy). Docker dalej niezbudowany w tym środowisku.
+- **Użycie AI:** kod, testy i dokumentacja z Claude, przegląd człowieka.
+- **Następny krok:** granice dla kolejnych województw (`--woj`), UI trybu „aktualność danych” (B).
+
 ## 2026-11-21 13:30 – HANDOFF #2: CR od B, JSON-LD, docs/tech, utwardzenie
 
 - **Czas:** sob 13:25–13:30

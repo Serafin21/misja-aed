@@ -3,7 +3,7 @@
      pliku XML” (v1.0.6, 2025-11-21): dataset (extIdent ≤36, title/description pl+en ≤300/≤1000, url, categories,
      conditions, resources, tags, updateFrequency, flagi) i resource (+ availability, dataDate, specialSigns,
      containsProtectedData). URI przestrzeni nazw „p”, XSD i składnia <tags>: do potwierdzenia (CR-1).
-     Wygenerowano: 2026-11-21T13:31 -->
+     Wygenerowano: 2026-11-21T14:55 -->
 <p:datasets xmlns:p="urn:do-weryfikacji:dane.gov.pl:import">
   <dataset status="published">
     <extIdent>aed-polska</extIdent>
