@@ -151,7 +151,6 @@ export function App() {
           <div className="container">Tryb demonstracyjny: dane przykładowe (fikcyjne) z pliku <code>data/sample</code>. Nie używaj ich w prawdziwej sytuacji.</div>
         </div>
       )}
-      <div className="container"><Breadcrumbs path={path} /></div>
       <main id="main" className="container" tabIndex={-1}>
         <Routes />
       </main>

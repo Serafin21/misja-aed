@@ -13,7 +13,10 @@ export function onMockModeChange(fn: (m: boolean) => void) { listeners.add(fn); 
 function setMock(v: boolean) { if (usingMocks !== v) { usingMocks = v; listeners.forEach((l) => l(v)); } }
 
 export class HttpError extends Error {
-  constructor(public status: number, public body: ApiError | null) { super(body?.message ?? `Błąd ${status}`); }
+  constructor(public status: number, public body: ApiError | null) {
+    // 404 without our error body = the running API is older than the app (e.g. not restarted after git pull)
+    super(body?.message ?? (status === 404 ? 'Serwer danych nie ma tej funkcji – uruchom go ponownie po pobraniu nowej wersji (git pull).' : `Błąd ${status}`));
+  }
   /** Field-level messages from a 422 response ({ pole: komunikat }). */
   get fields(): Record<string, string> { return this.body?.fields ?? {}; }
 }

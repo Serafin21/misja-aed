@@ -322,3 +322,10 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Sprawdzone: składnia TS. Build – u B.
 - Użycie AI (jedna linia): trzy poprawki interfejsu z Claude (Model B) według zrzutu od B.
 - Następny krok: build i ocena B.
+
+## HANDOFF #28
+
+- Czas: sob 22:40
+- Zrobione (zrzut od B): ścieżka okruszków usunięta ze wszystkich stron (komponent `Breadcrumbs` zostaje w kodzie, nieużywany). Błąd 404 bez treści od API pokazuje zamiast „Błąd 404”: „Serwer danych nie ma tej funkcji – uruchom go ponownie po pobraniu nowej wersji (git pull)”.
+- Diagnoza „Moje AED: Błąd 404” i „nie działa konto administratora”: kod API ma `/moje-aed`, `/moje-aed/powiadomienia` i konto `administrator` / `administrator-demo` (`src/api/auth.py`) – B miał uruchomiony serwer sprzed `git pull` (uvicorn bez `--reload`). Rozwiązanie: restart serwera danych.
+- Użycie AI (jedna linia): poprawki i diagnoza z Claude (Model B).
