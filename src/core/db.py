@@ -58,17 +58,71 @@ CREATE TABLE IF NOT EXISTS konta (
 """
 
 _lock = threading.RLock()
-_conn: sqlite3.Connection | None = None
 
 
-def connect(path: Path | str | None = None) -> sqlite3.Connection:
+class _Result:
+    """Rows of a finished statement (read inside the lock, so no cursor is shared between threads)."""
+    __slots__ = ("_rows", "lastrowid", "rowcount")
+
+    def __init__(self, rows, lastrowid, rowcount):
+        self._rows, self.lastrowid, self.rowcount = rows, lastrowid, rowcount
+
+    def fetchone(self):
+        return self._rows[0] if self._rows else None
+
+    def fetchall(self):
+        return list(self._rows)
+
+    def __iter__(self):
+        return iter(self._rows)
+
+
+class LockedConnection:
+    """One SQLite connection shared by the API's worker threads: every statement runs under one lock and its rows
+    are fetched at once. Without it two simultaneous requests could use the connection together
+    ("sqlite3.InterfaceError: bad parameter or other API misuse" → HTTP 500)."""
+
+    def __init__(self, conn: sqlite3.Connection):
+        self._c = conn
+
+    def execute(self, sql: str, params=()):
+        with _lock:
+            cur = self._c.execute(sql, params)
+            return _Result(cur.fetchall(), cur.lastrowid, cur.rowcount)
+
+    def executemany(self, sql: str, seq):
+        with _lock:
+            cur = self._c.executemany(sql, seq)
+            return _Result([], cur.lastrowid, cur.rowcount)
+
+    def executescript(self, sql: str):
+        with _lock:
+            return self._c.executescript(sql)
+
+    def commit(self):
+        with _lock:
+            self._c.commit()
+
+    def rollback(self):
+        with _lock:
+            self._c.rollback()
+
+    def __getattr__(self, name):
+        return getattr(self._c, name)
+
+
+_conn: LockedConnection | None = None
+
+
+def connect(path: Path | str | None = None) -> LockedConnection:
     global _conn
     with _lock:
         if _conn is None or path is not None:
             p = Path(path or DB_PATH)
             p.parent.mkdir(parents=True, exist_ok=True)
-            _conn = sqlite3.connect(str(p), check_same_thread=False)
-            _conn.row_factory = sqlite3.Row
+            raw = sqlite3.connect(str(p), check_same_thread=False)
+            raw.row_factory = sqlite3.Row
+            _conn = LockedConnection(raw)
             _conn.execute("PRAGMA journal_mode=WAL")
             _conn.executescript(DDL)
             cols = {r[1] for r in _conn.execute("PRAGMA table_info(konta)")}

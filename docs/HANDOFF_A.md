@@ -1,5 +1,9 @@
 # HANDOFF – Model A
 
+## 2026-11-22 – HANDOFF #13: błąd 500 przy równoczesnych zapytaniach
+
+- **Naprawione:** jedno połączenie SQLite było używane przez kilka wątków serwera naraz – przy kilku zapytaniach w tej samej chwili (np. po zalogowaniu strona pobiera 4–5 rzeczy) zdarzał się błąd 500 `sqlite3.InterfaceError: bad parameter or other API misuse`. `db.connect()` zwraca teraz `LockedConnection`: każde polecenie pod jedną blokadą, wiersze pobierane od razu (`fetchone`/`fetchall`/iteracja bez zmian dla kodu). Sprawdzone: 110 równoczesnych zapytań (20 wątków) – same 200; `pytest` 101.
+
 ## 2026-11-22 – HANDOFF #12: decyzja właściciela projektu – konto admin, pełne prawa administratora, zgłoszenia zmian, od razu na mapie (MODEL_ROL v1.4, CONTRACT v2.3)
 
 - **Konta:** wbudowane tylko `admin` / `admin123` (`ADMIN_PASSWORD`); konta testowe `dysponent`/`administrator`/`moderator` tylko z `AED_KONTA_TESTOWE=tak` (włączone w `tests/conftest.py`). Zarezerwowane loginy: admin, administrator, moderator, dysponent, demo, root. `PATCH /konta/{login}`: dane instytucji, `nowy_login`, `haslo`, `aktywne` (zmiana nazwy instytucji przenosi jej przypisania, AED z aplikacji i zgłoszenia); `DELETE /konta/{login}`; `_konto_out` z `oczekuje` i liczbą AED instytucji.
