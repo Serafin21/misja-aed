@@ -39,9 +39,14 @@ export function label(dict: string, value: string | null | undefined): string {
 }
 
 export function address(a: Pick<Aed, 'ulica_cecha' | 'ulica' | 'numer_budynku' | 'numer_lokalu' | 'kod_pocztowy' | 'miejscowosc'>): string {
-  const street = a.ulica ? `${a.ulica_cecha && a.ulica_cecha !== 'inne' ? a.ulica_cecha + ' ' : ''}${a.ulica} ${a.numer_budynku}` : `${a.miejscowosc} ${a.numer_budynku}`;
-  const lokal = a.numer_lokalu ? `/${a.numer_lokalu}` : '';
-  return `${street}${lokal}, ${a.kod_pocztowy} ${a.miejscowosc}`;
+  // Records from OpenStreetMap often have no address – skip empty parts instead of printing "null".
+  const j = (...parts: (string | null | undefined)[]) => parts.filter((x) => x !== null && x !== undefined && String(x).trim() !== '').join(' ');
+  const cecha = a.ulica_cecha && a.ulica_cecha !== 'inne' ? a.ulica_cecha : null;
+  const nr = a.numer_budynku ? `${a.numer_budynku}${a.numer_lokalu ? `/${a.numer_lokalu}` : ''}` : null;
+  const street = a.ulica ? j(cecha, a.ulica, nr) : j(a.miejscowosc, nr);
+  const town = j(a.kod_pocztowy, a.miejscowosc);
+  const out = [street, town].filter(Boolean).join(', ');
+  return out || 'Brak adresu w danych – sprawdź położenie na mapie';
 }
 
 export function distance(m: number | undefined): string {

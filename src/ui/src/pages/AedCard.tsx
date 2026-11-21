@@ -68,7 +68,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
         <section aria-labelledby="h-hours" className="panel">
           <h2 id="h-hours">Kiedy jest dostępne</h2>
           <ul className="plain">{describeHours(a.godziny_dostepnosci).map((h) => <li key={h}>{h}</li>)}</ul>
-          <p className="hint">Zapis w danych: <code>{a.godziny_dostepnosci}</code>. Czas: Europe/Warsaw.</p>
+          {a.godziny_dostepnosci && <p className="hint">Zapis w danych: <code>{a.godziny_dostepnosci}</code>. Czas: Europe/Warsaw.</p>}
           <h2 id="h-dev">Urządzenie</h2>
           <dl className="facts">
             <dt>Stan</dt><dd>{label('status_urzadzenia', a.status_urzadzenia)}</dd>
