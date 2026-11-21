@@ -3,7 +3,7 @@
 import type { AedPoint } from '../api/types';
 
 export type Dostepnosc = 'teraz' | 'zamkniete' | 'uprawnieni' | 'nieznane';
-export type Aktualnosc = 'aktualne' | 'stare' | 'brak_daty';
+export type Aktualnosc = 'aktualne' | 'stare' | 'brak_daty' | 'zbior_nieaktualny';
 export type Zrodlo = 'dysponent' | 'osm';
 
 export interface PointFilters {
@@ -28,13 +28,14 @@ export const DOSTEPNOSC: { v: Dostepnosc; label: string; hint: string }[] = [
 
 export const AKTUALNOSC: { v: Aktualnosc; label: string; hint: string }[] = [
   { v: 'aktualne', label: 'Aktualne', hint: 'sprawdzone w ostatnich 12 mies.' },
-  { v: 'stare', label: 'Nieaktualne', hint: 'sprawdzone ponad rok temu' },
+  { v: 'stare', label: 'Do weryfikacji', hint: 'sprawdzone ponad rok temu' },
   { v: 'brak_daty', label: 'Bez daty sprawdzenia', hint: 'nie wiadomo, kiedy sprawdzono' },
+  { v: 'zbior_nieaktualny', label: 'Zbiór dostawcy po terminie', hint: 'dostawca nie zaktualizował zbioru na czas' },
 ];
 
 export const ZRODLO: { v: Zrodlo; label: string; hint: string }[] = [
-  { v: 'dysponent', label: 'Od instytucji', hint: 'dane od właścicieli AED' },
-  { v: 'osm', label: 'OpenStreetMap', hint: 'dane społeczności (ODbL)' },
+  { v: 'dysponent', label: 'Wspólna lista', hint: 'dane właścicieli AED z dane.gov.pl' },
+  { v: 'osm', label: 'Do sprawdzenia', hint: 'OpenStreetMap – niepotwierdzone przez właściciela' },
 ];
 
 export function dostepnosc(p: AedPoint): Dostepnosc {
@@ -43,6 +44,7 @@ export function dostepnosc(p: AedPoint): Dostepnosc {
 }
 
 export function aktualnosc(p: AedPoint): Aktualnosc {
+  if (p.zbior_nieaktualny) return 'zbior_nieaktualny'; // MODEL_ROL §7: dataset out of date ≠ record to verify
   if (p.stan_danych === 'aktualne') return 'aktualne';
   return p.wiek_danych_dni === null ? 'brak_daty' : 'stare'; // undefined (older API) counts as "stare"
 }

@@ -22,8 +22,11 @@ export function AedListItem({ aed, from, rank, mode = 'dostepnosc' }: { aed: Aed
         <div className="aed-item__badges">
           {mode === 'dane' ? <><DataBadge aed={aed} /><AvailabilityBadge aed={aed} /></> : <><AvailabilityBadge aed={aed} /><DataBadge aed={aed} /></>}
           {aed.mobilny && <span className="badge badge--info"><Icon name="car" />Urządzenie w pojeździe</span>}
+          {aed.meta?.warstwa === 'pomocnicza' && <span className="badge badge--helper"><Icon name="question" />Do sprawdzenia – OpenStreetMap</span>}
+          {aed.meta?.zbior_nieaktualny && <span className="badge badge--warn">Zbiór dostawcy po terminie</span>}
         </div>
         <p className="aed-item__addr">{address(aed)}</p>
+        {aed.meta?.dostawca && <p className="hint">Dane: {aed.meta.dostawca}</p>}
         <p className="aed-item__where">{where}</p>
         <p className="aed-item__hours"><span className="visually-hidden">Godziny: </span>{describeHours(aed.godziny_dostepnosci).join('; ')}</p>
         <LockedCabinet aed={aed} compact />

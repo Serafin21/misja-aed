@@ -31,7 +31,9 @@ export function AedCard({ id }: { id: string }) {
 function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
   const a = d.aed;
   const to = { lat: a.szerokosc_geograficzna, lon: a.dlugosc_geograficzna };
-  const osm = a.licencja === 'ODbL-1.0';
+  const m = a.meta ?? {};
+  const helper = m.warstwa === 'pomocnicza';
+  const osm = helper || a.licencja === 'ODbL-1.0';
   return (
     <article className="card-page" aria-labelledby="page-title">
       <header className="card-page__head">
@@ -43,6 +45,20 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
           {a.tryb_pediatryczny && <span className="badge badge--info">Tryb dla dzieci</span>}
         </div>
       </header>
+
+      {helper && (
+        <div className="callout callout--warn" role="note">
+          <p className="callout__title">Do sprawdzenia – punkt z mapy OpenStreetMap</p>
+          <p>Właściciel urządzenia nie potwierdził tych danych i nie należą one do wspólnej listy AED. Urządzenie może być w innym miejscu albo niedostępne. Jeśli wiesz, czyje to AED, <Link to={`/zglos?aed=${encodeURIComponent(a.id_aed)}`}>daj nam znać</Link> – zaprosimy właściciela do publikacji danych.</p>
+          <p className="hint">© współtwórcy OpenStreetMap (licencja ODbL 1.0)</p>
+        </div>
+      )}
+      {!helper && (m.zbior_nieaktualny || (m.mozliwe_duplikaty?.length ?? 0) > 0) && (
+        <div className="callout callout--info" role="note">
+          {m.zbior_nieaktualny && <p><strong>Zbiór dostawcy jest po terminie aktualizacji</strong> – dane mogą być nieaktualne.</p>}
+          {(m.mozliwe_duplikaty?.length ?? 0) > 0 && <p><strong>Możliwy duplikat:</strong> w pobliżu jest AED innego dostawcy ({m.mozliwe_duplikaty!.map((x, i) => <span key={x}>{i ? ', ' : ''}<Link to={`/aed/${x}`}>{x}</Link></span>)}). Dostawcy sprawdzają, czy to to samo urządzenie.</p>}
+        </div>
+      )}
 
       <LockedCabinet aed={a} />
       <p className="firstaid-bar"><span>W nagłym wypadku dzwoń 112.</span><Link to="/pierwsza-pomoc">Jak użyć AED?</Link></p>
@@ -85,9 +101,10 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
         <section aria-labelledby="h-ver" className="panel">
           <h2 id="h-ver">Weryfikacja i aktualność</h2>
           <dl className="facts">
-            <dt>Zweryfikowano</dt><dd>{date(a.data_weryfikacji)} ({label('metoda_weryfikacji', a.metoda_weryfikacji)})</dd>
+            <dt>Metoda weryfikacji</dt><dd>{label('metoda_weryfikacji', a.metoda_weryfikacji)}</dd>
             <dt>Ostatnia aktualizacja</dt><dd>{date(a.data_aktualizacji)}</dd>
-            <dt>Potwierdzenia na miejscu</dt><dd>{d.potwierdzenia.liczba}{d.potwierdzenia.ostatnie ? `, ostatnie ${date(d.potwierdzenia.ostatnie)}` : ''}</dd>
+            <dt>Sprawdzone przez właściciela</dt><dd>{a.data_weryfikacji ? date(a.data_weryfikacji) : 'brak daty'}</dd>
+            <dt>Ostatnie potwierdzenie mieszkańca</dt><dd>{d.potwierdzenia.ostatnie ? date(d.potwierdzenia.ostatnie) : 'brak'}{d.potwierdzenia.liczba ? ` (razem ${d.potwierdzenia.liczba})` : ''}</dd>
             {a.kompletnosc !== null && <><dt>Kompletność danych</dt><dd>{a.kompletnosc}%</dd></>}
           </dl>
         </section>
@@ -106,8 +123,15 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
       <QrSticker id={a.id_aed} name={a.nazwa_obiektu} />
 
       <section aria-labelledby="h-src" className="panel">
-        <h2 id="h-src">Skąd są te dane</h2>
-        <p>Dane pochodzą z: {label('zrodlo_danych', a.zrodlo_danych)}{osm && <> (© autorzy OpenStreetMap)</>}.</p>
+        <h2 id="h-src">Skąd są te dane i kto za nie odpowiada</h2>
+        {helper ? <p>Punkt z mapy OpenStreetMap (© współtwórcy OpenStreetMap, ODbL). Nikt nie odpowiada za te dane – dlatego nie należą do wspólnej listy.</p> : (
+          <dl className="facts">
+            <dt>Dostawca danych</dt><dd><strong>{m.dostawca}</strong>{m.fikcyjny_dostawca ? ' (dostawca fikcyjny – prototyp)' : ''} – odpowiada za jakość, aktualność i poprawność tych danych</dd>
+            <dt>Zbiór w dane.gov.pl</dt><dd>{m.zbior_url ? <ExternalLink href={m.zbior_url}>{m.zbior_tytul ?? 'zbiór dostawcy'}</ExternalLink> : '—'}{m.zasob_url && <> · <ExternalLink href={m.zasob_url}>plik z danymi</ExternalLink></>}</dd>
+            <dt>Dane na dzień</dt><dd>{m.data_danych ? date(m.data_danych) : '—'}</dd>
+            <dt>Zasady korzystania</dt><dd>{m.licencja_zbioru ?? a.licencja}</dd>
+          </dl>
+        )}
         <details className="details">
         <summary>Dla specjalistów</summary>
         <p>Licencja: <strong>{a.licencja}</strong>

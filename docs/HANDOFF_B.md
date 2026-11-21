@@ -249,3 +249,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: –
 - Użycie AI (jedna linia): panel moderatora, zdjęcie w zgłoszeniu i logowanie instytucji z Claude.
 - Następny krok: test czytnikiem ekranu panelu i pola zdjęcia.
+
+## HANDOFF #22
+
+- Czas: sob 23:55
+- Zrobione (API: HANDOFF A #9, spec `docs/MODEL_ROL.md`): **Model ról w interfejsie.** Neutralna nazwa „Mapa AED” w nagłówku (logo kampanii tylko na `/dla-instytucji`). Logowanie z linku w stopce („Logowanie dla dostawców i administratorów”, `/logowanie`); po zalogowaniu menu zależne od roli: dostawca → **Moje AED** (`/moje-aed`), administrator → **Panel administratora** (`/panel`), plus „Wyloguj”. **Moje AED** (`pages/MyAed.tsx`): wczytanie opublikowanych AED do wersji roboczej, edycja/usuwanie, kreator kończy się „Pobierz pliki do publikacji” (ZIP: CSV, XML harvestera, słownik, instrukcja) – nie ma przycisku „Opublikuj”; powiadomienia (walidacja, przypomnienia, duplikaty, zgłoszenia mieszkańców) i kolejka zgłoszeń do własnych AED. **Panel administratora** (`pages/Admin.tsx`): łączenie zbiorów z raportem na zbiór, luki w pokryciu gmin, kolejka zgłoszeń bez dostawcy (`components/ReportsQueue.tsx`), zbiory po terminie + „Wyślij przypomnienia”, konta, dziennik zdarzeń, odświeżanie – administrator nie edytuje danych AED. Mapa/lista: facet „Warstwa” (Wspólna lista / Do sprawdzenia – OSM), pinezki OSM wyróżnione, plakietki „zbiór po terminie” i „możliwy duplikat”. Karta AED: pochodzenie (dostawca, zbiór, data), baner warstwy pomocniczej, potwierdzenie mieszkańca osobno. Zgłoszenie: typ problemu, opcjonalny e-mail, trafia do dostawcy albo administratora. `pages/Moderation.tsx` usunięty (`/moderacja` → panel).
+- Jak uruchomić / zobaczyć: API z `a/core` (`python -m scripts.seed --reset --osm full --lista auto`) + `npm run dev` → `/logowanie` (dysponent / dysponent-demo, administrator / administrator-demo).
+- Założenia: zgodnie z MODEL_ROL K1–K12; demo bez logowania nie zapisuje niczego.
+- CR: –
+- Znane błędy: –
+- Użycie AI (jedna linia): interfejs modelu ról z Claude.
+- Następny krok: logowanie przez login.gov.pl (docelowo), test czytnikiem ekranu nowych ekranów.

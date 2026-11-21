@@ -3,19 +3,19 @@
 // Manual: the same 4-step wizard as E4 + institution data, a list, one publication at the end. Draft saved on the device.
 import { useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react';
 import {
-  approveImport, confirmMapping, createAed, decideDuplicates, fixImportRows, HttpError, isMockMode, NotSupported, templateUrl, uploadFile,
+  approveImport, getSession, confirmMapping, createAed, decideDuplicates, fixImportRows, HttpError, isMockMode, NotSupported, templateUrl, uploadFile,
   type ImportInfo,
 } from '../api/client';
 import type { RaportWalidacji, WynikImportu } from '../api/types';
-import { RequireLogin } from '../components/Auth';
+import { RequireLogin, useSession } from '../components/Auth';
 import { AedWizard, draftToRecord, emptyDraft, type AedDraft } from '../components/AedWizard';
-import { BRAND_NAME, BRAND_SLOGAN, heartRects } from '../components/Brand';
+import { BRAND_CTA, BRAND_NAME, BRAND_SLOGAN, heartRects, LogoMark } from '../components/Brand';
 import { ErrorSummary, Req, RequiredNote, useValidation } from '../components/form';
 import { ErrorBox, Icon } from '../components/ui';
 import { dictValues, label } from '../lib/format';
 import { FIELDS, fieldLabel, templateCsv } from '../lib/fields';
 import { hoursInWords } from '../lib/hoursBuilder';
-import { usePageTitle } from '../router';
+import { Link, usePageTitle } from '../router';
 
 // ---------- institution data + local draft ----------
 interface Inst { owner: string; ownerType: string; lic: string }
@@ -41,12 +41,28 @@ export function Providers() {
   const saved = useRef(loadDraft());
   const [mode, setMode] = useState<'start' | 'file' | 'manual'>(saved.current ? 'manual' : 'start');
   const [inst, setInst] = useState<Inst>(saved.current?.inst ?? emptyInst());
+  // a provider adds only its own devices: the institution is the one of the logged-in account (the server enforces it too)
+  const session = useSession();
+  const own = session?.rola === 'dysponent' ? session.dysponent_nazwa ?? '' : '';
+  useEffect(() => { if (own && inst.owner !== own) setInst((i) => ({ ...i, owner: own })); }, [own]);
   return (
     <>
       <h1 id="page-title">Dodaj AED swojej instytucji</h1>
       {mode === 'start' && (
         <>
-          <p className="lead">Urząd, szkoła, firma, organizacja: dodaj swoje defibrylatory, żeby każdy mógł je znaleźć. Wybierz, jak chcesz to zrobić.</p>
+          <section className="campaign-hero campaign-hero--compact" aria-label={`Akcja ${BRAND_NAME}`}>
+            <LogoMark size={72} title={`Logo akcji ${BRAND_NAME}`} />
+            <div>
+              <p className="campaign-hero__cta">{BRAND_CTA}</p>
+              <p>Urząd, szkoła, szpital, firma: dane o Waszych defibrylatorach publikujecie <strong>sami, na koncie swojej instytucji w dane.gov.pl</strong> – dzięki temu wiadomo, kto za nie odpowiada. My pomagamy przygotować pliki według wspólnego wzoru.</p>
+            </div>
+          </section>
+          <ol className="steps">
+            <li><strong>Konto dostawcy</strong> w dane.gov.pl (jeśli Wasza instytucja go nie ma) i konto w tym kreatorze – zakłada je administrator po sprawdzeniu instytucji.</li>
+            <li><strong>Dodaj AED</strong> – z pliku albo ręcznie. Sprawdzimy dane ze wzorem.</li>
+            <li><strong>Pobierz pliki do publikacji</strong> w „Moje AED” i opublikuj je na koncie instytucji. Po publikacji Wasze AED trafią na wspólną listę.</li>
+          </ol>
+          <p className="lead">Wybierz, jak chcesz dodać AED:</p>
           <div className="choice-cards">
             <button type="button" className="choice-card" onClick={() => setMode('file')}>
               <strong>Mam listę AED w pliku</strong>
@@ -72,7 +88,7 @@ function InstFields({ inst, setInst, v }: { inst: Inst; setInst: (i: Inst) => vo
     <>
       <div className="field">
         <label htmlFor="i-owner">Nazwa instytucji<Req /></label>
-        <input id="i-owner" type="text" autoComplete="organization" required value={inst.owner} onChange={(ev) => setInst({ ...inst, owner: ev.target.value })} onBlur={() => v.check('owner')}
+        <input id="i-owner" type="text" autoComplete="organization" required value={inst.owner} readOnly={!!getSession()?.dysponent_nazwa} onChange={(ev) => setInst({ ...inst, owner: ev.target.value })} onBlur={() => v.check('owner')}
           aria-invalid={!!e.owner} aria-describedby={e.owner ? 'i-owner-err' : undefined} />
         {e.owner && <p id="i-owner-err" className="field-error">{e.owner}</p>}
       </div>
@@ -113,7 +129,7 @@ function FileFlow({ inst, setInst, back }: { inst: Inst; setInst: (i: Inst) => v
   const head = useRef<HTMLHeadingElement>(null);
   const go = (s: FileStage) => { setStage(s); setTimeout(() => head.current?.focus(), 0); };
   const csvHref = isMockMode() ? `data:text/csv;charset=utf-8,${encodeURIComponent(templateCsv())}` : templateUrl('csv');
-  const titles: Record<FileStage, string> = { upload: 'Wgraj plik z listą AED', columns: 'Dopasuj kolumny, których nie rozpoznaliśmy', result: 'Wynik sprawdzania', done: 'Gotowe – AED są na mapie' };
+  const titles: Record<FileStage, string> = { upload: 'Wgraj plik z listą AED', columns: 'Dopasuj kolumny, których nie rozpoznaliśmy', result: 'Wynik sprawdzania', done: 'Gotowe – AED są w Twojej kopii roboczej' };
 
   return (
     <section aria-labelledby="f-title">
@@ -123,7 +139,7 @@ function FileFlow({ inst, setInst, back }: { inst: Inst; setInst: (i: Inst) => v
           <p><a className="btn btn--primary" href={templateUrl('xlsx')} download>Pobierz wzór w Excelu</a></p>
           <p>Możesz też wgrać własny plik – dopasujemy kolumny.</p>
           <details className="details"><summary>Dla specjalistów: wzór CSV</summary><p><a href={csvHref} download="szablon_aed.csv">Pobierz wzór CSV</a></p></details>
-          <RequireLogin role="dysponent" roles={['dysponent', 'moderator']}>
+          <RequireLogin role="dysponent">
             <UploadForm inst={inst} setInst={setInst} file={file} setFile={setFile} back={back}
               onUploaded={async (i) => {
                 setInfo(i);
@@ -143,10 +159,10 @@ function FileFlow({ inst, setInst, back }: { inst: Inst; setInst: (i: Inst) => v
       {stage === 'done' && result && (
         <div role="status">
           <div className="callout callout--ok">
-            <p className="callout__title"><Icon name="check" />Dziękujemy! Opublikowaliśmy {result.dodane + result.zaktualizowane + result.scalone} AED.</p>
+            <p className="callout__title"><Icon name="check" />Dodaliśmy {result.dodane + result.zaktualizowane + result.scalone} AED do Twojej kopii roboczej.</p>
             {result.odrzucone > 0 && <p>{result.odrzucone} AED czeka na poprawki. Popraw je w pliku i wgraj go ponownie.</p>}
           </div>
-          <Badge owner={inst.owner} />
+          <NextStep />
         </div>
       )}
     </section>
@@ -281,7 +297,7 @@ function Results({ rep, setRep, reupload, onPublished }: { rep: RaportWalidacji;
     if (!poprawki.length) { setMsg('Wpisz poprawną wartość przynajmniej w jednym polu.'); return; }
     try { setRep({ ...(await fixImportRows(rep.import_id!, poprawki)), import_id: rep.import_id }); setFix({}); setMsg('Zapisaliśmy poprawki i sprawdziliśmy plik jeszcze raz.'); }
     catch (ex) {
-      if (ex instanceof NotSupported) setMsg('Poprawianie w tabeli jeszcze nie działa na serwerze. Popraw te wiersze w pliku i wgraj go ponownie – albo opublikuj teraz gotowe AED.');
+      if (ex instanceof NotSupported) setMsg('Poprawianie w tabeli jeszcze nie działa na serwerze. Popraw te wiersze w pliku i wgraj go ponownie – albo dodaj teraz gotowe AED do kopii roboczej.');
       else setFail(ex as Error);
     }
   }
@@ -304,7 +320,7 @@ function Results({ rep, setRep, reupload, onPublished }: { rep: RaportWalidacji;
       <p role="status" className="status-line">{msg}</p>
 
       <h3 className="group-title"><Icon name="check" />Gotowe ({ready})</h3>
-      <p>{ready ? 'Te AED możemy od razu dodać do mapy.' : 'Żadne AED nie jest jeszcze gotowe.'}</p>
+      <p>{ready ? 'Te AED możemy od razu dodać do Twojej kopii roboczej.' : 'Żadne AED nie jest jeszcze gotowe.'}</p>
       {(rep as RaportWalidacji & { uzupelnienia?: { wiersz: number; pole: string | null; komunikat: string }[] }).uzupelnienia?.length ? (
         <details className="details"><summary>Co poprawiliśmy sami</summary>
           <ul>{(rep as RaportWalidacji & { uzupelnienia: { wiersz: number; pole: string | null; komunikat: string }[] }).uzupelnienia.slice(0, 50).map((p, i) => <li key={i}>{human(p.wiersz, p.pole, p.komunikat)}</li>)}</ul>
@@ -337,12 +353,12 @@ function Results({ rep, setRep, reupload, onPublished }: { rep: RaportWalidacji;
         </>
       )}
 
-      <h3 className="group-title"><Icon name="question" />Może już jest na mapie ({rep.duplikaty.length})</h3>
+      <h3 className="group-title"><Icon name="question" />Może już jest w Twoich danych ({rep.duplikaty.length})</h3>
       {rep.duplikaty.length === 0 ? <p>Nie znaleźliśmy takich AED.</p> : (
         <>
           {rep.duplikaty.map((d) => (
             <fieldset key={d.wiersz}>
-              <legend>Wiersz {d.wiersz}: w tym samym miejscu (około {Math.round(d.odleglosc_m)} m) jest już AED na mapie.</legend>
+              <legend>Wiersz {d.wiersz}: w tym samym miejscu (około {Math.round(d.odleglosc_m)} m) jest już AED.</legend>
               <div className="big-choices">
                 <label htmlFor={`dup-${d.wiersz}-s`}><input id={`dup-${d.wiersz}-s`} type="radio" name={`dup-${d.wiersz}`} checked={dupDec[d.wiersz] === 'to_samo'} onChange={() => setDupDec({ ...dupDec, [d.wiersz]: 'to_samo' })} /> To samo AED</label>
                 <label htmlFor={`dup-${d.wiersz}-i`}><input id={`dup-${d.wiersz}-i`} type="radio" name={`dup-${d.wiersz}`} checked={dupDec[d.wiersz] === 'inne'} onChange={() => setDupDec({ ...dupDec, [d.wiersz]: 'inne' })} /> To inne AED</label>
@@ -355,7 +371,7 @@ function Results({ rep, setRep, reupload, onPublished }: { rep: RaportWalidacji;
 
       {fail && <ErrorBox error={fail} />}
       <p className="form-actions">
-        <button type="button" className="btn btn--primary" onClick={publish} disabled={busy || rep.poprawne === 0}>{busy ? 'Publikuję…' : 'Opublikuj gotowe teraz, resztę poprawię później'}</button>
+        <button type="button" className="btn btn--primary" onClick={publish} disabled={busy || rep.poprawne === 0}>{busy ? 'Dodaję…' : 'Dodaj gotowe do moich AED, resztę poprawię później'}</button>
         <button type="button" className="btn btn--secondary" onClick={reupload}>Wgraj poprawiony plik</button>
       </p>
     </>
@@ -401,14 +417,14 @@ function ManualFlow({ inst, setInst, saved, back }: { inst: Inst; setInst: (i: I
   if (results && list.length === 0) {
     return (
       <div role="status">
-        <div className="callout callout--ok"><p className="callout__title"><Icon name="check" />Dziękujemy! Dodaliśmy {results.ok} AED do mapy.</p></div>
-        <Badge owner={inst.owner} />
+        <div className="callout callout--ok"><p className="callout__title"><Icon name="check" />Dodaliśmy {results.ok} AED do Twojej kopii roboczej.</p></div>
+        <NextStep />
       </div>
     );
   }
 
   return (
-    <RequireLogin role="dysponent" roles={['dysponent', 'moderator']}>
+    <RequireLogin role="dysponent">
       <p className="draft-note">Możesz wrócić później – to, co wpiszesz, zapisuje się na tym urządzeniu.</p>
       {step === 0 && (
         <form noValidate onSubmit={(e) => { e.preventDefault(); if (v.validateAll()) setStep(list.length ? 5 : 1); }} aria-labelledby="m-title">
@@ -430,7 +446,7 @@ function ManualFlow({ inst, setInst, saved, back }: { inst: Inst; setInst: (i: I
       )}
       {step === 5 && (
         <section aria-labelledby="m-list">
-          <h2 id="m-list" ref={head} tabIndex={-1}>Twoje AED do opublikowania ({list.length})</h2>
+          <h2 id="m-list" ref={head} tabIndex={-1}>Twoje AED do dodania ({list.length})</h2>
           {results && results.errors.length > 0 && (
             <div className="callout callout--error" role="alert">
               <p className="callout__title">Dodaliśmy {results.ok} AED. Tych nie udało się dodać – popraw je:</p>
@@ -452,7 +468,7 @@ function ManualFlow({ inst, setInst, saved, back }: { inst: Inst; setInst: (i: I
             </ul>
           )}
           <p className="form-actions">
-            <button type="button" className="btn btn--primary" onClick={publishAll} disabled={busy || !list.length}>{busy ? 'Publikuję…' : `Opublikuj wszystkie (${list.length})`}</button>
+            <button type="button" className="btn btn--primary" onClick={publishAll} disabled={busy || !list.length}>{busy ? 'Dodaję…' : `Dodaj do moich AED (${list.length})`}</button>
             <button type="button" className="btn btn--secondary" onClick={() => { setCurrent(emptyDraft()); setEditing(null); setStep(1); }}>Dodaj kolejne AED</button>
             <button type="button" className="btn btn--tertiary" onClick={() => setStep(0)}>Zmień dane instytucji</button>
           </p>
@@ -462,8 +478,19 @@ function ManualFlow({ inst, setInst, saved, back }: { inst: Inst; setInst: (i: I
   );
 }
 
-/** Badge for the provider. Campaign brand system from TL. */
-function Badge({ owner }: { owner: string }) {
+/** After adding: the data is NOT published yet – the provider downloads the files and publishes them on its own account (K11). */
+function NextStep() {
+  return (
+    <div className="callout callout--info">
+      <p className="callout__title">Co dalej?</p>
+      <p>Dane nie są jeszcze opublikowane. W „Moje AED” pobierz <strong>pliki do publikacji</strong> i opublikuj je na koncie swojej instytucji w dane.gov.pl – wtedy Twoje AED trafią na wspólną listę, a Twoja instytucja odpowiada za ich aktualność.</p>
+      <p><Link className="btn btn--primary" to="/moje-aed">Przejdź do „Moje AED”</Link></p>
+    </div>
+  );
+}
+
+/** Badge for the provider (campaign materials, shown in "Moje AED" once its AED are on the common list). */
+export function Badge({ owner }: { owner: string }) {
   const name = owner.trim() || 'Nasza instytucja';
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="220" viewBox="0 0 600 220" role="img" aria-label="${esc(name)} udostępnia dane o AED – ${BRAND_NAME}"><rect width="600" height="220" rx="24" fill="#1A7A50"/>${heartRects(40, 50, 24)}<text x="200" y="78" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#fff">${BRAND_NAME}</text><text x="200" y="116" font-family="Arial, sans-serif" font-size="22" fill="#fff">Udostępniamy dane o naszych AED</text><text x="200" y="150" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#fff">${esc(name.slice(0, 36))}</text><text x="200" y="184" font-family="Arial, sans-serif" font-weight="600" font-size="17" fill="#EDF2EC">${BRAND_SLOGAN}</text></svg>`;
@@ -471,7 +498,7 @@ function Badge({ owner }: { owner: string }) {
   return (
     <section aria-labelledby="badge-title" className="badge-box">
       <h3 id="badge-title">Twoja odznaka</h3>
-      <p>Pokaż na stronie lub przy wejściu, że Twoje AED jest na mapie.</p>
+      <p>Pokaż na stronie lub przy wejściu, że dane o Waszych AED są w dane.gov.pl.</p>
       <img src={href} alt={`Odznaka akcji ${BRAND_NAME}: ${name} udostępnia dane o swoich AED`} width={600} height={220} />
       <p><a className="btn btn--secondary" href={href} download="odznaka_aed.svg">Pobierz odznakę (SVG)</a></p>
     </section>

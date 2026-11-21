@@ -95,10 +95,10 @@ export function mockDecide(id: string, decyzja: string, _rekord?: Record<string,
 }
 
 // Demo accounts as in .env.example (sample mode only – the real API checks passwords from .env).
-const DEMO_PASSWORDS: Record<string, string> = { dysponent: 'dysponent-demo', moderator: 'moderator-demo' };
-export function mockLogin(login: 'dysponent' | 'moderator', haslo: string) {
+const DEMO_PASSWORDS: Record<string, string> = { dysponent: 'dysponent-demo', administrator: 'administrator-demo', moderator: 'moderator-demo' };
+export function mockLogin(login: string, haslo: string) {
   if (DEMO_PASSWORDS[login] !== haslo) return Promise.reject(new Error('Nieprawidłowy login lub hasło.'));
-  return delay({ token: `${login}.demo`, rola: login });
+  return delay({ token: `${login}.demo`, rola: (login === 'dysponent' ? 'dysponent' : 'administrator') as 'dysponent' | 'administrator', login, dysponent_nazwa: login === 'dysponent' ? 'Urząd Gminy Przykładowo' : null });
 }
 
 export function mockSources(): Promise<Zrodlo[]> { return delay(zrodla as Zrodlo[]); }

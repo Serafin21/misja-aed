@@ -271,13 +271,14 @@ function pointName(p: AedPoint, mode: MapMode): string {
   const state = mode === 'dane'
     ? (p.stan_danych === 'aktualne' ? 'dane aktualne' : 'dane nieaktualne')
     : (p.dostepny_teraz === true ? 'dostępne teraz' : p.dostepny_teraz === false ? 'teraz zamknięte' : 'godziny do sprawdzenia');
-  return `AED – ${state}. Naciśnij Enter, aby zobaczyć nazwę i adres.`;
+  return `${p.osm ? 'Do sprawdzenia (OpenStreetMap, niepotwierdzone przez właściciela)' : 'AED'} – ${state}. Naciśnij Enter, aby zobaczyć nazwę i adres.`;
 }
 
 function pointMarker(p: AedPoint, mode: MapMode): L.Marker {
   const name = pointName(p, mode);
   const icon = L.divIcon({
-    className: 'aed-pin',
+    // helper layer "Do sprawdzenia" (OSM) is greyed out – distinct from the common list by colour and description (MODEL_ROL §8)
+    className: p.osm ? 'aed-pin aed-pin--pomocnicza' : 'aed-pin',
     html: mode === 'dane' ? dataPinSvg(p.stan_danych, p.osm) : pinSvg(pointKind(p), p.osm),
     iconSize: [40, 52],
     iconAnchor: [20, 50],
@@ -304,6 +305,7 @@ function pointMarker(p: AedPoint, mode: MapMode): L.Marker {
       const dl = dataLabel(a);
       e.popup.setContent(
         `<div class="map-popup"><p class="map-popup__title">${esc(a.nazwa_obiektu || 'AED bez nazwy')}</p>`
+        + (a.meta?.warstwa === 'pomocnicza' ? '<p class="map-popup__helper"><strong>Do sprawdzenia</strong> – punkt z OpenStreetMap, niepotwierdzony przez właściciela.</p>' : (a.meta?.dostawca ? `<p class="hint">Dane: ${esc(a.meta.dostawca)}</p>` : ''))
         + `<p>${esc(address(a))}</p>`
         + `<p>${esc(mode === 'dane' ? dl.long : availText(a))}</p>`
         + (a.szafka_zamknieta ? '<p><strong>Szafka zamknięta</strong> – instrukcja na karcie AED.</p>' : '')
