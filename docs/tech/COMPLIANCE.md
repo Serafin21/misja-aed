@@ -60,7 +60,7 @@ Podstawa: „Standard techniczny: Standardy otwartości danych” (dane.gov.pl, 
 ## Licencje
 
 - **Dane:** `aed.csv`/`aed.geojson`/`aed.jsonld` – CC0-1.0 (lub CC-BY-4.0, jeśli dysponent tak wskaże; licencja w każdym rekordzie). Dane OpenStreetMap (ODbL-1.0) **wyłącznie** w osobnych zasobach `aed_osm_odbl.*` z atrybucją „© autorzy OpenStreetMap”; wartości z OSM nie są kopiowane do rekordów CC0 (CR-5).
-- **Kod:** zależności uruchomieniowe wyłącznie MIT / BSD / Apache-2.0 / PSF – `python scripts/check_licenses.py` (wynik: 0 pozycji spoza listy). Narzędzia testowe w `requirements-dev.txt` (nie trafiają do obrazu).
+- **Kod:** zależności uruchomieniowe wyłącznie MIT / BSD / Apache-2.0 / PSF – `python scripts/check_licenses.py` (wynik: 0 pozycji spoza listy). Narzędzia testowe (pytest, httpx) w `pyproject.toml` → `test` – nie trafiają do obrazu Docker.
 - **Dane osobowe:** brak – zgłoszenie obywatela nie zawiera kontaktu, telefonów i e-maili z OSM nie importujemy, `containsProtectedData=false`.
 
 ## Znane odstępstwa i ograniczenia

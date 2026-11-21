@@ -11,7 +11,7 @@ Przy pierwszym starcie baza wypełnia się danymi przykładowymi i warstwą Open
 ## Bez Dockera (Python 3.12+)
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt
+pip install -r requirements.txt pytest==9.1.1 httpx==0.28.1
 python -m scripts.seed --reset                          # dane przykładowe + OSM (sieć → cache → próbka)
 uvicorn src.api.main:app --reload                       # http://localhost:8000/api/v1/docs
 ```

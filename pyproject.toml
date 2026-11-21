@@ -1,0 +1,14 @@
+[project]
+name = "misja-aed-core"
+version = "1.0.0"
+description = "Misja AED – agregator i API otwartego zbioru danych o defibrylatorach (HackNation 2026)"
+requires-python = ">=3.12"
+# runtime dependencies: requirements.txt (MIT / BSD / Apache-2.0 only – scripts/check_licenses.py)
+
+[project.optional-dependencies]
+# tests only, not in the Docker image (httpx pulls certifi, MPL-2.0 – test environment only)
+test = ["pytest==9.1.1", "httpx==0.28.1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

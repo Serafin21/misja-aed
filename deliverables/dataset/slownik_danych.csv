@@ -1,0 +1,45 @@
+nazwa_pola,etykieta,opis,typ,format,przyklad,obowiazkowosc,slownik,tag_osm,schema_org
+id_aed,Identyfikator AED,"Stały, ogólnopolski identyfikator nadawany przy pierwszym włączeniu do zbioru; nie zmienia się przy aktualizacjach.",tekst,^AED-PL-[0-9A-F]{10}$,AED-PL-3F9A2C71B0,wymagane,,,schema:identifier
+id_dysponenta_aed,Identyfikator nadany przez dysponenta,Numer inwentarzowy lub wewnętrzny kod urządzenia u dysponenta.,tekst,maks. 50 znaków,INW/2024/017,zalecane,,ref,
+nazwa_obiektu,Nazwa obiektu,"Nazwa budynku lub miejsca, w którym jest AED.",tekst,maks. 200 znaków,Szkoła Podstawowa nr 999,wymagane,,name,schema:name
+opis_lokalizacji,Opis lokalizacji,Gdzie dokładnie szukać urządzenia na miejscu.,tekst,maks. 250 znaków,"Parter, przy recepcji, obok wind",wymagane,,defibrillator:location,schema:description
+pietro,Piętro,"0 = parter, liczby ujemne = poziomy podziemne.",liczba całkowita,-5…100,0,zalecane,,level,
+wewnatrz_budynku,Wewnątrz budynku,"true – w budynku, false – na zewnątrz (np. kapsuła na elewacji).",logiczny,true | false,true,wymagane,,indoor,
+wojewodztwo,Województwo,Nazwa województwa małymi literami.,tekst (słownik),słownik: wojewodztwo,mazowieckie,wymagane,wojewodztwo,,schema:addressRegion
+powiat,Powiat,Nazwa powiatu.,tekst,,Warszawa,zalecane,,,
+gmina,Gmina,Nazwa gminy.,tekst,,Warszawa,wymagane,,,
+miejscowosc,Miejscowość,Nazwa miejscowości (dosłownie jak w źródle).,tekst,,Warszawa,wymagane,,addr:city,schema:addressLocality
+ulica_cecha,Cecha ulicy,Rodzaj ulicy zgodnie z TERYT.,tekst (słownik),słownik: ulica_cecha,ul.,zalecane,ulica_cecha,,
+ulica,Ulica,"Nazwa ulicy bez cechy; puste, gdy miejscowość nie ma ulic.",tekst,,Królewska,zalecane,,addr:street,schema:streetAddress
+numer_budynku,Numer budynku,Numer porządkowy budynku.,tekst,maks. 10 znaków,27,wymagane,,addr:housenumber,
+numer_lokalu,Numer lokalu,"Numer lokalu, jeśli dotyczy.",tekst,maks. 10 znaków,4,opcjonalne,,addr:unit,
+kod_pocztowy,Kod pocztowy,Kod pocztowy w formacie NN-NNN.,tekst,^\d{2}-\d{3}$,00-060,wymagane,,addr:postcode,schema:postalCode
+teryt_terc,Kod TERC,"Kod terytorialny (województwo, powiat, gmina) – 6 cyfr, jak w adresie uniwersalnym.",tekst,^\d{6}$,146501,zalecane,,,
+teryt_simc,Kod SIMC,Identyfikator miejscowości z rejestru TERYT – 7 cyfr.,tekst,^\d{7}$,0918123,zalecane,,,
+szerokosc_geograficzna,Szerokość geograficzna,"WGS 84 (EPSG:4326), stopnie dziesiętne, kropka, 6 miejsc po przecinku.",liczba dziesiętna,49.000000…54.900000,52.243700,wymagane,,lat,schema:latitude
+dlugosc_geograficzna,Długość geograficzna,"WGS 84 (EPSG:4326), stopnie dziesiętne, kropka, 6 miejsc po przecinku.",liczba dziesiętna,14.100000…24.200000,21.013900,wymagane,,lon,schema:longitude
+dostep,Dostępność dla osób postronnych,Kto może skorzystać z urządzenia.,tekst (słownik),słownik: dostep,publiczny,wymagane,dostep,access,
+godziny_dostepnosci,Godziny dostępności,"Składnia opening_hours (OpenStreetMap): ""24/7"" albo np. ""Mo-Fr 07:00-20:00; Sa 08:00-14:00"".",tekst,składnia opening_hours,Mo-Fr 07:00-20:00; Sa 08:00-14:00,wymagane,,opening_hours,schema:openingHours
+dostepny_24h,Dostępny całą dobę,"true, gdy urządzenie jest dostępne 24/7.",logiczny,true | false,false,wymagane,,,
+szafka_zamknieta,Szafka zamknięta,"true, gdy szafka wymaga klucza lub kodu.",logiczny,true | false,false,wymagane,,,
+instrukcja_dostepu,Instrukcja dostępu,"Jak dostać się do urządzenia, gdy szafka jest zamknięta lub obiekt ma ograniczony dostęp.",tekst,maks. 250 znaków,Klucz w portierni; kod podaje dyspozytor 112,zalecane,,,
+mobilny,Urządzenie mobilne,true dla AED w pojeździe (np. OSP); lokalizacja oznacza miejsce stacjonowania.,logiczny,true | false,false,wymagane,,,
+status_urzadzenia,Status urządzenia,Stan techniczny według dysponenta.,tekst (słownik),słownik: status_urzadzenia,sprawny,wymagane,status_urzadzenia,,
+tryb_pediatryczny,Tryb lub elektrody pediatryczne,"true, gdy dostępne są elektrody lub tryb dla dzieci.",logiczny,true | false,true,zalecane,,,
+producent,Producent,Producent urządzenia.,tekst,,Przykład S.A.,opcjonalne,,manufacturer,
+model,Model,Model urządzenia.,tekst,,AED-100,opcjonalne,,model,
+data_waznosci_elektrod,Data ważności elektrod,Data w formacie rrrr-mm-dd.,data,yyyy-mm-dd,2027-05-31,zalecane,,,
+data_ostatniego_przegladu,Data ostatniego przeglądu,Data w formacie rrrr-mm-dd.,data,yyyy-mm-dd,2026-09-15,zalecane,,,
+dysponent_nazwa,Dysponent,Podmiot odpowiedzialny za urządzenie.,tekst,maks. 250 znaków,Szkoła Podstawowa nr 999 w Warszawie,wymagane,,operator,schema:provider
+dysponent_typ,Typ dysponenta,Rodzaj podmiotu.,tekst (słownik),słownik: dysponent_typ,szkola_placowka_oswiatowa,wymagane,dysponent_typ,,
+dysponent_regon,REGON dysponenta,"9 lub 14 cyfr, bez spacji i łączników.",tekst,^\d{9}(\d{5})?$,012345678,zalecane,,,
+kontakt_telefon,Telefon kontaktowy,9 cyfr bez spacji albo z prefiksem +48.,tekst,^(\+48)?\d{9}$,221234567,zalecane,,phone,schema:telephone
+kontakt_email,E-mail kontaktowy,Adres do aktualizacji danych.,tekst,adres e-mail,sekretariat@sp999.example.pl,zalecane,,email,schema:email
+zrodlo_danych,Źródło rekordu,Źródło nadrzędne rekordu; pełne pochodzenie w zasobie aed_pochodzenie.csv.,tekst (słownik),słownik: zrodlo_danych,dysponent,wymagane,zrodlo_danych,,
+licencja,Licencja rekordu,Warunki ponownego wykorzystania danych rekordu.,tekst (słownik),słownik: licencja,CC0-1.0,wymagane,licencja,,schema:license
+data_weryfikacji,Data weryfikacji,"Ostatnie potwierdzenie, że urządzenie jest na miejscu i dostępne.",data,yyyy-mm-dd,2026-11-20,wymagane,,check_date,
+metoda_weryfikacji,Metoda weryfikacji,Jak potwierdzono dane.,tekst (słownik),słownik: metoda_weryfikacji,deklaracja_dysponenta,wymagane,metoda_weryfikacji,,
+data_aktualizacji,Data aktualizacji rekordu,Data i czas ostatniej zmiany rekordu.,data i czas,yyyy-mm-ddThh:mm,2026-11-21T14:05,wymagane,,,schema:dateModified
+kompletnosc,Kompletność rekordu,"Odsetek wypełnionych pól obowiązkowych i zalecanych (0–100), liczony automatycznie.",liczba całkowita,0…100,86,zalecane,,,
+zdjecie_url,Zdjęcie lokalizacji,Adres URL zdjęcia pokazującego miejsce zawieszenia.,URL,https://…,https://example.pl/aed/3f9a.jpg,opcjonalne,,image,schema:image
+uwagi,Uwagi,Dodatkowe informacje.,tekst,maks. 500 znaków,,opcjonalne,,description,

@@ -1,0 +1,4 @@
+kod_zrodla,nazwa,typ_zrodla,format,licencja,czestotliwosc_aktualizacji,liczba_rekordow,rekordy_wlaczone,pokrycie_pol_wymaganych_proc,pokrycie_pol_zalecanych_proc,obszar
+dysponent:gmina-przykladowo,Urząd Gminy Przykładowo (plik CSV),dysponent,"CSV (średnik, przecinek dziesiętny)",CC0-1.0,monthly,3,3,100,29,gmina Przykładowo
+dysponent:uczelnia-testowa,Uczelnia Testowa (JSON),dysponent,JSON,CC0-1.0,monthly,2,2,100,32,kampus Kraków
+osm,OpenStreetMap – warstwa AED (eksport AED OSM Polska),spolecznosc,GeoJSON,ODbL-1.0,daily,3,2,78,0,Polska
