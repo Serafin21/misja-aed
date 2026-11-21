@@ -338,3 +338,10 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Sprawdzone: składnia TS; linki PDF → pliki. Klikanie linków w przeglądarkowym podglądzie PDF – do sprawdzenia u B (Chrome).
 - Użycie AI (jedna linia): umieszczenie plików i sekcji na stronie głównej z Claude (Model B); księga i logo – zespół.
 - Poprawka (23:35, B): na stronie głównej tylko mały link „Księga znaku akcji „AED w danych” (PDF)”; bez przycisku i pliku ZIP. Uwaga: link „AED_w_danych_logo.zip” u góry strony 9 księgi nie ma teraz pliku (pozostałe 48 linków do formatów działa).
+
+## HANDOFF #30
+
+- Czas: sob 23:45
+- Zrobione (decyzja B): w `brand/` tylko nowa księga znaku od zespołu (v1.1, 9 stron, IBM Plex Sans) i nowy zestaw logo `brand/logo/{svg,png,jpg,pdf}/` (48 plików: pozioma, pionowa, bez hasła, sam znak × kolor / negatyw / mono); `brand/logo.{svg,png,jpg,pdf}` = wersja podstawowa (pozioma, kolor). Usunięte: stara księga (11 stron, Inter), `brand/warianty/`, generator `brand/zrodla/` (w historii git). `brand/README.md` i `haslo.txt` (+ hashtag #AEDwDanych) według nowej księgi.
+- Uwaga: w aplikacji znak (`LogoMark`) i pinezki rysuje kod – kolory zgodne z księgą (#1A7A50, #0F3B2B, #E2A23B, #B9791A, #6B7570).
+- Użycie AI (jedna linia): podmiana plików i README z Claude (Model B); księga i logo – zespół.
