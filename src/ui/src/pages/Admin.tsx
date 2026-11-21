@@ -223,7 +223,7 @@ const PODSTAWY: [PodstawaPublikacji, string, string][] = [
 // ---------- institutions and their accounts: create, find, edit everything (also login and password), block, delete ----------
 function Accounts() {
   const st = useAsync(() => listAccounts(), []);
-  const empty = { rola: 'dysponent' as 'dysponent' | 'administrator', login: '', dysponent_nazwa: '', dostawca_podstawa: '' as PodstawaPublikacji | '', email: '', telefon: '', regon: '' };
+  const empty = { rola: 'dysponent' as 'dysponent' | 'administrator', login: '', haslo: '', dysponent_nazwa: '', dostawca_podstawa: '' as PodstawaPublikacji | '', email: '', telefon: '', regon: '' };
   const [form, setForm] = useState(empty);
   const [creating, setCreating] = useState(false);
   const [secret, setSecret] = useState<{ login: string; haslo: string } | null>(null);
@@ -239,12 +239,14 @@ function Accounts() {
     try {
       const inst = form.rola === 'dysponent';
       if (inst && !form.dostawca_podstawa) throw new Error('Wybierz podstawę publikacji.');
-      const r = await createAccount({ login: form.login.trim().toLowerCase(), rola: form.rola,
+      if (form.haslo && form.haslo.length < 8) throw new Error('Hasło musi mieć co najmniej 8 znaków (albo zostaw puste – wygenerujemy je).');
+      const r = await createAccount({ login: form.login.trim(), rola: form.rola, ...(form.haslo ? { haslo: form.haslo } : {}),
         dysponent_nazwa: inst ? form.dysponent_nazwa.trim() : (form.dysponent_nazwa.trim() || 'Ministerstwo Cyfryzacji'),
         ...(inst ? { dostawca_podstawa: form.dostawca_podstawa as PodstawaPublikacji } : {}), ...(form.email.trim() ? { email: form.email.trim() } : {}) });
       const extra = { ...(form.telefon.trim() ? { telefon: form.telefon.trim() } : {}), ...(form.regon.trim() ? { regon: form.regon.trim() } : {}) };
       if (Object.keys(extra).length) await updateAccount(r.data.login, extra);
       setSecret({ login: r.data.login, haslo: r.haslo_jednorazowe });
+      setTimeout(() => document.getElementById('acc-secret')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
       setForm(empty); setCreating(false); st.reload();
     } catch (ex) { setErr(ex as Error); } finally { setBusy(false); }
   }
@@ -294,11 +296,17 @@ function Accounts() {
       <h2 id="h-acc">Instytucje i konta</h2>
       <p>Wszystkie konta: instytucji odpowiedzialnych za AED i administratorów. Możesz zmienić każdą daną konta – także login i hasło (np. po utracie lub kradzieży hasła), zablokować albo usunąć konto. Wnioski instytucji o konto zatwierdzasz w <Link to="/zgloszenia-aed">Zgłoszenia AED</Link>.</p>
       {secret && (
-        <div className="callout callout--ok" role="alert">
-          <p className="callout__title">Konto założone. Przekaż instytucji login i hasło bezpiecznym kanałem.</p>
-          <p>Login: <span className="secret">{secret.login}</span> · Hasło: <span className="secret">{secret.haslo}</span></p>
-          <p className="hint">Hasło widać tylko teraz. Instytucja może je zmienić po zalogowaniu („Zmień hasło”).</p>
-          <p><button type="button" className="btn btn--tertiary" onClick={() => setSecret(null)}>Ukryj hasło</button></p>
+        <div id="acc-secret" className="callout callout--ok account-secret" role="alert">
+          <p className="callout__title">Konto założone – oto dane do logowania. Przekaż je instytucji (np. telefonicznie albo osobno e-mailem).</p>
+          <dl className="account-secret__data">
+            <dt>Login</dt><dd><span className="secret">{secret.login}</span></dd>
+            <dt>Hasło</dt><dd><span className="secret">{secret.haslo}</span></dd>
+          </dl>
+          <p className="hint">Zapisz hasło teraz – później nie da się go odczytać. Jeśli zginie, ustawisz nowe przyciskiem „Edytuj” przy koncie. Instytucja może je zmienić po zalogowaniu („Zmień hasło”).</p>
+          <p className="form-actions">
+            <button type="button" className="btn btn--secondary" onClick={() => navigator.clipboard?.writeText(`Login: ${secret.login}\nHasło: ${secret.haslo}`)}>Kopiuj login i hasło</button>
+            <button type="button" className="btn btn--tertiary" onClick={() => setSecret(null)}>Gotowe – ukryj</button>
+          </p>
         </div>
       )}
       {info && <p className="callout callout--ok" role="status">{info}</p>}
@@ -317,8 +325,11 @@ function Accounts() {
             <div className="field"><label htmlFor="acc-name">{form.rola === 'dysponent' ? 'Nazwa instytucji' : 'Imię i nazwisko lub nazwa (nieobowiązkowe)'}</label>
               <input id="acc-name" required={form.rola === 'dysponent'} minLength={3} value={form.dysponent_nazwa} onChange={(e) => setForm({ ...form, dysponent_nazwa: e.target.value })} placeholder="np. Urząd Miasta Krosna" /></div>
             <div className="field"><label htmlFor="acc-login">Login</label>
-              <input id="acc-login" required pattern="[a-z0-9][a-z0-9._\-]{2,40}" title="3–41 znaków: małe litery, cyfry, kropka, _ i -" autoCapitalize="none" spellCheck={false}
-                value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} placeholder="np. um.krosno" /></div>
+              <input id="acc-login" required minLength={3} maxLength={60} autoCapitalize="none" spellCheck={false}
+                value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} placeholder="np. UM Krosno albo aed@krosno.pl" /></div>
+            <div className="field"><label htmlFor="acc-pass">Hasło (nieobowiązkowe)</label>
+              <p id="acc-pass-hint" className="hint">Wpisz hasło albo zostaw puste – wygenerujemy je i pokażemy po założeniu konta.</p>
+              <input id="acc-pass" type="text" autoComplete="off" aria-describedby="acc-pass-hint" value={form.haslo} onChange={(e) => setForm({ ...form, haslo: e.target.value })} /></div>
             <div className="field"><label htmlFor="acc-regon">REGON (nieobowiązkowy)</label>
               <input id="acc-regon" inputMode="numeric" value={form.regon} onChange={(e) => setForm({ ...form, regon: e.target.value })} /></div>
             <div className="field"><label htmlFor="acc-mail">E-mail (nieobowiązkowy)</label>

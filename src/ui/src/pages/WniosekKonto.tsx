@@ -24,7 +24,7 @@ function validate(f: typeof EMPTY): Record<string, string> {
   if (!f.podstawa) e.podstawa = 'Wybierz podstawę publikacji.';
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email_sluzbowy.trim())) e.email_sluzbowy = 'Wpisz służbowy adres e-mail.';
   if (!/^\+?[\d\s-]{9,16}$/.test(f.telefon.trim())) e.telefon = 'Wpisz numer telefonu, np. +48 12 345 67 89.';
-  if (!/^[a-z0-9][a-z0-9._-]{2,40}$/.test(f.login.trim().toLowerCase())) e.login = 'Login: 3–41 znaków – małe litery, cyfry, kropka, _ i -.';
+  if (!/^[\p{L}\p{N}._@+\- ]{3,60}$/u.test(f.login.trim())) e.login = 'Login: od 3 do 60 znaków – litery, cyfry, kropka, myślnik albo adres e-mail.';
   if (f.haslo.length < 10) e.haslo = 'Hasło musi mieć co najmniej 10 znaków.';
   else if (f.haslo !== f.haslo2) e.haslo2 = 'Hasła się różnią.';
   return e;
@@ -48,7 +48,7 @@ export function WniosekKonto() {
     try {
       const { haslo2: _skip, ...rest } = f;
       void _skip;
-      await requestAccount({ ...rest, login: rest.login.trim().toLowerCase(), podstawa: rest.podstawa as PodstawaPublikacji } as WniosekIn);
+      await requestAccount({ ...rest, login: rest.login.trim(), podstawa: rest.podstawa as PodstawaPublikacji } as WniosekIn);
       setDone(true);
     } catch (ex) {
       if (ex instanceof HttpError && Object.keys(ex.fields).length) { setErrors(ex.fields); setFocus((x) => x + 1); }
@@ -62,7 +62,7 @@ export function WniosekKonto() {
         <h1 id="page-title">Wniosek wysłany</h1>
         <div className="callout callout--ok" role="status">
           <p className="callout__title"><Icon name="check" />Dziękujemy! Administrator sprawdzi instytucję i podstawę publikacji.</p>
-          <p>Do tego czasu konto jest nieaktywne. Po zatwierdzeniu zalogujesz się loginem <code>{f.login.trim().toLowerCase()}</code> i hasłem z wniosku.</p>
+          <p>Do tego czasu konto jest nieaktywne. Po zatwierdzeniu zalogujesz się loginem <code>{f.login.trim()}</code> i hasłem z wniosku.</p>
         </div>
         <p><Link to="/logowanie">Przejdź do logowania</Link></p>
       </>
@@ -108,7 +108,7 @@ export function WniosekKonto() {
         {input('email_sluzbowy', 'Służbowy e-mail', { type: 'email', hint: 'Najlepiej w domenie instytucji.', auto: 'email', mode: 'email' })}
         {input('telefon', 'Telefon kontaktowy', { type: 'tel', auto: 'tel', mode: 'tel' })}
         <h2>Dane logowania</h2>
-        {input('login', 'Login', { hint: 'Np. ug.przykladowo – małe litery, cyfry, kropka.', auto: 'username' })}
+        {input('login', 'Login', { hint: 'Dowolny, np. „UG Przykładowo” albo służbowy e-mail. Wielkość liter nie ma znaczenia.', auto: 'username' })}
         {input('haslo', 'Hasło', { type: 'password', hint: 'Co najmniej 10 znaków.', auto: 'new-password' })}
         {input('haslo2', 'Powtórz hasło', { type: 'password', auto: 'new-password' })}
         {fail && <ErrorBox error={fail} />}
