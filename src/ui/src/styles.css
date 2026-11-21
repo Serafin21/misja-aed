@@ -488,6 +488,9 @@ thead th { background: var(--color-surface); }
 .e2__filters .mode-switch { margin: 0 0 var(--space); }
 .e2__filters .mode-switch__opts { display: grid; gap: var(--space-s); }
 .e2-page .area-chip { margin: 0 0 var(--space-m); }
-/* "Zaloguj się, aby dodać AED" – first menu tab, separated from the rest by a line */
-.main-nav__login a { font-weight: var(--font-weight-bold); }
-@media (min-width: 900px) { .main-nav__login { padding-right: var(--space-s); margin-right: var(--space-s); border-right: 2px solid var(--color-border); } }
+/* "Zaloguj się, aby dodać AED" – last menu item, a filled button in the brand green */
+.main-nav .main-nav__login a { background: var(--brand-green, #1A7A50); color: #fff; border: 2px solid var(--brand-green, #1A7A50); border-radius: var(--radius); padding: 0 var(--space-m); font-weight: var(--font-weight-bold); text-decoration: none; }
+.main-nav .main-nav__login a:hover, .main-nav .main-nav__login a:focus-visible { background: var(--brand-deep, #0F3B2B); border-color: var(--brand-deep, #0F3B2B); color: #fff; text-decoration: underline; }
+.main-nav .main-nav__login a[aria-current="page"] { background: var(--brand-deep, #0F3B2B); color: #fff; }
+@media (min-width: 900px) { .main-nav__login { margin-left: var(--space-s); } }
+@media (max-width: 899px) { .main-nav .main-nav__login a { justify-content: center; margin-top: var(--space-s); border-left-width: 2px; } }

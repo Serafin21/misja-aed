@@ -133,8 +133,8 @@ export function App() {
           </button>
           <nav id="main-nav" aria-label="Główna" className={`main-nav${menu ? ' is-open' : ''}`}>
             <ul>
-              {!session && <li className="main-nav__login"><Link to="/logowanie">Zaloguj się, aby dodać AED</Link></li>}
               {NAV.map((n) => <li key={n.to}><Link to={n.to}>{n.label}</Link></li>)}
+              {!session && <li className="main-nav__login"><Link to="/logowanie">Zaloguj się, aby dodać AED</Link></li>}
               {session && (ROLE_NAV[session.rola] ?? []).map((n) => <li key={n.to} className="main-nav__role"><Link to={n.to}>{n.label}</Link></li>)}
               {/* only after logging in (docs/MODEL_ROL.md §4) – the server checks permissions on every operation anyway */}
               {roleHome && <li className="main-nav__role"><Link to={roleHome.to}>{roleHome.label}</Link></li>}
