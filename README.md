@@ -1,8 +1,20 @@
-# AED w danych – otwarty zbiór defibrylatorów dla dane.gov.pl
+# Mapa AED – wspólna lista AED w dane.gov.pl
 
-**Dane prosto z serca.** Prototyp na HackNation 2026, zadanie Ministerstwa Cyfryzacji „Misja AED – dane na ratunek”. Zbiera dane o defibrylatorach AED z wielu źródeł, ujednolica je według wzorcowego zakresu danych i publikuje jako otwarty zbiór dla dane.gov.pl. Każdy może w nim szybko znaleźć najbliższe dostępne AED.
+Prototyp na HackNation 2026, zadanie Ministerstwa Cyfryzacji „Misja AED – dane na ratunek”. Dane o każdym AED publikuje na dane.gov.pl jego właściciel, na własnym koncie dostawcy, a portal łączy zbiory wielu dostawców we wspólną listę. Przygotowaliśmy wzorzec danych (44 pola) i kreator, który z formularza lub pliku tworzy komplet plików do publikacji, w tym XML zgodny ze schematem harvestera dane.gov.pl 1.13. Wspólna lista nie jest nowym zbiorem: każdy rekord pokazuje dostawcę, link do zbioru i datę danych, a zgłoszenia mieszkańców trafiają do tego dostawcy.
 
-> Stan: wersja robocza (sob 13:30). Sekcje oznaczone „w toku” uzupełniamy w miarę postępu prac.
+Źródło prawdy o rolach i procesach: [`docs/MODEL_ROL.md`](docs/MODEL_ROL.md).
+
+## Role
+
+| Rola | Kto | Może | Nie może |
+|---|---|---|---|
+| Mieszkaniec | każda osoba, bez logowania | wyszukać AED; zobaczyć źródło i datę danych; wysłać zgłoszenie; potwierdzić AED | zmieniać dane |
+| Dysponent (dostawca) | właściciel AED z kontem dostawcy | przygotować pliki; opublikować zbiór na swoim koncie; aktualizować własne rekordy; rozpatrywać zgłoszenia o swoich AED | zmieniać rekordy innych dostawców; publikować cudze AED |
+| Administrator (MC) | wyznaczeni pracownicy MC | prowadzić konta i wzorzec; uruchamiać agregację; monitorować aktualność i luki; obsługiwać zgłoszenia bez dostawcy; prowadzić akcję promocyjną | dodawać, poprawiać, usuwać rekordy AED; scalać duplikaty |
+| Podmiot wspierający | fundacja, uczelnia, gmina wobec cudzych AED | pomagać dysponentom przygotować pliki; prowadzić lokalne akcje | publikować dane o cudzych AED |
+| System agregujący | proces techniczny | pobierać i walidować zbiory; budować listę; wysyłać przypomnienia | zmieniać treść rekordów |
+
+Uprawnienia sprawdza serwer przy każdej operacji, a każdy zapis trafia do dziennika zdarzeń. Dane z OpenStreetMap są tylko warstwą pomocniczą „Do sprawdzenia” – nie trafiają na listę ani do eksportu.
 
 ## Szybki start
 
@@ -17,14 +29,14 @@ Aplikacja: http://localhost (port 80), API: http://localhost/api/v1, dokumentacj
 
 > Stan: konfiguracja gotowa, pierwsze zbudowanie obrazów przez zespół – sob wieczorem (wynik wpiszemy tutaj).
 
-**Konta demonstracyjne** (hasła z pliku `.env`, domyślne z `.env.example`):
+**Konta testowe** (hasła z pliku `.env`, domyślne z `.env.example`). Logowanie: link w stopce „Logowanie dla dostawców i administratorów” (`/logowanie`).
 
 | Rola | Login | Hasło | Do czego |
 |---|---|---|---|
-| Dysponent | `dysponent` | `dysponent-demo` | wgranie pliku z AED (ekran „Dla dysponentów”, kroki 2–5) |
-| Moderator | `moderator` | `moderator-demo` | panel moderatora (zatwierdzanie zgłoszeń obywateli) |
+| Dysponent (fikcyjny dostawca) | `dysponent` | `dysponent-demo` | Moje AED: dodanie i edycja własnych AED, „Pobierz pliki do publikacji”, zgłoszenia o własnych AED |
+| Administrator | `administrator` | `administrator-demo` | Panel administratora: agregacja, luki, zgłoszenia bez dostawcy, przypomnienia, konta, dziennik zdarzeń |
 
-Przeglądanie mapy, kart AED, zgłaszanie AED i pobieranie zbioru nie wymagają logowania.
+Mapa, karty AED, zgłoszenia i eksport listy nie wymagają logowania. Dane do prototypu: `python -m scripts.seed --reset --osm full --lista auto`.
 
 ### Sama aplikacja (bez backendu, na danych przykładowych)
 
@@ -44,30 +56,25 @@ Jak każdy uruchamia Claude Code na tym repo ze swojego konta: [`docs/user/claud
 
 ## Ścieżki testowe dla jury
 
-1. **Obywatel – najbliższe AED.** Strona główna → „Znajdź najbliższe AED” → „Pokaż najbliższe AED” (albo „Użyj punktu w centrum Warszawy” w trybie demonstracyjnym) → lista 5 najbliższych z filtrem „Tylko dostępne teraz” → „Biblioteka Testowa” → na górze karty informacja, że szafka jest zamknięta, i instrukcja dostępu → „Paszport AED”: potwierdź, że urządzenie jest na miejscu.
-2. **Instytucja – plik z listą AED.** „Dla instytucji” → „Mam listę AED w pliku” → pobierz wzór → zaloguj się kontem `dysponent` → wpisz nazwę i rodzaj instytucji → wgraj `data/sample/zrodlo_gmina_przyklad.csv` → sprawdź dopasowanie kolumn → raport (zamiana „pn-pt 8-16” na `Mo-Fr 08:00-16:00`, scalony duplikat z OpenStreetMap) → zatwierdź → pobierz odznakę akcji.
-3. **Programista / dane.gov.pl.** „Zbiór danych” → pliki CSV, GeoJSON, osobny zasób OSM (ODbL), pochodzenie, źródła, słownik danych, CSVW, metadane DCAT-AP-PL, XML importu; opis 44 pól; przykłady zapytań do API.
-4. **Źródła.** „Źródła” → zakres referencyjny każdego źródła (liczba rekordów, pokrycie pól wymaganych i zalecanych, licencja, częstotliwość, obszar).
-5. **Moderator.** Stopka → „Dla specjalistów” → „Moderacja zgłoszeń” → zaloguj się kontem `moderator` → zgłoszenie obywatela → „Zatwierdź…” (uzupełnij nazwę obiektu, adres i godziny), „Scal z istniejącym” albo „Odrzuć”.
+1. **Mieszkaniec.** „Znajdź AED” → najbliższe AED → karta: dostawca danych, link do zbioru, data danych i data weryfikacji; instrukcja dostępu przy zamkniętej szafce.
+2. **Zgłoszenie.** Na karcie AED „Zgłoś problem z tym AED” (np. szafka zamknięta) → informacja, do którego dostawcy trafi uwaga. Dane na liście się nie zmieniają (K7).
+3. **Dostawca.** `/logowanie` kontem `dysponent` → Moje AED → dodaj AED albo wgraj plik → raport ze wzorcem → „Pobierz pliki do publikacji” (CSV, XML harvestera 1.13, słownik, instrukcja). Publikację na swoim koncie w dane.gov.pl wykonuje dostawca (K11).
+4. **Administrator.** `/logowanie` kontem `administrator` → Panel administratora → raport agregacji (zbiory na liście i poza nią), luki w gminach, zgłoszenia bez dostawcy. Administrator nie ma przycisków do edycji AED (K2).
+5. **Warstwa „Do sprawdzenia”.** Mapa → warstwa OpenStreetMap: punkty bez dostawcy i bez daty, odróżnione od listy, z atrybucją ODbL (K5).
+6. **Programista.** Stopka → „Eksport listy” (kompilacja zbiorów dostawców z identyfikatorem dostawcy i zbioru w każdym rekordzie) i „Dostawcy”.
 
 ## Architektura
 
 ```mermaid
 flowchart LR
-  subgraph Źródła
-    D[Pliki dysponentów<br/>CSV, XLSX, JSON, GeoJSON]
-    O[OpenStreetMap<br/>ODbL]
-    G[Zbiory w dane.gov.pl]
-    Z[Zgłoszenia obywateli]
-  end
-  D & O & G & Z --> I[Import i mapowanie kolumn]
-  I --> N[Normalizacja i walidacja<br/>JSON Schema]
-  N --> P[Deduplikacja z pochodzeniem]
-  P --> DB[(SQLite)]
-  DB --> API[REST API /api/v1<br/>FastAPI]
-  DB --> E[Eksport: CSV, GeoJSON, CSVW,<br/>DCAT-AP-PL, XML importu]
-  E --> DGP[dane.gov.pl]
-  API --> UI[Aplikacja React + Leaflet<br/>WCAG 2.2 AA]
+  D1[Dysponent A] & D2[Dysponent B] --> K[Kreator: formularz lub plik<br/>sprawdzenie ze wzorcem]
+  K --> P[Pakiet: CSV + XML harvestera 1.13]
+  P --> DGP[Konto dostawcy<br/>w dane.gov.pl]
+  DGP --> AG[Agregacja: API 1.4<br/>bez scalania, z pochodzeniem]
+  AG --> L[Wspólna lista: mapa, lista, eksport]
+  M[Mieszkaniec] -- zgłoszenie --> Q[Kolejka dostawcy]
+  Q --> D1
+  O[OpenStreetMap ODbL] -. tylko warstwa „Do sprawdzenia”<br/>i mapa luk .-> L
 ```
 
 - Kontrakt API: [`docs/CONTRACT.md`](docs/CONTRACT.md). Szczegóły techniczne backendu: `docs/tech/` (w toku).
@@ -76,7 +83,15 @@ flowchart LR
 
 ## Zgodność z dane.gov.pl
 
-W toku – skrót z `docs/tech/COMPLIANCE.md` po publikacji przez zespół backendu. Założenia z kontraktu: CSV na poziomie 3 (UTF-8, przecinek, RFC 4180), GeoJSON, API JSON ze stronicowaniem i filtrami, metadane pl/en w DCAT-AP-PL, CSVW, słownik danych, plik XML do automatycznego zasilania portalu, dane OpenStreetMap w osobnym zasobie na licencji ODbL.
+Model korzysta z mechanizmów, które portal już ma (MODEL_ROL §11): konta dostawców, harvester XML 1.13, komentarze do zbiorów i zasobów, częstotliwość aktualizacji z przypomnieniem. Pliki dostawcy: CSV (UTF-8, przecinek, RFC 4180) według wzorca 44 pól i XML harvestera zgodny z XSD. Eksport listy jest oznaczony jako kompilacja zbiorów dostawców i nie ma własnego pliku XML ani metadanych DCAT, bo lista nie ma dostawcy. Szczegóły: [`docs/tech/COMPLIANCE.md`](docs/tech/COMPLIANCE.md).
+
+## Co w prototypie jest symulacją
+
+- Dostawcy są fikcyjni (3), ich zbiory leżą w `data/dostawcy/` w kształcie odpowiedzi API 1.4 portalu.
+- Zgłoszenia mieszkańców i przypomnienia o aktualizacji są symulowane w aplikacji; docelowo komentarze do zbiorów i powiadomienia dane.gov.pl.
+- Logowanie kontami testowymi; docelowo login.gov.pl i uwierzytelnianie dwuskładnikowe.
+- Prawdziwe zbiory AED samorządów z dane.gov.pl nie mają jeszcze 44 pól wzorca – agregacja pokazuje je w raporcie, nie na mapie.
+- Kafelki mapy z serwera OpenStreetMap; przy wdrożeniu potrzebny własny serwer kafelków.
 
 ## Dostępność
 
@@ -88,15 +103,15 @@ Cel: WCAG 2.2 na poziomie AA. Wyniki testów i zrzuty: [`docs/a11y/raport.md`](d
 - Formularze: etykiety, podpowiedzi, błędy przy polach i w podsumowaniu, bez limitu czasu, bez danych osobowych.
 - Układ działa od 320 px szerokości.
 
-## Akcja „AED w danych”
+## Akcja „AED w danych” (materiały dla dostawców)
 
-Nazwa, hasło, logotyp i system znaczników na mapie wybrał zespół. Pliki logotypu i księga znaku: [`brand/`](brand/).
+Logo „AED w danych” i hasło „Dane prosto z serca” służą akcji skierowanej do właścicieli AED, którzy nie mają jeszcze zbioru na dane.gov.pl – nie są marką aplikacji. Wezwanie: „Masz AED? Udostępnij je na dane.gov.pl”. Mapa luk i warstwa OSM wskazują gminy, do których akcja trafia najpierw. Pliki logotypu i księga znaku: [`brand/`](brand/).
 
 ## Licencje
 
 - Kod: zależności wyłącznie na licencjach MIT, BSD, Apache-2.0 lub ISC (sprawdzenie: `cd src/ui && npm run licenses`). Mapa: Leaflet (BSD-2-Clause) bez react-leaflet.
 - Kafelki mapy i dane OpenStreetMap: © autorzy OpenStreetMap, licencja ODbL.
-- Dane w prototypie są przykładowe i fikcyjne.
+- Dostawcy i ich zbiory w prototypie są fikcyjni.
 
 ## Zakres użycia AI
 
