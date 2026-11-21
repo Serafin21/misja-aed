@@ -1,9 +1,18 @@
-# Akcja – materiały (właściciel: Team Leader; decyzje twórcze podejmuje zespół)
+# Akcja „AED w danych” – logotyp i księga znaku
 
-Wymagane pliki (treść zadania, „Wymagania formalne”):
-- `logo.svg` (format otwarty – plik główny), `logo.png` (min. 2000 px szerokości, przezroczyste tło), `logo.jpg` (białe tło), `logo.pdf`
-- `ksiega_znaku.pdf`: kolorystyka (HEX, RGB, CMYK), pole ochronne, minimalna wielkość (px i mm), niedozwolone użycia (min. 6 przykładów), opis koncepcji w 3–5 zdaniach; dodatkowo wersje: pełna, achromatyczna, odwrócona
-- `haslo.txt`: nazwa akcji i hasło
+**Hasło:** Dane prosto z serca · decyzje twórcze (nazwa, hasło, znak): zespół. Pliki wygenerowane z jednej definicji wektorowej (`zrodla/znak.py`).
 
-Kryterium „Logotyp i hasło” = 25% oceny: proste i zrozumiałe, zgodne z tematem, nowoczesne, kreatywne, z potencjałem promocyjnym.
-Nie kopiujemy znaku ISO 7010 E010 ani logotypów istniejących kampanii – logotyp ma być autorski. Czcionki tylko na wolnych licencjach (np. SIL OFL).
+| Plik | Co to jest |
+|---|---|
+| `logo.svg` | plik główny, format otwarty, napisy zamienione na krzywe |
+| `logo.png` | 2400 px szerokości, przezroczyste tło |
+| `logo.jpg` | białe tło, 2400 px |
+| `logo.pdf` | wektor do druku |
+| `ksiega_znaku.pdf` | księga znaku (10 stron A4): koncepcja, konstrukcja, pole ochronne, minimalna wielkość (px i mm), kolory HEX/RGB/CMYK, typografia, wersje (pełna, achromatyczna, odwrócona, jednobarwna), 8 niedozwolonych użyć, znaczniki mapy, zastosowania |
+| `haslo.txt` | nazwa akcji i hasło |
+| `warianty/` | logo pionowe i poziome w wersjach: `kolor`, `odwrocony`, `achromatyczny`, `czarny`, `bialy` (SVG, PNG, PDF; JPG dla jasnych), sam znak, ikony aplikacji, znaczniki mapy |
+| `zrodla/` | `znak.py` (geometria i kolory), `generuj.py` (pliki logo), `ksiega.py` (księga znaku) |
+
+Krój pisma: Inter (SIL Open Font License 1.1). Odtworzenie plików: `python brand/zrodla/generuj.py && python brand/zrodla/ksiega.py` (wymaga fontTools, Pillow, `rsvg-convert`, `pdfunite` i plików Inter OTF; ścieżka w zmiennej `INTER_DIR`).
+
+Wartości CMYK w księdze przeliczono z RGB bez profilu ICC – przed drukiem do potwierdzenia z drukarnią.

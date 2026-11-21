@@ -1,6 +1,6 @@
 # AED w danych – otwarty zbiór defibrylatorów dla dane.gov.pl
 
-**1 wiersz = 1 AED = szansa na życie.** Prototyp na HackNation 2026, zadanie Ministerstwa Cyfryzacji „Misja AED – dane na ratunek”. Zbiera dane o defibrylatorach AED z wielu źródeł, ujednolica je według wzorcowego zakresu danych i publikuje jako otwarty zbiór dla dane.gov.pl. Każdy może w nim szybko znaleźć najbliższe dostępne AED.
+**Dane prosto z serca.** Prototyp na HackNation 2026, zadanie Ministerstwa Cyfryzacji „Misja AED – dane na ratunek”. Zbiera dane o defibrylatorach AED z wielu źródeł, ujednolica je według wzorcowego zakresu danych i publikuje jako otwarty zbiór dla dane.gov.pl. Każdy może w nim szybko znaleźć najbliższe dostępne AED.
 
 > Stan: wersja robocza (sob 13:30). Sekcje oznaczone „w toku” uzupełniamy w miarę postępu prac.
 

@@ -31,7 +31,7 @@ export function QrSticker({ id, name }: { id: string; name: string }) {
     + `<g transform="translate(${qx} 118) scale(${s})">${qr}</g>`
     + `<text x="${W / 2}" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#fff">Zeskanuj i potwierdź, że AED jest tutaj</text>`
     + `<text x="${W / 2}" y="498" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#EDF2EC">${esc(name.slice(0, 44))}</text>`
-    + `<text x="${W / 2}" y="530" text-anchor="middle" font-family="Consolas, monospace" font-size="14" fill="#EDF2EC">${BRAND_SLOGAN}</text></svg>`;
+    + `<text x="${W / 2}" y="530" text-anchor="middle" font-family="Arial, sans-serif" font-weight="600" font-size="15" fill="#EDF2EC">${BRAND_SLOGAN}</text></svg>`;
   const href = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(sticker)}`;
   return (
     <details className="details">

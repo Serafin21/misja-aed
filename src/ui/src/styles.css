@@ -60,7 +60,7 @@ main:focus, h1:focus { outline: none; }
 .site-header__inner { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; min-height: 60px; }
 .brand { display: inline-flex; align-items: center; gap: .5rem; color: #fff; font-weight: 800; font-size: 1.2rem; text-decoration: none; min-height: 44px; }
 .brand__mark { display: inline-flex; background: #fff; border-radius: 8px; padding: 3px; }
-.brand__slogan { display: block; white-space: nowrap; font: 600 .78rem/1.1 ui-monospace, "Cascadia Mono", Consolas, monospace; opacity: .95; }
+.brand__slogan { display: block; white-space: nowrap; font-size: .8rem; font-weight: 600; line-height: 1.1; opacity: .95; }
 @media (max-width: 420px) { .brand__slogan { display: none; } }
 .site-header :focus-visible { outline-color: #fff; }
 .header-112 { margin-left: auto; display: inline-flex; align-items: center; gap: .35rem; background: #fff; color: var(--danger); font-weight: 800; padding: .4rem .8rem; border-radius: 999px; text-decoration: none; min-height: 44px; }
@@ -248,7 +248,7 @@ h2[tabindex="-1"]:focus { outline: none; }
 /* E8 */
 .campaign-hero { display: grid; gap: 1.5rem; align-items: center; grid-template-columns: auto 1fr; background: var(--bg-alt); border-radius: 20px; padding: 1.5rem; }
 @media (max-width: 640px) { .campaign-hero { grid-template-columns: 1fr; } }
-.slogan { display: inline-block; font: 700 1.15rem/1.3 ui-monospace, "Cascadia Mono", Consolas, monospace; background: #fff; border-radius: 8px; padding: .3rem .7rem; }
+.slogan { display: inline-block; font-size: 1.25rem; font-weight: 700; line-height: 1.3; color: var(--brand); background: #fff; border-radius: 8px; padding: .3rem .7rem; }
 .reasons { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); padding-left: 1.2rem; }
 .reasons li::marker { font-weight: 800; color: var(--brand); }
 .sticker { display: block; max-width: 100%; height: auto; margin: .5rem 0; }

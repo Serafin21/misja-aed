@@ -1,6 +1,6 @@
 # AED w danych – otwarty zbiór defibrylatorów dla dane.gov.pl
 
-**Hasło akcji:** 1 wiersz = 1 AED = szansa na życie
+**Hasło akcji:** Dane prosto z serca
 **Zadanie:** Misja AED – dane na ratunek (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi), HackNation 2026
 **Repozytorium:** https://github.com/Serafin21/misja-aed
 

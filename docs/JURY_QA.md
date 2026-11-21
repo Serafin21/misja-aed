@@ -33,7 +33,7 @@ Celujemy w WCAG 2.2 AA. Lista ma te same informacje co mapa, stan nie zależy od
 Tak – wgrywa swój plik w swoim formacie. Kolumny dopasowujemy automatycznie, zapisy typu „TAK/NIE” czy „pn-pt 8-16” poprawiamy sami, a raport mówi prostym językiem, w którym wierszu i polu jest problem i co proponujemy.
 
 **11. Dlaczego „AED w danych” i takie logo?**
-Logo to serce złożone z kwadratów jak komórki tabeli – każdy wiersz danych to jedno AED. Jedna bursztynowa komórka to „Twoje AED”. Hasło „1 wiersz = 1 AED = szansa na życie” mówi dysponentowi, że jeden wiersz wystarczy. Znacznik na mapie należy do tej samej rodziny.
+Logo to serce złożone z kwadratów jak komórki tabeli – każdy wiersz danych to jedno AED. Jedna bursztynowa komórka to „Twoje AED”. Hasło „Dane prosto z serca” łączy dwa sensy: AED ratuje serce, a dysponent dzieli się danymi bez wahania, bo jeden wiersz może uratować życie. Znacznik na mapie należy do tej samej rodziny.
 
 **12. Jakie dane osobowe zbieracie?**
 Żadnych od obywateli – formularze zgłoszenia i potwierdzenia mają tylko punkt na mapie i opis, z podpowiedzią, by nie wpisywać nazwisk ani telefonów. Kontakt dysponenta to kontakt instytucji.
