@@ -12,6 +12,7 @@ import { ErrorBox, ExternalLink, Loading } from '../components/ui';
 import { dictValues } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { usePageTitle } from '../router';
+import type { PodstawaPublikacji } from '../api/types';
 
 const n = (x: number | undefined) => (x ?? 0).toLocaleString('pl-PL');
 const when = (t: string | null | undefined) => (t ? t.replace('T', ', ') : '—');
@@ -208,9 +209,17 @@ function Refresh() {
 }
 
 // ---------- provider accounts ----------
+// CR-TL-6: the basis on which the provider may publish (shown on the AED card as meta.dostawca_podstawa)
+const PODSTAWY: [PodstawaPublikacji, string, string][] = [
+  ['wlasciciel', 'Właściciel AED', 'urządzenie należy do tej instytucji'],
+  ['zarzadca', 'Zarządca z umową', 'zarządza urządzeniem na podstawie umowy z właścicielem'],
+  ['weryfikujacy', 'Podmiot weryfikujący', 'np. fundacja, która sprawdziła AED na miejscu'],
+];
+
 function Accounts() {
   const st = useAsync(() => listAccounts(), []);
-  const [form, setForm] = useState({ login: '', dysponent_nazwa: '', email: '' });
+  const empty = { login: '', dysponent_nazwa: '', dostawca_podstawa: '' as PodstawaPublikacji | '', email: '' };
+  const [form, setForm] = useState(empty);
   const [secret, setSecret] = useState<{ login: string; haslo: string; nowe: boolean } | null>(null);
   const [err, setErr] = useState<Error | null>(null);
   const [busy, setBusy] = useState(false);
@@ -218,9 +227,10 @@ function Accounts() {
   async function create(e: FormEvent) {
     e.preventDefault(); setErr(null); setBusy(true);
     try {
-      const r = await createAccount({ login: form.login.trim().toLowerCase(), dysponent_nazwa: form.dysponent_nazwa.trim(), ...(form.email.trim() ? { email: form.email.trim() } : {}) });
+      if (!form.dostawca_podstawa) throw new Error('Wybierz podstawę publikacji.');
+      const r = await createAccount({ login: form.login.trim().toLowerCase(), dysponent_nazwa: form.dysponent_nazwa.trim(), dostawca_podstawa: form.dostawca_podstawa, ...(form.email.trim() ? { email: form.email.trim() } : {}) });
       setSecret({ login: r.data.login, haslo: r.haslo_jednorazowe, nowe: true });
-      setForm({ login: '', dysponent_nazwa: '', email: '' });
+      setForm(empty);
       st.reload();
     } catch (ex) { setErr(ex as Error); } finally { setBusy(false); }
   }
@@ -235,7 +245,7 @@ function Accounts() {
   return (
     <section className="admin-section" aria-labelledby="h-acc">
       <h2 id="h-acc">Konta dostawców</h2>
-      <p>Konto zakładasz po sprawdzeniu, że osoba reprezentuje właściciela AED (np. pismo, e-mail z domeny instytucji). Dostawca przygotowuje i publikuje tylko swoje dane i rozpatruje zgłoszenia o swoich AED. Docelowo: konta portalu dane.gov.pl i logowanie przez login.gov.pl.</p>
+      <p>Konto zakładasz po sprawdzeniu, że osoba reprezentuje podmiot, który odpowiada za dane: właściciela AED, zarządcę z umową albo podmiot, który sprawdził AED na miejscu (np. pismo, umowa, e-mail z domeny instytucji). Dostawca przygotowuje i publikuje tylko dane, za które odpowiada, i rozpatruje zgłoszenia o swoich AED. Docelowo: konta portalu dane.gov.pl i logowanie przez login.gov.pl.</p>
       {secret && (
         <div className="callout callout--ok" role="alert">
           <p className="callout__title">{secret.nowe ? 'Konto założone.' : 'Nowe hasło gotowe.'} Przekaż instytucji login i hasło bezpiecznym kanałem.</p>
@@ -255,6 +265,18 @@ function Accounts() {
           <label htmlFor="acc-name">Nazwa instytucji (jak w danych AED)</label>
           <input id="acc-name" required minLength={3} value={form.dysponent_nazwa} onChange={(e) => setForm({ ...form, dysponent_nazwa: e.target.value })} placeholder="np. Urząd Miasta Krosna" />
         </div>
+        <fieldset className="field field--full">
+          <legend>Podstawa publikacji</legend>
+          <div className="big-choices">
+            {PODSTAWY.map(([v, l, h]) => (
+              <label key={v}>
+                <input type="radio" name="acc-podstawa" value={v} required checked={form.dostawca_podstawa === v}
+                  onChange={() => setForm({ ...form, dostawca_podstawa: v })} />
+                <span>{l}<span className="hint"> – {h}</span></span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div className="field">
           <label htmlFor="acc-mail">E-mail kontaktowy (nieobowiązkowy)</label>
           <input id="acc-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />

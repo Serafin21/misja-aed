@@ -66,8 +66,12 @@ export function mockNearest(lat: number, lon: number, limit: number, onlyNow: bo
 export function mockGetAed(id: string): Promise<AedDetail | null> {
   const a = records.find((r) => r.id_aed === id);
   if (!a) return delay(null);
+  // CR-TL-6 placeholder until Model A sends meta.dostawca_podstawa: sample records are fictional providers' own AED
+  const meta = a.licencja === 'ODbL-1.0' ? undefined
+    : { warstwa: 'lista' as const, dostawca: a.dysponent_nazwa, dostawca_podstawa: 'wlasciciel' as const, fikcyjny_dostawca: true, licencja_zbioru: a.licencja };
+  const view = withAvailability(a);
   return delay({
-    aed: withAvailability(a),
+    aed: meta && !view.meta ? { ...view, meta } : view,
     pochodzenie: (pochodzenie as Pochodzenie[]).filter((p) => p.id_aed === id),
     potwierdzenia: confirmations.get(id) ?? { liczba: 0, ostatnie: null },
   });

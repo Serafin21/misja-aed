@@ -276,3 +276,16 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: –
 - Użycie AI (jedna linia): teksty pod model ról, strony Dostawcy/Eksport i poprawka księgi znaku z Claude (Model B); treść modelu – TL.
 - Następny krok: build u człowieka B, potem zrzuty 01–06 i test a11y.
+
+## HANDOFF #24
+
+- Czas: sob 21:35
+- Build u człowieka B po #23: `npm run build` zielony (2,48 s; tylko ostrzeżenie Vite o paczce JS > 500 kB).
+- Zrobione (CR-TL-6): `SUBMISSION.md` – nazwa zespołu **MKS**; w „Podejściu”, tabeli ról README i pitch (prezentacja slajd 3, opis projektu) zasada „publikuje tylko podmiot, który za dane odpowiada – właściciel, zarządca z umową albo fundacja, która sprawdziła AED na miejscu – i zawsze po zalogowaniu”. Karta AED: „Dostawca: {dostawca} ({właściciel | zarządca z umową | weryfikuje na miejscu})” z `meta.dostawca_podstawa` (typ `PodstawaPublikacji`, etykiety `PODSTAWA_LABEL` w `api/types.ts`); atrapa w trybie przykładowym: rekordy dysponentów z `data/sample` jako „właściciel”, fikcyjny dostawca. Panel administratora → zakładanie konta: obowiązkowe pole „Podstawa publikacji” (właściciel AED / zarządca z umową / podmiot weryfikujący), wysyłane jako `dostawca_podstawa` w `POST /konta`; tekst nad formularzem zaktualizowany. README: link do strony zadania (hacknation.pl) zamiast dokumentów z repo (git rm robi A).
+- Zrobione (CR-TL-7): `docs/AI_USAGE.md` – tabela według TL, bez TODO (nagłówek i kolejność kolumn bez zmian; doszedł wiersz „Model ról i specyfikacja”). Wiersz „Kod frontendu” z #23 zastąpiony brzmieniem TL. (CR-TL-7 prosił o commit razem z #23 – #23 był już wypchnięty, więc razem z #24.)
+- Sprawdzone: składnia TS zmienionych plików. Build po tych zmianach – do uruchomienia u B.
+- CR do A: `meta.dostawca_podstawa` w rekordach listy (`wlasciciel` | `zarzadca` | `weryfikujacy`), pole `dostawca_podstawa` w `POST /konta` i w `GET /konta`.
+- Do decyzji TL: opis rozwiązania w SUBMISSION (tekst TL z CR-TL-5) i wstęp README nadal mówią „publikuje… jego właściciel” – zostawione bez zmian, bo CR-TL-6 wskazał tylko „Podejście”, tabelę ról i pitch.
+- Znane błędy: –
+- Użycie AI (jedna linia): zmiany tekstów i pól według decyzji TL z Claude (Model B).
+- Następny krok: build u B, zrzuty 01–06 po scaleniu A, test a11y.

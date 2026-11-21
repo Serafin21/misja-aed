@@ -7,7 +7,7 @@
 Mapa AED – wspólna lista AED w dane.gov.pl (akcja dla dostawców danych: „AED w danych”)
 
 ## Nazwa zespołu
-TODO
+MKS
 
 ## Numer stolika
 15f
@@ -22,7 +22,7 @@ https://github.com/Serafin21/misja-aed
 Proponujemy model, w którym dane o każdym AED publikuje na dane.gov.pl jego właściciel, a portal łączy zbiory wielu dostawców we wspólną listę. Przygotowaliśmy wzorzec danych (44 pola) i kreator, który z formularza lub pliku tworzy komplet plików do publikacji na koncie dostawcy, w tym XML zgodny ze schematem harvestera dane.gov.pl 1.13. Wspólna lista nie jest nowym zbiorem: każdy rekord pokazuje dostawcę, link do zbioru i datę danych, a zgłoszenia mieszkańców trafiają do tego dostawcy. Akcja „AED w danych” zaprasza właścicieli AED do publikacji tam, gdzie mapa pokazuje luki.
 
 ## Podejście do problemu (3–4 zdania)
-Problemem nie jest brak danych, tylko brak odpowiedzialności: w OpenStreetMap jest ponad 18 tys. AED, ale tylko co szósty ma datę sprawdzenia z ostatniego roku i nikt za nie nie odpowiada. Zaczęliśmy od zasad portalu i jego kodu źródłowego, żeby użyć istniejących mechanizmów: kont dostawców, harvestera XML, komentarzy do zbiorów i przypomnień o aktualizacji. Role mają twarde granice: dysponent publikuje tylko swoje urządzenia, administrator łączy zbiory, ale nie wpisuje danych, a OSM służy wyłącznie do wskazywania luk.
+Problemem nie jest brak danych, tylko brak odpowiedzialności: w OpenStreetMap jest ponad 18 tys. AED, ale tylko co szósty ma datę sprawdzenia z ostatniego roku i nikt za nie nie odpowiada. Zaczęliśmy od zasad portalu i jego kodu źródłowego, żeby użyć istniejących mechanizmów: kont dostawców, harvestera XML, komentarzy do zbiorów i przypomnień o aktualizacji. Role mają twarde granice: publikuje tylko podmiot, który za dane odpowiada – właściciel, zarządca z umową albo fundacja, która sprawdziła AED na miejscu – i zawsze po zalogowaniu, administrator łączy zbiory, ale nie wpisuje danych, a OSM służy wyłącznie do wskazywania luk.
 
 ## Co zostało zrobione
 Model ról i odpowiedzialności (docs/MODEL_ROL.md). Wzorzec danych AED: 44 pola (XLSX), słownik danych, JSON Schema, metadane CSVW. Kreator dostawcy (Moje AED): formularz albo plik, sprawdzenie ze wzorcem i przycisk „Pobierz pliki do publikacji” – pakiet z CSV, XML harvestera 1.13 zgodnym z XSD, słownikiem i instrukcją publikacji na własnym koncie (nie ma przycisku „Opublikuj”). Agregacja wspólnej listy ze zbiorów dostawców w formacie odpowiedzi API 1.4 portalu: bez scalania rekordów, z oznaczeniem możliwych duplikatów i zbiorów po terminie. Role sprawdzane na serwerze (dysponent zmienia tylko swoje AED, administrator nie ma zapisu do danych), dziennik zdarzeń bez możliwości zmiany. Zgłoszenia mieszkańców trafiają do dostawcy, a AED bez dostawcy – do kolejki administratora jako zaproszenie do publikacji. Mapa i lista z dwoma trybami (dostępność teraz, aktualność danych), karta AED z dostawcą, zbiorem i datą danych, warstwa „Do sprawdzenia” z OpenStreetMap poza listą, mapa luk w gminach, pierwsza pomoc. Testy automatyczne kryteriów K1–K11 z modelu ról. Ograniczenia prototypu: dostawcy są fikcyjni (3), zgłoszenia i przypomnienia są symulowane w aplikacji (docelowo komentarze i powiadomienia portalu), logowanie kontami testowymi (docelowo login.gov.pl i 2FA), kafelki mapy z serwera OpenStreetMap.

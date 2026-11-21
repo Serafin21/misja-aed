@@ -10,9 +10,9 @@
 
 3 marca w centrum Warszawy świadkowie zatrzymania krążenia szukali defibrylatora, a kilka urządzeń w okolicy było zamkniętych na klucz. Danych o AED nie brakuje: w OpenStreetMap jest ponad 18 tys. urządzeń ⟲. Ale tylko co szósty ma datę sprawdzenia z ostatniego roku ⟲, a za żaden punkt nikt nie odpowiada. Dane są rozproszone i niezweryfikowane, bo nie mają właściciela.
 
-## Rozwiązanie: publikuje właściciel, portal łączy
+## Rozwiązanie: publikuje ten, kto odpowiada; portal łączy
 
-Dane o każdym AED publikuje na dane.gov.pl jego właściciel, na własnym koncie dostawcy. Portal łączy zbiory wielu dostawców we wspólną listę. Nie tworzymy nowego zbioru i niczego nie publikujemy w niczyim imieniu.
+Dane o AED publikuje tylko podmiot, który za dane odpowiada – właściciel, zarządca z umową albo fundacja, która sprawdziła AED na miejscu – i zawsze po zalogowaniu, na własnym koncie dostawcy w dane.gov.pl. Portal łączy zbiory wielu dostawców we wspólną listę. Nie tworzymy nowego zbioru i niczego nie publikujemy w niczyim imieniu.
 
 1. **Wzorzec danych AED:** 44 pola, m.in. godziny dostępności w zapisie maszynowym, zamknięta szafka i instrukcja dostępu, data i metoda weryfikacji, kod TERYT gminy. Jedna definicja, z której powstają XLSX, słownik danych, JSON Schema i CSVW.
 2. **Kreator dostawcy (Moje AED):** formularz albo plik → sprawdzenie ze wzorcem → „Pobierz pliki do publikacji”: CSV, XML harvestera dane.gov.pl 1.13 zgodny z XSD, słownik, instrukcja. Dostawca publikuje je na swoim koncie.

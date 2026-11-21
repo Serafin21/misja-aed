@@ -442,3 +442,7 @@ thead th { background: var(--color-surface); }
 .badge--transitional { background: var(--color-surface-strong); color: var(--color-text); border-color: var(--color-border-input); border-style: dashed; }
 .source-line { margin: var(--space-s) 0 0; }
 @media (max-width: 40em) { .facts { grid-template-columns: 1fr; } .facts dd { margin-bottom: var(--space-s); } }
+/* CR-TL-6: publication basis in the account form */
+.inline-form .field--full { flex-basis: 100%; border: 0; padding: 0; margin: 0; min-width: 0; }
+.inline-form .field--full legend { font-weight: var(--font-weight-semibold); margin-bottom: var(--space-s); padding: 0; }
+.big-choices .hint { font-weight: var(--font-weight-regular); }

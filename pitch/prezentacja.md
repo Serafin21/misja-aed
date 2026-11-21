@@ -36,9 +36,11 @@ Te punkty wpisują wolontariusze. Nikt nie potwierdza, że urządzenie wciąż w
 | Rola | Może | Nie może |
 |---|---|---|
 | Mieszkaniec | znaleźć AED, zobaczyć źródło i datę, zgłosić problem | zmieniać danych |
-| Dysponent (dostawca) | przygotować pliki, opublikować zbiór na **swoim** koncie, rozpatrywać zgłoszenia | publikować cudzych AED, zmieniać cudzych rekordów |
+| Dostawca: właściciel, zarządca z umową albo fundacja, która sprawdziła AED na miejscu | po zalogowaniu przygotować pliki, opublikować zbiór na **swoim** koncie, rozpatrywać zgłoszenia | publikować AED, za które nie odpowiada; zmieniać cudzych rekordów |
 | Administrator (MC) | prowadzić konta i wzorzec, uruchamiać agregację, pokazywać luki, prowadzić akcję | dodawać, poprawiać, usuwać rekordów AED |
 | OpenStreetMap | wskazywać luki (warstwa „Do sprawdzenia”) | trafić na listę ani do eksportu |
+
+Dane o AED publikuje tylko podmiot, który za dane odpowiada – właściciel, zarządca z umową albo fundacja, która sprawdziła AED na miejscu – i zawsze po zalogowaniu.
 
 Dane płyną w jedną stronę: dysponent → dane.gov.pl → wspólna lista. Zgłoszenia wracają do dysponenta. Uprawnienia sprawdza serwer, każdy zapis trafia do dziennika zdarzeń (testy K1–K11).
 

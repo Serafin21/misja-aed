@@ -1,6 +1,6 @@
 // REST client for CONTRACT §5. Falls back to in-browser mocks (data/sample/) when the API is unreachable.
 import * as mock from '../mocks/mockApi';
-import type { Zbiory, WynikImportu, Aed, AedDetail, AedMeta, AedFilters, AedPoint, AedView, ApiError, Miejsce, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
+import type { PodstawaPublikacji, Zbiory, WynikImportu, Aed, AedDetail, AedMeta, AedFilters, AedPoint, AedView, ApiError, Miejsce, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
 
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
 export const API_BASE = env.VITE_API_BASE || '/api/v1';
@@ -335,9 +335,9 @@ export interface ImportDgp { kod_zrodla: string; status: string; dodane?: number
 export const searchDgp = (q: string, importuj: boolean) =>
   http<{ data: ZbiorDgp[]; meta: { count: number; importy: ImportDgp[]; pominiete_niezwiazane?: number; bledy: string[] } }>(`/zrodla/dane-gov-pl/szukaj`, json('POST', { q, importuj }));
 
-export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; email: string | null; aktywne: boolean; utworzono: string | null; utworzyl: string | null; liczba_aed: number }
+export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; dostawca_podstawa?: PodstawaPublikacji | null; email: string | null; aktywne: boolean; utworzono: string | null; utworzyl: string | null; liczba_aed: number }
 export const listAccounts = () => http<{ data: Konto[] }>(`/konta`).then((r) => r.data);
-export const createAccount = (b: { login: string; dysponent_nazwa: string; email?: string }) =>
+export const createAccount = (b: { login: string; dysponent_nazwa: string; dostawca_podstawa: PodstawaPublikacji; email?: string }) =>
   http<{ data: Konto; haslo_jednorazowe: string }>(`/konta`, json('POST', b));
 export const resetPassword = (login: string) => http<{ data: Konto; haslo_jednorazowe: string }>(`/konta/${encodeURIComponent(login)}/reset-hasla`, json('POST'));
 export const setAccountActive = (login: string, aktywne: boolean) => http<{ data: Konto }>(`/konta/${encodeURIComponent(login)}`, json('PATCH', { aktywne }));

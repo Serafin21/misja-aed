@@ -60,7 +60,15 @@ export interface AedMeta {
   licencja_zbioru?: string | null; mozliwe_duplikaty?: string[]; fikcyjny_dostawca?: boolean;
   /** CR-TL-5: 'przejsciowy' = dataset published before the template; provider data shown unchanged */
   zgodnosc?: 'wzorzec' | 'przejsciowy';
+  /** CR-TL-6: on what basis the provider publishes this record */
+  dostawca_podstawa?: PodstawaPublikacji;
 }
+
+/** CR-TL-6: owner, manager with a contract, or an organisation that verified the AED on site */
+export type PodstawaPublikacji = 'wlasciciel' | 'zarzadca' | 'weryfikujacy';
+export const PODSTAWA_LABEL: Record<PodstawaPublikacji, string> = {
+  wlasciciel: 'właściciel', zarzadca: 'zarządca z umową', weryfikujacy: 'weryfikuje na miejscu',
+};
 
 /** GET /zbiory (CR-TL-5) – provider datasets and their status on the common list */
 export type StatusZbioru = 'wzorzec' | 'przejsciowy' | 'poza_lista';
