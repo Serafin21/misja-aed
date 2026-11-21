@@ -316,6 +316,38 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 
 ## HANDOFF #27
 
+- Czas: sob 22:30
+- Kontekst: zmiany CR-TL-8 z tej sesji (a8ed601..f977be4) **cofnięte** na prośbę człowieka B (09e8034, stan = 307a132). Zamiast nich trzy poprawki od B:
+- Zrobione: (1) „Znajdź AED” (`/znajdz`, `/mapa`): bez ścieżki okruszków i bez zdania wstępu (z linkiem 112); (2) nagłówek: serce z logo akcji (`LogoMark`) zamiast pinezki; (3) menu: dla niezalogowanych pierwsza karta „Zaloguj się, aby dodać AED” → `/logowanie`, oddzielona kreską od reszty (od 900 px).
+- Sprawdzone: składnia TS. Build – u B.
+- Użycie AI (jedna linia): trzy poprawki interfejsu z Claude (Model B) według zrzutu od B.
+- Następny krok: build i ocena B.
+
+## HANDOFF #28
+
+- Czas: sob 22:40
+- Zrobione (zrzut od B): ścieżka okruszków usunięta ze wszystkich stron (komponent `Breadcrumbs` zostaje w kodzie, nieużywany). Błąd 404 bez treści od API pokazuje zamiast „Błąd 404”: „Serwer danych nie ma tej funkcji – uruchom go ponownie po pobraniu nowej wersji (git pull)”.
+- Diagnoza „Moje AED: Błąd 404” i „nie działa konto administratora”: kod API ma `/moje-aed`, `/moje-aed/powiadomienia` i konto `administrator` / `administrator-demo` (`src/api/auth.py`) – B miał uruchomiony serwer sprzed `git pull` (uvicorn bez `--reload`). Rozwiązanie: restart serwera danych.
+- Użycie AI (jedna linia): poprawki i diagnoza z Claude (Model B).
+
+## HANDOFF #29
+
+- Czas: sob 23:30
+- Zrobione: nowa księga znaku od zespołu (9 stron, `AED_w_danych_pakiet.zip`) w `src/ui/public/akcja/`: `ksiega_znaku.pdf` i `logo/{svg,png,jpg,pdf}/` (48 plików). Strona 9 księgi ma linki względne (`logo/svg/…`) – leżą obok PDF-a, więc kliknięcie formatu w PDF otwartym ze strony pobiera plik (sprawdzone: wszystkie 50 linków ma plik docelowy). Strona główna: na dole sekcja „Akcja „AED w danych” – księga znaku” (znak, „Otwórz księgę znaku (PDF)” w nowym oknie, „Pobierz wszystkie pliki logo (ZIP)”).
+- Do decyzji: `brand/ksiega_znaku.pdf` w repo to wciąż wcześniejsza wersja (generator) – podmienić na nową od zespołu?
+- Sprawdzone: składnia TS; linki PDF → pliki. Klikanie linków w przeglądarkowym podglądzie PDF – do sprawdzenia u B (Chrome).
+- Użycie AI (jedna linia): umieszczenie plików i sekcji na stronie głównej z Claude (Model B); księga i logo – zespół.
+- Poprawka (23:35, B): na stronie głównej tylko mały link „Księga znaku akcji „AED w danych” (PDF)”; bez przycisku i pliku ZIP. Uwaga: link „AED_w_danych_logo.zip” u góry strony 9 księgi nie ma teraz pliku (pozostałe 48 linków do formatów działa).
+
+## HANDOFF #30
+
+- Czas: sob 23:45
+- Zrobione (decyzja B): w `brand/` tylko nowa księga znaku od zespołu (v1.1, 9 stron, IBM Plex Sans) i nowy zestaw logo `brand/logo/{svg,png,jpg,pdf}/` (48 plików: pozioma, pionowa, bez hasła, sam znak × kolor / negatyw / mono); `brand/logo.{svg,png,jpg,pdf}` = wersja podstawowa (pozioma, kolor). Usunięte: stara księga (11 stron, Inter), `brand/warianty/`, generator `brand/zrodla/` (w historii git). `brand/README.md` i `haslo.txt` (+ hashtag #AEDwDanych) według nowej księgi.
+- Uwaga: w aplikacji znak (`LogoMark`) i pinezki rysuje kod – kolory zgodne z księgą (#1A7A50, #0F3B2B, #E2A23B, #B9791A, #6B7570).
+- Użycie AI (jedna linia): podmiana plików i README z Claude (Model B); księga i logo – zespół.
+
+## HANDOFF #31
+
 - Czas: nd 00:20
 - Zrobione (decyzje właściciela projektu, API: HANDOFF A #12, MODEL_ROL v1.4):
   - **Znajdź AED:** zawsze lista po lewej, mapa po prawej (bez przełącznika widoku i trybów mapy). Jedno pole „Gdzie jesteś?” z szerokim przyciskiem **„Moja lokalizacja”** w tym samym pasku – lokalizacja trafia do pola jak zwykłe miejsce (adres z `/miejsca/odwrotnie`), nie jest osobnym filtrem. **„Filtry”** – rozwijany panel obok pola (czy można teraz skorzystać: otwarte / zamknięte / godziny nieokreślone; kiedy sprawdzono dane: w ostatnim roku / ponad rok temu / brak daty; źródło; województwo; pojazdy; liczniki, „Wyczyść”, „Pokaż N AED”; zamyka Escape i klik obok). **Kolejność**: od najbliższych (gdy wpisano miejsce), nazwa A–Z (domyślnie, nazwy bez liter na końcu), ostatnio sprawdzone; lista = AED widoczne na mapie. Minimalna legenda pod mapą. **Podgląd po kliknięciu znacznika** = ta sama treść co pozycja listy (`components/AedSummary.tsx`, React w dymku Leaflet).
@@ -326,3 +358,10 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
   - Logowanie: konto pokazowe `admin` / `admin123`, link do wniosku o konto.
 - Sprawdzone: `tsc -b`, `vite build`, przeglądarka na czystej bazie: admin zakłada konto instytucji → edytuje i przypisuje AED → instytucja widzi 4 AED, zgłasza zmianę i nowe AED, zmienia hasło → wniosek o konto fundacji → admin zatwierdza wszystko → nowe AED jest najbliższe dla „Kraków, Floriańska 3”.
 - CR: – · Znane błędy: strona „Dla instytucji” (stopka) ma jeszcze stary kreator pliku z kopią roboczą. · Użycie AI: ekrany z Claude.
+- Czas: sob 22:30
+- Kontekst: zmiany CR-TL-8 z tej sesji (a8ed601..f977be4) **cofnięte** na prośbę człowieka B (09e8034, stan = 307a132). Zamiast nich trzy poprawki od B:
+- Zrobione: (1) „Znajdź AED” (`/znajdz`, `/mapa`): bez ścieżki okruszków i bez zdania wstępu (z linkiem 112); (2) nagłówek: serce z logo akcji (`LogoMark`) zamiast pinezki; (3) menu: dla niezalogowanych pierwsza karta „Zaloguj się, aby dodać AED” → `/logowanie`, oddzielona kreską od reszty (od 900 px).
+- Sprawdzone: składnia TS. Build – u B.
+- Użycie AI (jedna linia): trzy poprawki interfejsu z Claude (Model B) według zrzutu od B.
+- Następny krok: build i ocena B.
+- Scalenie: połączone z pracą drugiej sesji B (#27–#30: dostępność, księga znaku, bez okruszków). Na prośbę właściciela projektu przywrócone: nowy „Znajdź AED” (lista/mapa, filtry, podgląd), role i „Zgłoszenia AED”, panel administratora. Pliki strefy A (`src/api`, `tests`) – bez cofnięcia z 09e8034 (poprawka godzin zostaje).

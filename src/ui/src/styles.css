@@ -589,3 +589,24 @@ thead th { background: var(--color-surface); }
 .field--full { grid-column: 1 / -1; }
 .main-nav__login a { font-weight: var(--font-weight-bold); }
 .submission__kind { margin: 0 0 4px; }
+/* "Zaloguj się, aby dodać AED" – last menu item, a filled button in the brand green */
+.main-nav .main-nav__login a { background: var(--brand-green, #1A7A50); color: #fff; border: 2px solid var(--brand-green, #1A7A50); border-radius: var(--radius); padding: 0 var(--space-m); font-weight: var(--font-weight-bold); text-decoration: none; }
+.main-nav .main-nav__login a:hover, .main-nav .main-nav__login a:focus-visible { background: var(--brand-deep, #0F3B2B); border-color: var(--brand-deep, #0F3B2B); color: #fff; text-decoration: underline; }
+.main-nav .main-nav__login a[aria-current="page"] { background: var(--brand-deep, #0F3B2B); color: #fff; }
+@media (min-width: 900px) { .main-nav__login { margin-left: var(--space-s); } }
+@media (max-width: 899px) { .main-nav .main-nav__login a { justify-content: center; margin-top: var(--space-s); border-left-width: 2px; } }
+/* Location button inside the "Gdzie jesteś?" field, on the right */
+.place-search__box--locate input { padding-right: 6.5rem; }
+.place-search__box--locate .place-search__clear { right: 52px; }
+.place-search__locate { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: var(--radius); background: var(--color-action); color: #fff; cursor: pointer; }
+.place-search__locate:hover, .place-search__locate:focus-visible { background: var(--color-action-hover); }
+.place-search__locate:disabled { opacity: .6; cursor: progress; }
+.place-search__locate .icon, .place-search__locate svg { width: 26px; height: 26px; }
+.e2__geo:empty { display: none; }
+.e2__geo { margin: var(--space-s) 0 0; }
+/* Home: small link to the campaign brand book */
+.brandbook-link { margin-top: var(--space-l, 2rem); font-size: 1rem; }
+/* Responsive fix (320 px): the single-column E2 grid grew to the fieldset's min-content width (368 px) */
+@media (max-width: 1099px) { .e2 { grid-template-columns: minmax(0, 1fr); } }
+.e2 > *, .e2__filters { min-width: 0; }
+fieldset.mode-switch, .e2__filters fieldset { min-width: 0; }

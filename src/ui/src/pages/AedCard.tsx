@@ -208,7 +208,7 @@ function Passport({ id, name, onDone }: { id: string; name: string; onDone: () =
           <RequiredNote />
           <ErrorSummary errors={v.summary} fieldIds={{ here: 'here-tak' }} focusToken={v.focusToken} />
           {formErr && <p role="alert" className="field-error">{formErr}</p>}
-          <fieldset aria-describedby={errors.here ? 'err-here' : undefined} aria-required="true"
+          <fieldset role="radiogroup" aria-describedby={errors.here ? 'err-here' : undefined} aria-required="true"
             onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) v.check('here'); }}>
             <legend>Czy AED jest na miejscu?<Req /></legend>
             {errors.here && <p id="err-here" className="field-error">{errors.here}</p>}
