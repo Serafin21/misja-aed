@@ -37,7 +37,11 @@ export interface MapViewProps {
   fitKey?: string;
   /** called after every move/zoom (and once at start) – E2 list shows what is visible */
   onView?: (v: { bounds: L.LatLngBounds; center: L.LatLng; zoom: number }) => void;
+  /** search result: zoom to its area (bbox) or point; a new `key` moves the map again */
+  goTo?: GoTo | null;
 }
+
+export interface GoTo { key: string; lat: number; lon: number; bbox?: [number, number, number, number] | null; zoom?: number; label?: string }
 
 const POLAND: L.LatLngBoundsExpression = [[49.0, 14.1], [54.9, 24.2]];
 
@@ -65,7 +69,7 @@ function markerName(a: AedView, mode: MapMode): string {
   return `${a.nazwa_obiektu}, ${a.miejscowosc} – ${state}${a.szafka_zamknieta ? ', szafka zamknięta' : ''}`;
 }
 
-export function MapView({ items, user, focusId, onPick, picked, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false, points, wheelZoom = true, fitKey: fitKeyProp, onView }: MapViewProps) {
+export function MapView({ items, user, focusId, onPick, picked, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false, points, wheelZoom = true, fitKey: fitKeyProp, onView, goTo }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -80,6 +84,8 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
   // CR-TL-2 point layer: one cluster group and one marker per AED and mode, reused when filters change
   const ptsGroup = useRef<L.LayerGroup | null>(null);
   const ptsCache = useRef<Map<string, L.Marker>>(new Map());
+  const goLayer = useRef<L.LayerGroup | null>(null);
+  const goKey = useRef('');
   const lastPts = useRef<{ points: AedPoint[] | null; mode: MapMode; fit?: string }>({ points: null, mode });
 
   useEffect(() => {
@@ -179,6 +185,26 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
       map.current?.setView([picked.lat, picked.lon], Math.max(map.current.getZoom(), 16));
     }
   }, [user, picked]);
+
+  // search result: fly to the area or the point and mark it (streets, addresses, localities)
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !goTo || goTo.key === goKey.current) return;
+    goKey.current = goTo.key;
+    goLayer.current?.remove();
+    goLayer.current = L.layerGroup().addTo(m);
+    if (goTo.bbox) {
+      const [a, b, c, d] = goTo.bbox;
+      m.fitBounds([[b, a], [d, c]], { padding: [24, 24], maxZoom: goTo.zoom ?? 17 });
+    } else {
+      m.setView([goTo.lat, goTo.lon], goTo.zoom ?? 16);
+    }
+    if (goTo.label) {
+      L.circleMarker([goTo.lat, goTo.lon], { radius: 10, color: '#0B2D6B', weight: 3, fillColor: '#ffffff', fillOpacity: 0.9 })
+        .bindTooltip(esc(goTo.label), { permanent: true, direction: 'top', offset: [0, -10], className: 'go-label' })
+        .addTo(goLayer.current);
+    }
+  }, [goTo]);
 
   // CR-TL-1: municipality layer – hatched where there is no AED at all (pattern injected into Leaflet's SVG)
   useEffect(() => {

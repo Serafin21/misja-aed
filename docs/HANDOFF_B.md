@@ -196,6 +196,17 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 
 ## HANDOFF #17
 
+- Czas: sob 21:00
+- Zrobione: **inteligentna wyszukiwarka miejsc** (`components/PlaceSearch.tsx`, wzorzec ARIA combobox: strzałki, Enter, Esc) na `/mapa` i `/znajdz`, dane z `GET /miejsca` (HANDOFF A #7): województwa, gminy, miejscowości (także wsie), ulice („Kraków, Floriańska” albo sama „Floriańska” przy przybliżonej mapie), adresy („Kraków, Floriańska 3”; gdy numeru nie ma – ulica); bez polskich znaków też działa („krakow”, „lodz”). Na `/mapa`: gmina → **filtr po granicy gminy** (`gmina_teryt` w punktach; Kraków: 350 AED zamiast 56 z nazwą „Kraków”) + przybliżenie i znacznik „Gmina: Kraków · Usuń”; województwo → filtr + przybliżenie; miejscowość, ulica, adres → przybliżenie i podpisany punkt na mapie, lista od najbliższych; ostatnia opcja „Szukaj „…” w nazwach i opisach AED” (np. „Biedronka”), mapa przybliża się do wyników. Enter przed przyjściem podpowiedzi czeka na nie (nie szuka w nazwach). Na `/znajdz`: adres/ulica/miejscowość → 5 najbliższych AED od tego miejsca; gmina/województwo → `/mapa` z filtrem. URL: `?gm=1261011&gmn=Kraków`. Pole „Gmina” w filtrach usunięte (zastąpione wyszukiwarką). Kolumna filtrów nie jest już przyklejona z przewijaniem (przycinała podpowiedzi).
+- Jak uruchomić / zobaczyć: API z `a/core` (`/miejsca`, `gmina_teryt`; internet do geokodera GUGiK) + `npm run dev` → `/mapa`, `/znajdz`.
+- Założenia: bez internetu działają województwa i gminy (z PRG), ulice i adresy nie.
+- CR: –
+- Znane błędy: –
+- Użycie AI (jedna linia): wyszukiwarka i integracja z mapą z Claude.
+- Następny krok: test czytnikiem ekranu podpowiedzi.
+
+## HANDOFF #18
+
 - Czas: sob 18:15
 - Zrobione: **E10 Pierwsza pomoc – nowe ilustracje** (uwaga człowieka B: piktogramy były zbyt uproszczone). Zamiast 4 ikon jest 9 własnych scenek SVG, po jednej przy każdym kroku dla dorosłego: bezpieczeństwo, „Halo?” i dłonie na ramionach, telefon 112, sprawdzanie oddechu, wysłanie drugiej osoby po AED, uciskanie (proste ręce, dłonie jedna na drugiej), elektrody na gołej klatce (pod prawym obojczykiem i pod lewą pachą) z kablami do AED, „nikt nie dotyka” podczas analizy, uciskanie dalej. Postacie mają głowę, tułów, ręce i nogi, a dłonie są w kształcie owalu (bez rysowania palców). Rysunki są ozdobne (`aria-hidden`), bo wszystko mówi tekst kroku; tekst bez zmian. Kolory z nowych zmiennych `--aid-*` w tokens.css. Na ekranie poniżej 640 px obrazek jest nad tekstem kroku.
 - Jak uruchomić / zobaczyć: `npm run dev` → `/pierwsza-pomoc`.

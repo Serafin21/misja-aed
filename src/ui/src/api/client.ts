@@ -1,6 +1,6 @@
 // REST client for CONTRACT §5. Falls back to in-browser mocks (data/sample/) when the API is unreachable.
 import * as mock from '../mocks/mockApi';
-import type { WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ApiError, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
+import type { WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ApiError, Miejsce, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
 
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
 export const API_BASE = env.VITE_API_BASE || '/api/v1';
@@ -307,6 +307,14 @@ export function listPoints(): Promise<AedPoint[]> {
     const r = await http<PointsFC>(`/aed/punkty`);
     return r.features.map((f) => ({ id_aed: f.id, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], ...f.properties }));
   }, () => mock.mockPoints());
+}
+
+/** Place search for the map and "Znajdź AED": voivodeships, gminy, localities, streets, addresses (GET /miejsca). */
+export function searchPlaces(q: string, blisko?: { lat: number; lon: number } | null): Promise<Miejsce[]> {
+  return withFallback(async () => {
+    const r = await http<{ data: Miejsce[] }>(`/miejsca${qs({ q, blisko: blisko ? `${blisko.lat.toFixed(5)},${blisko.lon.toFixed(5)}` : undefined })}`);
+    return r.data;
+  }, () => mock.mockPlaces(q));
 }
 
 /** Full records for the given ids, in the same order (list next to the map: what is visible on the map). */
