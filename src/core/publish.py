@@ -15,10 +15,11 @@ from .store import Store, now_min, today
 BASE_URL = os.environ.get("AED_PUBLIC_URL", "http://localhost:8000").rstrip("/")
 EXPORT_PREFIX = "/api/v1/eksport/"
 
-FILES = ["aed.csv", "aed.geojson", "aed_osm_odbl.csv", "aed_osm_odbl.geojson", "aed_pochodzenie.csv", "zrodla.csv",
+FILES = ["aed.csv", "aed.geojson", "aed.jsonld", "aed_osm_odbl.csv", "aed_osm_odbl.geojson", "aed_pochodzenie.csv", "zrodla.csv",
          "slownik_danych.csv", "aed.csvw.json", "dane_gov_pl_import.xml", "metadane.jsonld"]
 MIME = {".csv": "text/csv; charset=utf-8", ".geojson": "application/geo+json", ".json": "application/csvm+json",
         ".xml": "application/xml; charset=utf-8", ".jsonld": "application/ld+json"}
+MIME_BY_NAME = {"aed.jsonld": "application/ld+json"}
 
 OSM_ATTRIBUTION = "© autorzy OpenStreetMap, licencja ODbL 1.0 (https://www.openstreetmap.org/copyright)"
 
@@ -88,6 +89,9 @@ RESOURCES = [
      "Records in the reference data scope (UTF-8, comma, CRLF, RFC 4180). Licences CC0-1.0 and CC-BY-4.0.", True),
     ("aed-geojson", "aed.geojson", "Defibrylatory AED – GeoJSON", "AED defibrillators – GeoJSON",
      "Te same rekordy jako punkty WGS 84 (EPSG:4326).", "The same records as WGS 84 (EPSG:4326) points.", True),
+    ("aed-jsonld", "aed.jsonld", "Defibrylatory AED – JSON-LD (schema.org)", "AED defibrillators – JSON-LD (schema.org)",
+     "Te same rekordy co aed.csv jako dane powiązane (JSON-LD, słownik schema.org) – poziom 4 otwartości.",
+     "The same records as aed.csv as linked data (JSON-LD, schema.org vocabulary) – openness level 4.", True),
     ("aed-osm-odbl-csv", "aed_osm_odbl.csv", "Defibrylatory AED z OpenStreetMap – CSV (ODbL)",
      "AED defibrillators from OpenStreetMap – CSV (ODbL)",
      f"Rekordy pochodzące wyłącznie z OpenStreetMap, niepokryte danymi dysponentów. {OSM_ATTRIBUTION}.",
@@ -173,7 +177,7 @@ def dcat(store: Store) -> bytes:
     mod = max((r["data_aktualizacji"] for r in store.records.values()), default=now_min())
     lic = {"aed.csv": "http://creativecommons.org/publicdomain/zero/1.0/", "aed.geojson": "http://creativecommons.org/publicdomain/zero/1.0/",
            "aed_osm_odbl.csv": "https://opendatacommons.org/licenses/odbl/1-0/", "aed_osm_odbl.geojson": "https://opendatacommons.org/licenses/odbl/1-0/"}
-    fmt_uri = {".csv": "CSV", ".geojson": "GEOJSON", ".json": "JSON"}
+    fmt_uri = {".csv": "CSV", ".geojson": "GEOJSON", ".json": "JSON", ".jsonld": "JSON_LD"}
     doc = {
         "@context": {"dcat": "http://www.w3.org/ns/dcat#", "dct": "http://purl.org/dc/terms/",
                      "foaf": "http://xmlns.com/foaf/0.1/", "vcard": "http://www.w3.org/2006/vcard/ns#",
@@ -229,6 +233,9 @@ def build(store: Store, name: str) -> bytes:
         return to_csv(open_l, order)
     if name == "aed.geojson":
         return to_geojson(open_l)
+    if name == "aed.jsonld":
+        from . import linked
+        return json.dumps(linked.collection(open_l, BASE_URL), ensure_ascii=False, indent=1).encode("utf-8")
     if name == "aed_osm_odbl.csv":
         return to_csv(osm_l, order)
     if name == "aed_osm_odbl.geojson":

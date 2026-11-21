@@ -10,10 +10,10 @@ from urllib.parse import urlencode
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 
-from src.core import db, dedup, hours, importers, mapping, pipeline, publish, schema, template, validate
+from src.core import db, dedup, hours, importers, linked, mapping, pipeline, publish, schema, template, validate
 from src.core.store import TZ, get_store, now_min, today
 
 from .auth import check_login, require
@@ -27,6 +27,22 @@ app = FastAPI(
 )
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("AED_CORS", "*").split(","),
                    allow_methods=["*"], allow_headers=["*"])
+
+
+# ---------- simple rate limit for anonymous writes (citizen reports, QR confirmations) ----------
+_hits: dict[str, list[float]] = {}
+RATE = int(os.environ.get("AED_RATE_PER_MIN", "20"))
+
+
+def rate_limit(request: Request):
+    import time
+    ip = request.client.host if request.client else "?"
+    now = time.time()
+    hits = [t for t in _hits.get(ip, []) if now - t < 60]
+    if len(hits) >= RATE:
+        err(429, "za_duzo_zadan", "Za dużo zgłoszeń z tego adresu. Spróbuj ponownie za minutę.")
+    hits.append(now)
+    _hits[ip] = hits
 
 
 # ---------- errors (CONTRACT §1) ----------
@@ -184,6 +200,17 @@ def nearest(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-
             "links": {"self": f"{API}/aed/najblizsze?lat={lat}&lon={lon}&limit={limit}"}}
 
 
+@app.get(f"{API}/aed.jsonld", tags=["aed"], summary="Zbiór AED jako JSON-LD (schema.org) – poziom 4 otwartości")
+def aed_jsonld(warstwa_: Optional[str] = Query("otwarta", alias="warstwa")):
+    recs = sorted((r for r in get_store().records.values() if not warstwa_ or warstwa(r) == warstwa_), key=lambda r: r["id_aed"])
+    return JSONResponse(linked.collection(recs, publish.BASE_URL), media_type="application/ld+json")
+
+
+@app.get(f"{API}/kontekst.jsonld", tags=["aed"], summary="Kontekst JSON-LD (mapowanie pól na schema.org)")
+def jsonld_context():
+    return JSONResponse({"@context": linked.context(publish.BASE_URL)}, media_type="application/ld+json")
+
+
 def confirmations(id_aed: str) -> dict:
     conn = get_store().conn
     rows = conn.execute("SELECT data, created FROM potwierdzenia WHERE id_aed=? ORDER BY id DESC", (id_aed,)).fetchall()
@@ -195,11 +222,13 @@ def confirmations(id_aed: str) -> dict:
 
 
 @app.get(f"{API}/aed/{{id_aed}}", tags=["aed"], summary="Rekord AED z pochodzeniem i potwierdzeniami")
-def get_aed(id_aed: str):
+def get_aed(id_aed: str, request: Request):
     st = get_store()
     rec = st.records.get(id_aed)
     if not rec:
         err(404, "nie_znaleziono", f"Nie znaleziono AED o identyfikatorze {id_aed}.")
+    if "application/ld+json" in request.headers.get("accept", ""):
+        return JSONResponse(linked.record(rec, publish.BASE_URL), media_type="application/ld+json")
     return {"data": resource(rec, {"pochodzenie": st.provenance(id_aed), "potwierdzenia": confirmations(id_aed)}),
             "links": {"self": f"{API}/aed/{id_aed}"}}
 
@@ -412,7 +441,8 @@ class ZgloszenieIn(BaseModel):
     zdjecie: Optional[str] = Field(None, description="URL https:// albo data URI (opcjonalnie)")
 
 
-@app.post(f"{API}/zgloszenia", tags=["zgloszenia"], status_code=201, summary="Zgłoszenie AED przez obywatela")
+@app.post(f"{API}/zgloszenia", tags=["zgloszenia"], status_code=201, summary="Zgłoszenie AED przez obywatela",
+          dependencies=[Depends(rate_limit)])
 def create_report(body: ZgloszenieIn):
     zid = uuid.uuid4().hex[:12]
     data = body.model_dump() | {"id": zid, "status": "do_weryfikacji", "czas": now_min()}
@@ -482,7 +512,8 @@ class Potwierdzenie(BaseModel):
     komentarz: Optional[str] = Field(None, max_length=300)
 
 
-@app.post(f"{API}/aed/{{id_aed}}/potwierdzenia", tags=["aed"], status_code=201, summary="Paszport AED – potwierdzenie z kodu QR")
+@app.post(f"{API}/aed/{{id_aed}}/potwierdzenia", tags=["aed"], status_code=201, summary="Paszport AED – potwierdzenie z kodu QR",
+          dependencies=[Depends(rate_limit)])
 def confirm(id_aed: str, body: Potwierdzenie):
     st = get_store()
     if id_aed not in st.records:
@@ -583,6 +614,11 @@ def stats():
 def dictionaries():
     return {"data": {"slowniki": schema.dictionaries(), "pola": schema.data_dictionary(),
                      "wymagane": schema.required_fields(), "zalecane": schema.recommended_fields()}}
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(f"{API}/docs")
 
 
 @app.get(f"{API}/health", tags=["system"])

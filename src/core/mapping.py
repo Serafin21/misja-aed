@@ -74,6 +74,10 @@ for _s, _t in COMPOSITE.items():
     _INDEX.append((fold(_s), _t))
 
 
+# two numbers in one cell: "52,24 21,01" / "52.24;21.01" / "52.24, 21.01" (not a single "52,0123")
+_PAIR = re.compile(r"\d(?:[.,]\d+)?\s*[\s;|]\s*-?\d|\d\.\d+\s*,\s*-?\d+\.\d")
+
+
 def _sniff(values: list) -> object | None:
     vals = [v for v in values if not normalize.is_empty(v)][:20]
     if not vals:
@@ -87,7 +91,7 @@ def _sniff(values: list) -> object | None:
                 pass
         return ok / len(vals)
     if share(lambda v: normalize.coords(v) and 49 <= normalize.coords(v)[0] <= 55) > 0.8 and \
-            all(re.search(r"\d[\s;,]+\d", str(v)) for v in vals):
+            all(_PAIR.search(str(v)) for v in vals):
         return COORDS
     if share(normalize.address) > 0.7:
         return ADDRESS
