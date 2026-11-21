@@ -228,3 +228,13 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - **Treść „Pierwszej pomocy” do sprawdzenia przez ratownika lub mentora.**
 - Użycie AI (jedna linia): wyszukanie zdjęcia na wolnej licencji i zmiana strony z Claude (Model B); wybór zdjęcia sprawdzony przez Claude na stronie pliku w Commons.
 - Następny krok: test w przeglądarce.
+
+## HANDOFF #20
+
+- Czas: sob 18:30
+- Zrobione: **SUBMISSION.md gotowy do wstępnego zgłoszenia (DRAFT 20:00)**. Sprawdzony z treścią zadania i regulaminem. Zaktualizowane „Co zostało zrobione” (backend, żywe API, pełne OSM, prosta strona, księga znaku – już nie „w toku”), dodane ograniczenia (dane instytucji przykładowe, kafelki OSM, 22 odrzucone rekordy wg docs/tech/LICZBY.md), pola demo/prezentacja jako „w wersji finalnej”, dodatkowe materiały ze ścieżkami. Usunięte odwołanie do nieistniejącego `tools/hn.py`.
+- Sprawdzone przez Claude (nie przez człowieka): 44 pola w XLSX, logotyp JPG/PNG/PDF/SVG i księga PDF są w repo, liczby z LICZBY.md.
+- Brakuje: **nazwa zespołu** (decyzja człowieka). Zdjęcie `src/ui/public/img/aed-tomaszow-mazowiecki.jpg` **nie jest w repo** – strona ukrywa wtedy zdjęcie; do dodania przez człowieka B.
+- Uwaga: LICZBY.md (16:37) ma 18 033 / 3 148, a stan z żywego API podany przez B to 18 040 / 3 155 – przed prezentacją jedno źródło (ponowne `python -m scripts.liczby`, strefa A/TL).
+- Użycie AI (jedna linia): aktualizacja tekstu zgłoszenia i sprawdzenie zgodności z wymaganiami formalnymi – Claude (Model B); zatwierdza i wysyła człowiek B.
+- Następny krok: nazwa zespołu → wysłanie DRAFT ok. 19:30; potem test w przeglądarce.

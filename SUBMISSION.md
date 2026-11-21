@@ -1,7 +1,7 @@
 # Zgłoszenie HackTribe – kopiuj pola 1:1
 
-> DRAFT: wyślij ok. 13:00 (termin sob 20:00 – po nim nie zmienisz zadania). FINAL: niedziela 11:00 (cel 10:30).
-> Zamień każde TODO na treść – `python tools/hn.py check` wyłapie braki.
+> DRAFT: wyślij sob ok. 19:30 (termin sob 20:00 – po nim nie zmienisz zadania). FINAL: niedziela 11:00 (cel 10:30).
+> Przed wysłaniem zamień każde TODO na treść (wyszukaj „TODO” w tym pliku). Pola „demo” i „prezentacja” w wersji wstępnej mogą zostać z dopiskiem „w wersji finalnej”.
 
 ## Nazwa projektu
 AED w danych – otwarty zbiór defibrylatorów dla dane.gov.pl
@@ -25,13 +25,13 @@ Tworzymy ogólnopolski, otwarty zbiór danych o defibrylatorach AED w portalu da
 Zaczęliśmy od zasad portalu dane.gov.pl (Standard techniczny, DCAT-AP-PL, plik XML importu) i na ich podstawie zaprojektowaliśmy zakres danych z jednym źródłem prawdy, z którego generujemy XLSX, słownik danych, JSON Schema i metadane CSVW. Każde źródło ma opisany zakres referencyjny (pokrycie pól, licencja, częstotliwość), a każdy rekord zachowuje pochodzenie; dane OpenStreetMap (ODbL) publikujemy jako osobną warstwę. Prototyp to backend FastAPI z importem, walidacją i deduplikacją oraz frontend React. Zakres wykorzystania AI opisujemy w dokumentacji zgodnie z regulaminem zadania.
 
 ## Co zostało zrobione
-Analiza wymagań i zasad dane.gov.pl, wzorcowy zakres danych v0.9 (XLSX, słownik danych, JSON Schema, CSVW), dane przykładowe z kilku źródeł, kontrakt API i podział pracy. Wybrana nazwa, hasło i system znaku akcji „AED w danych” (logo, znaczniki na mapie, kolorystyka). Prototyp aplikacji (React) z 9 ekranami na danych przykładowych: najbliższe dostępne AED, mapa z listą, karta AED z instrukcją dostępu przy zamkniętej szafce i „Paszportem AED”, zgłoszenie obywatela, kreator importu dla dysponenta z raportem błędów i odznaką, zbiór danych, źródła, akcja, moderacja. W toku: backend (import, walidacja, deduplikacja, publikacja), podłączenie aplikacji do API, testy dostępności, księga znaku.
+Wzorcowy zakres danych v0.9 (44 pola; XLSX, słownik danych, JSON Schema, metadane CSVW) i zbiór w formatach dla dane.gov.pl (CSV, GeoJSON, JSON-LD, plik XML do automatycznego zasilania). Backend FastAPI + SQLite: import z wielu źródeł, walidacja według zakresu, deduplikacja, zachowanie pochodzenia każdego rekordu i API. Wczytaliśmy pełny eksport AED z OpenStreetMap dla Polski (ponad 18 tys. AED, publikowane osobno na licencji ODbL) i policzyliśmy aktualność danych w każdej gminie (granice z Państwowego Rejestru Granic). Aplikacja (React) na żywym API, prosta dla osób rzadko korzystających z internetu (duży tekst, duże przyciski, „Dzwoń 112” zawsze widoczne): mapa i lista najbliższych AED z filtrami i wyszukiwarką miejsc, karta AED z instrukcją dostępu, zgłoszenie AED przez mieszkańca w 4 krokach, strona dla instytucji (wgranie pliku z raportem błędów albo wpisanie ręczne), pierwsza pomoc krok po kroku. Akcja „AED w danych”: hasło „Dane prosto z serca”, logotyp w wariantach (JPG, PNG, PDF, SVG) i księga znaku PDF. Ograniczenia: rekordy instytucji w prototypie są przykładowe (fikcyjne), prawdziwe są dane OSM; kafelki mapy z serwera OpenStreetMap (przy wdrożeniu potrzebny własny); 22 rekordy OSM odrzucone przez limity długości tekstu. W toku do finału: testy dostępności, prezentacja i nagranie demo.
 
 ## Link do demo (do 2 min)
-TODO – wymagane w finale
+Nagranie demo (do 2 min) – w wersji finalnej
 
 ## Prezentacja (PDF do 10 MB)
-TODO – pitch/prezentacja.pdf (min. 5 slajdów ze zrzutami ekranu, kroki użytkownika, ograniczenia)
+Prezentacja PDF – w wersji finalnej (min. 5 slajdów ze zrzutami ekranu, kroki użytkownika, ograniczenia)
 
 ## Dodatkowe materiały
-TODO – logotyp (JPG, PNG, PDF, SVG) i księga znaku PDF z brand/, XLSX z deliverables/zakres_danych/
+W repozytorium: logotyp (brand/logo.jpg, .png, .pdf, .svg + warianty), księga znaku (brand/ksiega_znaku.pdf), wzorcowy zakres danych (deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx), zbiór danych (deliverables/dataset/).
