@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS zgloszenia (id TEXT PRIMARY KEY, status TEXT NOT NULL
 CREATE TABLE IF NOT EXISTS potwierdzenia (
   id INTEGER PRIMARY KEY AUTOINCREMENT, id_aed TEXT NOT NULL, data TEXT NOT NULL, created TEXT);
 CREATE INDEX IF NOT EXISTS ix_potw_aed ON potwierdzenia(id_aed);
+CREATE TABLE IF NOT EXISTS konta (
+  login TEXT PRIMARY KEY, rola TEXT NOT NULL, dysponent_nazwa TEXT, haslo TEXT NOT NULL, aktywne INTEGER NOT NULL DEFAULT 1,
+  utworzono TEXT, utworzyl TEXT, email TEXT);
 """
 
 _lock = threading.RLock()

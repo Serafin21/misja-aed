@@ -139,7 +139,8 @@ ZRODLA_COLS = ["kod_zrodla", "nazwa", "typ_zrodla", "format", "licencja", "czest
 
 
 def import_xml(store: Store) -> bytes:
-    """Automatic-feed XML (dataset + resources). Namespace/XSD pending confirmation (CR-1)."""
+    """Automatic-feed XML for dane.gov.pl, valid against the portal's XSD `urn:otwarte-dane:harvester:1.13`
+    (https://dane.gov.pl/static/xml/otwarte_dane_latest.xsd, copy in docs/tech/otwarte_dane_1_13.xsd) – CR-1 resolved."""
     d = today()
     res_xml = []
     for ext, name, tpl, ten, dpl, den, dynamic in RESOURCES:
@@ -160,30 +161,34 @@ def import_xml(store: Store) -> bytes:
     tags = "".join(f'<tag lang="pl">{escape(t)}</tag>' for t in DATASET["keywords_pl"]) + \
         "".join(f'<tag lang="en">{escape(t)}</tag>' for t in DATASET["keywords_en"])
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<!-- Plik XML do automatycznego zasilania dane.gov.pl – struktura wg instrukcji COI „Instrukcja przygotowania
-     pliku XML” (v1.0.6, 2025-11-21): dataset (extIdent ≤36, title/description pl+en ≤300/≤1000, url, categories,
-     conditions, resources, tags, updateFrequency, flagi) i resource (+ availability, dataDate, specialSigns,
-     containsProtectedData). URI przestrzeni nazw „p”, XSD i składnia <tags>: do potwierdzenia (CR-1).
-     Wygenerowano: {now_min()} -->
-<p:datasets xmlns:p="urn:do-weryfikacji:dane.gov.pl:import">
+<!-- Plik XML do automatycznego zasilania dane.gov.pl (harmonizator). Zgodny ze schematem portalu
+     urn:otwarte-dane:harvester:1.13 – https://dane.gov.pl/static/xml/otwarte_dane_latest.xsd
+     (kopia: docs/tech/otwarte_dane_1_13.xsd; sprawdzenie: python scripts/check_xml.py). Wygenerowano: {now_min()} -->
+<ns:datasets xmlns:ns="urn:otwarte-dane:harvester:1.13">
   <dataset status="published">
     <extIdent>aed-polska</extIdent>
     <title><polish>{escape(DATASET['title_pl'])}</polish><english>{escape(DATASET['title_en'])}</english></title>
     <description><polish>{escape(DATASET['desc_pl'])}</polish><english>{escape(DATASET['desc_en'])}</english></description>
     <url>{escape(BASE_URL)}/</url>
     <categories><category>{DATASET['category']}</category></categories>
-    <conditions><!-- warunki ponownego wykorzystania: do decyzji dostawcy (CR-2) --></conditions>
+    <conditions>
+      <source>true</source>
+      <modification>true</modification>
+      <dbOrCopyrighted>Zasoby aed.* – CC0 1.0 (rekordy z licencją CC BY 4.0 oznaczone w polu licencja); zasoby aed_osm_odbl.* – ODbL 1.0, © autorzy OpenStreetMap.</dbOrCopyrighted>
+      <dbOrCopyrightedLicenseChosen>CC0 1.0</dbOrCopyrightedLicenseChosen>
+    </conditions>
     <resources>
 {chr(10).join(res_xml)}
     </resources>
     <tags>{tags}</tags>
     <updateFrequency>{DATASET['update_frequency']}</updateFrequency>
+    <lastUpdateDate>{now_min()}:00</lastUpdateDate>
     <hasDynamicData>true</hasDynamicData>
     <hasHighValueData>false</hasHighValueData>
     <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
     <hasResearchData>false</hasResearchData>
   </dataset>
-</p:datasets>
+</ns:datasets>
 """
     return xml.encode("utf-8")
 

@@ -1,8 +1,8 @@
 """Numbers for the presentation from the full data → docs/tech/LICZBY.md.
 
 Usage: python -m scripts.seed --reset --osm full && python -m scripts.liczby
-Counts only real AED (records with an OpenStreetMap source from the national export); the fictional sample records from
-data/sample/ are left out.
+Counts only real AED (OpenStreetMap national export + AED datasets of municipalities from dane.gov.pl); the fictional
+sample records from data/sample/ are left out.
 """
 from __future__ import annotations
 
@@ -35,7 +35,9 @@ def main():
     sample_ids = {f["properties"]["id_aed"] for f in json.loads(
         (ROOT / "data" / "sample" / "aed_ujednolicone.geojson").read_text(encoding="utf-8"))["features"]}
     real = [r for i, r in st.records.items()
-            if any(s["kod_zrodla"] == "osm" and not s["id_w_zrodle"].startswith("node/9000000") for s in st.sources.get(i, []))]
+            if any((s["kod_zrodla"] == "osm" and not s["id_w_zrodle"].startswith("node/9000000"))
+                   or s["kod_zrodla"].startswith("dane_gov_pl:") for s in st.sources.get(i, []))]
+    dgp = [(r["kod_zrodla"], db.loads(r["data"])) for r in st.conn.execute("SELECT * FROM zrodla WHERE kod_zrodla LIKE 'dane_gov_pl:%'")]
     if len(real) < 1000:
         raise SystemExit("Za mało rekordów OSM – najpierw: python -m scripts.seed --reset --osm full")
     now = datetime.now(TZ)
@@ -70,7 +72,7 @@ def main():
         "# Liczby z pełnych danych (do prezentacji)",
         "",
         f"> Wygenerowane {now:%d.%m.%Y %H:%M} przez `python -m scripts.liczby` z bazy po `python -m scripts.seed --reset --osm full`. "
-        "Źródło AED: eksport AED OSM Polska (OpenStreetMap, ODbL-1.0, © autorzy OpenStreetMap). Granice gmin: "
+        "Źródła AED: eksport AED OSM Polska (OpenStreetMap, ODbL-1.0, © autorzy OpenStreetMap) i zbiory AED samorządów z dane.gov.pl. Granice gmin: "
         "Państwowy Rejestr Granic – Główny Urząd Geodezji i Kartografii. Rekordy przykładowe (fikcyjne) z `data/sample/` **nie są liczone**.",
         "> Aktualne = `data_weryfikacji` (w OSM `check_date`/`survey:date`) nie starsza niż 365 dni; brak daty = nieaktualne (CONTRACT §8).",
         "",
@@ -78,7 +80,7 @@ def main():
         "",
         "| Wskaźnik | Wartość |",
         "|---|---|",
-        f"| AED w Polsce (OpenStreetMap, po deduplikacji) | **{n(len(real))}** |",
+        f"| AED w Polsce (OpenStreetMap + zbiory samorządów, po deduplikacji) | **{n(len(real))}** |",
         f"| Aktualne (sprawdzone w ostatnich 12 miesiącach) | **{n(akt)}** ({pct(akt, len(real))}) |",
         f"| Nieaktualne (starsza weryfikacja albo brak daty) | **{n(len(real) - akt)}** ({pct(len(real) - akt, len(real))}) |",
         f"| – w tym bez żadnej daty weryfikacji | {n(len(real) - len(wieki))} ({pct(len(real) - len(wieki), len(real))}) |",
@@ -107,19 +109,36 @@ def main():
         f"- Obiektów w eksporcie: **{n(imp.get('liczba_obiektow', 0))}** (import {osm_meta.get('data_importu', '?').replace('T', ' ')}).",
         f"- Nowe rekordy: {n(imp.get('dodane', 0))}; scalone z rekordem dysponenta: {n(imp.get('scalone', 0))}; "
         f"połączone jako duplikaty w samym OSM (≤ 5 m od innego punktu i prawie ta sama nazwa): {n(imp.get('zaktualizowane', 0))}.",
-        f"- **Odrzucone: {n(imp.get('odrzucone', 0))}** ({pct(imp.get('odrzucone', 0), imp.get('liczba_obiektow', 0))}). Powody:",
-        "",
-        "| Powód odrzucenia | Liczba |",
-        "|---|---:|",
+        f"- **Odrzucone: {n(imp.get('odrzucone', 0))}** ({pct(imp.get('odrzucone', 0), imp.get('liczba_obiektow', 0))})."
+        + (" Powody:" if powody else " Zbyt długie nazwy i opisy są skracane (z adnotacją w raporcie), a nie odrzucane."),
     ]
+    if powody:
+        L += ["", "| Powód odrzucenia | Liczba |", "|---|---:|"]
     for p, c in sorted(powody.items(), key=lambda x: -x[1]):
         L.append(f"| {p} | {c} |")
-    if powody and all("dłuższy" in p for p in powody):
+    if powody and all("dłuższy" in p for p in powody):  # older imports
         L += ["", "Wszystkie odrzucenia dotyczą zbyt długich tekstów (limity z wzorcowego zakresu danych). Takie rekordy dałoby się "
                   "przyjąć po skróceniu tekstu – do decyzji."]
     L += [
         "",
-        "## Jakość danych OSM (czego brakuje do wzorcowego zakresu)",
+        "## Zbiory AED samorządów z dane.gov.pl (prawdziwe dane od dysponentów)",
+        "",
+        "| Zbiór | Wiersze | Nowe AED | Połączone z OSM | Odrzucone | Licencja |",
+        "|---|---:|---:|---:|---:|---|",
+    ]
+    for kod, m in sorted(dgp):
+        w = m.get("wynik_importu") or {}
+        if w:
+            L.append(f"| [{m.get('nazwa')}]({m.get('url')}) | {w.get('wiersze', '–')} | {w.get('dodane', 0)} | "
+                     f"{w.get('scalone', 0) + w.get('zaktualizowane', 0)} | {w.get('odrzucone', 0)} | {m.get('licencja')} |")
+        else:
+            L.append(f"| [{m.get('nazwa')}]({m.get('url')}) | – | – | – | – | {m.get('licencja')} (brak pliku do pobrania – tylko link do portalu miasta) |")
+    L += [
+        "",
+        "AED z zestawów samorządów mają pierwszeństwo przed OpenStreetMap przy scalaniu (CONTRACT §4). "
+        "Brakujące godziny i numery budynków są ostrzeżeniami do uzupełnienia przez dysponenta.",
+        "",
+        "## Jakość danych (czego brakuje do wzorcowego zakresu)",
         "",
         "| Pole | Wypełnione | Odsetek |",
         "|---|---:|---:|",

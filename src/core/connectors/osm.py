@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from .. import hours, normalize as N, quality, validate
+from .. import hours, normalize as N, pipeline, quality, validate
 from ..pipeline import PLACEHOLDER_ID, _p
 from ..schema import ROOT
 from ..store import Store, now_min
@@ -146,6 +146,7 @@ def refresh(store: Store, source: str | None = None) -> dict:
                 reject(f"geometria inna niż punkt ({(f.get('geometry') or {}).get('type')})")
                 continue
             rec, probs = to_record(f)
+            pipeline.truncate(rec, probs, osm_id(f.get("properties") or {}, f))  # TL: shorten instead of rejecting
             probs += check(rec, osm_id(f.get("properties") or {}, f))
             errors = [pr for pr in probs if pr["poziom"] == "blad"]
             if errors:

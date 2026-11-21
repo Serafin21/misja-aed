@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Plik XML do automatycznego zasilania dane.gov.pl – struktura wg instrukcji COI „Instrukcja przygotowania
-     pliku XML” (v1.0.6, 2025-11-21): dataset (extIdent ≤36, title/description pl+en ≤300/≤1000, url, categories,
-     conditions, resources, tags, updateFrequency, flagi) i resource (+ availability, dataDate, specialSigns,
-     containsProtectedData). URI przestrzeni nazw „p”, XSD i składnia <tags>: do potwierdzenia (CR-1).
-     Wygenerowano: 2026-11-21T16:38 -->
-<p:datasets xmlns:p="urn:do-weryfikacji:dane.gov.pl:import">
+<!-- Plik XML do automatycznego zasilania dane.gov.pl (harmonizator). Zgodny ze schematem portalu
+     urn:otwarte-dane:harvester:1.13 – https://dane.gov.pl/static/xml/otwarte_dane_latest.xsd
+     (kopia: docs/tech/otwarte_dane_1_13.xsd; sprawdzenie: python scripts/check_xml.py). Wygenerowano: 2026-11-21T18:12 -->
+<ns:datasets xmlns:ns="urn:otwarte-dane:harvester:1.13">
   <dataset status="published">
     <extIdent>aed-polska</extIdent>
     <title><polish>Defibrylatory AED w Polsce – zbiór zintegrowany</polish><english>AED defibrillators in Poland – integrated dataset</english></title>
     <description><polish>Ogólnopolski, otwarty zbiór lokalizacji i dostępności automatycznych defibrylatorów zewnętrznych (AED), integrujący dane od dysponentów według wzorcowego zakresu danych. Każdy rekord ma stały identyfikator, datę weryfikacji, godziny dostępności i informację o zamkniętej szafce. Pochodzenie rekordów i zakres referencyjny źródeł są opublikowane jako osobne zasoby. Dane OpenStreetMap (ODbL) są w osobnym zasobie.</polish><english>Nationwide open dataset of automated external defibrillator (AED) locations and availability, integrating data from AED owners according to a reference data scope. Each record has a stable identifier, verification date, availability hours and locked-cabinet information. Record provenance and the reference scope of sources are published as separate resources. OpenStreetMap data (ODbL) is a separate resource.</english></description>
     <url>http://localhost:8000/</url>
     <categories><category>HEAL</category></categories>
-    <conditions><!-- warunki ponownego wykorzystania: do decyzji dostawcy (CR-2) --></conditions>
+    <conditions>
+      <source>true</source>
+      <modification>true</modification>
+      <dbOrCopyrighted>Zasoby aed.* – CC0 1.0 (rekordy z licencją CC BY 4.0 oznaczone w polu licencja); zasoby aed_osm_odbl.* – ODbL 1.0, © autorzy OpenStreetMap.</dbOrCopyrighted>
+      <dbOrCopyrightedLicenseChosen>CC0 1.0</dbOrCopyrightedLicenseChosen>
+    </conditions>
     <resources>
       <resource status="published">
         <extIdent>aed-csv</extIdent>
@@ -142,9 +145,10 @@
     </resources>
     <tags><tag lang="pl">AED</tag><tag lang="pl">defibrylator</tag><tag lang="pl">pierwsza pomoc</tag><tag lang="pl">ratownictwo</tag><tag lang="pl">zdrowie</tag><tag lang="pl">bezpieczeństwo</tag><tag lang="en">AED</tag><tag lang="en">defibrillator</tag><tag lang="en">first aid</tag><tag lang="en">emergency</tag><tag lang="en">health</tag><tag lang="en">safety</tag></tags>
     <updateFrequency>daily</updateFrequency>
+    <lastUpdateDate>2026-11-21T18:12:00</lastUpdateDate>
     <hasDynamicData>true</hasDynamicData>
     <hasHighValueData>false</hasHighValueData>
     <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
     <hasResearchData>false</hasResearchData>
   </dataset>
-</p:datasets>
+</ns:datasets>
