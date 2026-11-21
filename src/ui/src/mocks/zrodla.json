@@ -1,0 +1,54 @@
+[
+ {
+  "kod_zrodla": "dysponent:gmina-przykladowo",
+  "nazwa": "Urząd Gminy Przykładowo (plik CSV)",
+  "typ_zrodla": "dysponent",
+  "format": "CSV (średnik, przecinek dziesiętny)",
+  "licencja": "CC0-1.0",
+  "czestotliwosc_aktualizacji": "monthly",
+  "liczba_rekordow": "3",
+  "rekordy_wlaczone": "3",
+  "pokrycie_pol_wymaganych_proc": "100",
+  "pokrycie_pol_zalecanych_proc": "54",
+  "obszar": "gmina Przykładowo"
+ },
+ {
+  "kod_zrodla": "dysponent:uczelnia-testowa",
+  "nazwa": "Uczelnia Testowa (JSON)",
+  "typ_zrodla": "dysponent",
+  "format": "JSON",
+  "licencja": "CC0-1.0",
+  "czestotliwosc_aktualizacji": "monthly",
+  "liczba_rekordow": "2",
+  "rekordy_wlaczone": "2",
+  "pokrycie_pol_wymaganych_proc": "91",
+  "pokrycie_pol_zalecanych_proc": "47",
+  "obszar": "kampus Kraków"
+ },
+ {
+  "kod_zrodla": "osm",
+  "nazwa": "OpenStreetMap – warstwa AED (przykład)",
+  "typ_zrodla": "spolecznosc",
+  "format": "GeoJSON",
+  "licencja": "ODbL-1.0",
+  "czestotliwosc_aktualizacji": "daily",
+  "liczba_rekordow": "3",
+  "rekordy_wlaczone": "2",
+  "pokrycie_pol_wymaganych_proc": "70",
+  "pokrycie_pol_zalecanych_proc": "30",
+  "obszar": "Polska"
+ },
+ {
+  "kod_zrodla": "zgloszenia",
+  "nazwa": "Zgłoszenia obywateli",
+  "typ_zrodla": "obywatel",
+  "format": "formularz",
+  "licencja": "CC0-1.0",
+  "czestotliwosc_aktualizacji": "na bieżąco",
+  "liczba_rekordow": "1",
+  "rekordy_wlaczone": "0",
+  "pokrycie_pol_wymaganych_proc": "30",
+  "pokrycie_pol_zalecanych_proc": "10",
+  "obszar": "Polska"
+ }
+]
