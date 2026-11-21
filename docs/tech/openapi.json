@@ -2464,6 +2464,641 @@
         }
       }
     },
+    "/api/v1/miejsca/odwrotnie": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Najbliższy adres dla współrzędnych (przycisk „Użyj mojej lokalizacji”)",
+        "description": "Punkty adresowe GUGiK (promień 100 m): `ulica`, `numer_budynku`, `kod_pocztowy`, `miejscowosc`, `odleglosc_m`; gmina, województwo i `teryt_terc` (7 cyfr) z granic PRG – także bez sieci. Brak adresu w pobliżu → pola adresu `null`.",
+        "operationId": "places_reverse_api_v1_miejsca_odwrotnie_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 54.9,
+              "minimum": 49.0,
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 24.2,
+              "minimum": 14.1,
+              "title": "Lon"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/konta/wnioski": {
+      "post": {
+        "tags": [
+          "konta"
+        ],
+        "summary": "Wniosek instytucji o konto dostawcy (bez logowania)",
+        "description": "Właściciel, zarządca albo podmiot weryfikujący AED zakłada konto sam; konto jest nieaktywne, dopóki administrator nie zatwierdzi wniosku (sprawdza instytucję, REGON i podstawę). Logowanie przed zatwierdzeniem → 403 `konto_oczekuje`.",
+        "operationId": "account_request_api_v1_konta_wnioski_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WniosekIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "konta"
+        ],
+        "summary": "Wnioski o konto (administrator)",
+        "operationId": "account_requests_api_v1_konta_wnioski_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "oczekuje | zatwierdzony | odrzucony",
+              "title": "Status"
+            },
+            "description": "oczekuje | zatwierdzony | odrzucony"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/konta/wnioski/{wid}/decyzja": {
+      "post": {
+        "tags": [
+          "konta"
+        ],
+        "summary": "Zatwierdź albo odrzuć wniosek o konto (administrator)",
+        "operationId": "account_request_decide_api_v1_konta_wnioski__wid__decyzja_post",
+        "parameters": [
+          {
+            "name": "wid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Wid"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecyzjaWnioskuIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/konta/ja/uzytkownicy": {
+      "post": {
+        "tags": [
+          "konta"
+        ],
+        "summary": "Dodaj pracownika do swojej instytucji (P2) – te same uprawnienia, hasło jednorazowe pokazywane raz",
+        "operationId": "account_add_employee_api_v1_konta_ja_uzytkownicy_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracownikIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zgloszenia-aed": {
+      "post": {
+        "tags": [
+          "zgloszenia-aed"
+        ],
+        "summary": "Zgłoś AED (tylko zalogowana instytucja)",
+        "description": "Nowe AED zgłasza instytucja (właściciel, zarządca albo podmiot weryfikujący) po zalogowaniu; bez logowania 401. Wszystkie pola konkretne (bez „nie wiem”), zdjęcie wymagane (metadane usuwane). Administrator sprawdza zgłoszenie formalnie i zatwierdza albo odsyła do poprawy; zatwierdzone AED trafia do kopii roboczej instytucji, która publikuje je sama.",
+        "operationId": "aed_submission_create_api_v1_zgloszenia_aed_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZgloszenieAedIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zgloszenia-aed/{zid}": {
+      "put": {
+        "tags": [
+          "zgloszenia-aed"
+        ],
+        "summary": "Popraw i wyślij ponownie (instytucja, status do_poprawy)",
+        "description": "Tylko instytucja, która zgłosiła AED. Administrator nie edytuje pól zgłoszenia (403).",
+        "operationId": "aed_submission_fix_api_v1_zgloszenia_aed__zid__put",
+        "parameters": [
+          {
+            "name": "zid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Zid"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZgloszenieAedIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/moje-zgloszenia": {
+      "get": {
+        "tags": [
+          "zgloszenia-aed"
+        ],
+        "summary": "Zgłoszenia AED mojej instytucji: status, decyzja, komentarz, kto i kiedy",
+        "operationId": "my_aed_submissions_api_v1_moje_zgloszenia_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/zgloszenia-aed": {
+      "get": {
+        "tags": [
+          "zgloszenia-aed"
+        ],
+        "summary": "Zgłoszenia AED instytucji do zatwierdzenia (administrator)",
+        "operationId": "admin_aed_submissions_api_v1_admin_zgloszenia_aed_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "oczekuje | zatwierdzone | do_poprawy | wszystkie",
+              "default": "oczekuje",
+              "title": "Status"
+            },
+            "description": "oczekuje | zatwierdzone | do_poprawy | wszystkie"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zgloszenia-aed/{zid}/zdjecie": {
+      "get": {
+        "tags": [
+          "zgloszenia-aed"
+        ],
+        "summary": "Zdjęcie ze zgłoszenia AED (podpisany link)",
+        "operationId": "aed_submission_photo_api_v1_zgloszenia_aed__zid__zdjecie_get",
+        "parameters": [
+          {
+            "name": "zid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Zid"
+            }
+          },
+          {
+            "name": "t",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "T"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/zgloszenia-aed/{zid}/decyzja": {
+      "post": {
+        "tags": [
+          "zgloszenia-aed"
+        ],
+        "summary": "Zatwierdź albo odeślij do poprawy (administrator – bez edycji pól)",
+        "description": "Zatwierdzenie formalne (kompletność, zdjęcie, położenie). `do_poprawy` wymaga komentarza. Próba zmiany pól → 403. Zatwierdzone AED trafia do kopii roboczej instytucji nadawcy; publikuje ona sama, odpowiedzialność zostaje po jej stronie.",
+        "operationId": "admin_aed_submission_decide_api_v1_admin_zgloszenia_aed__zid__decyzja_post",
+        "parameters": [
+          {
+            "name": "zid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Zid"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecyzjaZglAedIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/health": {
       "get": {
         "tags": [
@@ -2655,6 +3290,59 @@
           "decyzja"
         ],
         "title": "Decyzja"
+      },
+      "DecyzjaWnioskuIn": {
+        "properties": {
+          "decyzja": {
+            "type": "string",
+            "pattern": "^(zatwierdz|odrzuc)$",
+            "title": "Decyzja"
+          },
+          "uzasadnienie": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uzasadnienie"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decyzja"
+        ],
+        "title": "DecyzjaWnioskuIn"
+      },
+      "DecyzjaZglAedIn": {
+        "properties": {
+          "decyzja": {
+            "type": "string",
+            "pattern": "^(zatwierdz|do_poprawy)$",
+            "title": "Decyzja"
+          },
+          "komentarz": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Komentarz"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "decyzja"
+        ],
+        "title": "DecyzjaZglAedIn"
       },
       "HTTPValidationError": {
         "properties": {
@@ -2872,6 +3560,31 @@
         ],
         "title": "Potwierdzenie"
       },
+      "PracownikIn": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login"
+        ],
+        "title": "PracownikIn"
+      },
       "Szukaj": {
         "properties": {
           "q": {
@@ -2927,6 +3640,185 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WniosekIn": {
+        "properties": {
+          "nazwa_instytucji": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Nazwa Instytucji"
+          },
+          "regon": {
+            "type": "string",
+            "pattern": "^\\d{9}(\\d{5})?$",
+            "title": "Regon"
+          },
+          "podstawa": {
+            "type": "string",
+            "pattern": "^(wlasciciel|zarzadca|weryfikujacy)$",
+            "title": "Podstawa",
+            "description": "właściciel AED | zarządca z umową | podmiot weryfikujący AED na miejscu"
+          },
+          "email_sluzbowy": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email Sluzbowy"
+          },
+          "telefon": {
+            "type": "string",
+            "pattern": "^\\+?[\\d\\s-]{9,16}$",
+            "title": "Telefon"
+          },
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "haslo": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Haslo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nazwa_instytucji",
+          "regon",
+          "podstawa",
+          "email_sluzbowy",
+          "telefon",
+          "login",
+          "haslo"
+        ],
+        "title": "WniosekIn"
+      },
+      "ZgloszenieAedIn": {
+        "properties": {
+          "nazwa_obiektu": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Nazwa Obiektu"
+          },
+          "ulica": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ulica",
+            "description": "puste tylko w miejscowości bez ulic"
+          },
+          "numer_budynku": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Numer Budynku"
+          },
+          "kod_pocztowy": {
+            "type": "string",
+            "pattern": "^\\d{2}-\\d{3}$",
+            "title": "Kod Pocztowy"
+          },
+          "miejscowosc": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 2,
+            "title": "Miejscowosc"
+          },
+          "szerokosc": {
+            "type": "number",
+            "maximum": 54.9,
+            "minimum": 49.0,
+            "title": "Szerokosc",
+            "description": "z geokodowania adresu (GET /miejsca) albo z pinezki"
+          },
+          "dlugosc": {
+            "type": "number",
+            "maximum": 24.2,
+            "minimum": 14.1,
+            "title": "Dlugosc"
+          },
+          "opis_lokalizacji": {
+            "type": "string",
+            "maxLength": 250,
+            "minLength": 5,
+            "title": "Opis Lokalizacji",
+            "description": "gdzie dokładnie wisi urządzenie"
+          },
+          "wewnatrz_budynku": {
+            "type": "boolean",
+            "title": "Wewnatrz Budynku",
+            "default": true
+          },
+          "dostep": {
+            "type": "string",
+            "pattern": "^(publiczny|ograniczony|prywatny)$",
+            "title": "Dostep"
+          },
+          "dostepny_24h": {
+            "type": "boolean",
+            "title": "Dostepny 24H"
+          },
+          "godziny": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Godziny",
+            "description": "wymagane, gdy dostepny_24h = false; np. „pn-pt 8-16”"
+          },
+          "szafka_zamknieta": {
+            "type": "boolean",
+            "title": "Szafka Zamknieta",
+            "description": "true | false – bez „nie wiem”"
+          },
+          "instrukcja_dostepu": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrukcja Dostepu",
+            "description": "wymagana, gdy szafka zamknięta"
+          },
+          "zdjecie": {
+            "type": "string",
+            "title": "Zdjecie",
+            "description": "WYMAGANE: data:image/jpeg|png|webp;base64,… (maks. 1,5 MB); metadane (EXIF, GPS) są usuwane"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "nazwa_obiektu",
+          "numer_budynku",
+          "kod_pocztowy",
+          "miejscowosc",
+          "szerokosc",
+          "dlugosc",
+          "opis_lokalizacji",
+          "dostep",
+          "dostepny_24h",
+          "szafka_zamknieta",
+          "zdjecie"
+        ],
+        "title": "ZgloszenieAedIn"
       },
       "ZgloszenieIn": {
         "properties": {

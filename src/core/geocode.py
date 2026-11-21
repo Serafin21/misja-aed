@@ -121,7 +121,8 @@ def _remote(address: str, gminy_seen: set[str]) -> list[dict]:
                 continue  # UUG adds similar addresses (other streets) – keep exact matches only
             street = f"{r.get('street')} {r.get('number')}" if r.get("street") else r.get("number")
             out.append({"typ": "adres", "nazwa": f"{street}, {r.get('city')}", "opis": f"adres, {r.get('code') or ''}".strip(", "),
-                        "lat": lat, "lon": lon, "bbox": None})
+                        "lat": lat, "lon": lon, "bbox": None, "ulica": r.get("street") or None, "numer_budynku": r.get("number") or None,
+                        "kod_pocztowy": r.get("code") or None, "miejscowosc": r.get("city") or None})
     return out
 
 
@@ -160,3 +161,41 @@ def search(q: str, limit: int = 8, blisko: tuple[float, float] | None = None, on
             keys.add(k)
             uniq.append(i)
     return uniq[:limit]
+
+
+@lru_cache(maxsize=512)
+def _uug_reverse(lat: float, lon: float) -> tuple:
+    """GUGiK reverse geocoder (GetAddressReverse, radius 100 m) → results; empty on any error."""
+    url = UUG + "?" + urllib.parse.urlencode({"request": "GetAddressReverse", "location": f"POINT({lon} {lat})", "srid": "4326"})
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
+            j = json.loads(r.read().decode("utf-8"))
+    except Exception:
+        return ()
+    res = j.get("results") or {}
+    return tuple(res[k] for k in sorted(res, key=lambda k: int(k)))
+
+
+def reverse(lat: float, lon: float, online: bool = True) -> dict:
+    """Nearest address point for "Użyj mojej lokalizacji": street, number, postcode, locality from the official address
+    points (GUGiK), gmina and TERYT TERC (7 digits) from the PRG boundaries (also offline)."""
+    lat, lon = round(lat, 6), round(lon, 6)
+    t = coverage.index().teryt(lon, lat)
+    gmina = next((i["nazwa"] for _, i in _offline_index() if i.get("teryt") == t), None) if t else None
+    out = {"ulica": None, "numer_budynku": None, "kod_pocztowy": None, "miejscowosc": None, "gmina": gmina,
+           "wojewodztwo": coverage.WOJ_KOD.get(t[:2]) if t else None, "teryt_terc": t, "lat": None, "lon": None,
+           "odleglosc_m": None, "zrodlo": "PRG (gmina)"}
+    for r in (_uug_reverse(lat, lon) if online else ()):
+        try:
+            out.update(ulica=r.get("street") or None, numer_budynku=r.get("number") or None, kod_pocztowy=r.get("code") or None,
+                       miejscowosc=r.get("city") or None, lat=round(float(r["y"]), 6), lon=round(float(r["x"]), 6),
+                       odleglosc_m=round(float(r.get("distance") or 0)), zrodlo="punkty adresowe GUGiK, gmina z PRG")
+            if not out["gmina"]:
+                parts = str(r.get("jednostka") or "").strip("{}").split(",")
+                out["gmina"] = parts[-1] if len(parts) >= 4 else None
+        except (TypeError, ValueError, KeyError):
+            continue
+        break
+    return out
+

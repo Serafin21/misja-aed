@@ -1,4 +1,4 @@
-> Źródło: dokument zespołu „Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności” (21.11.2026). Wiążący dla CONTRACT.md od wersji 2.0. Stan wdrożenia w prototypie: sekcja „Wdrożenie” na końcu.
+> Źródło: dokument zespołu „Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności” (21.11.2026). Wiążący dla CONTRACT.md od wersji 2.0. Stan wdrożenia w prototypie: sekcja „Wdrożenie” na końcu. **Wersja 1.3** (22.11.2026, CR-TL-8): zaufane konta instytucji (wniosek → zatwierdzenie), „Zgłoś AED” tylko po zalogowaniu, zatwierdzanie formalne przez administratora (§4, §5 P1a, P2a), kryteria K13–K16.
 
 # Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności
 
@@ -75,12 +75,16 @@ Prawo zapisu ma tylko dysponent i tylko wobec własnych urządzeń; administrato
 | Rola                 | Kto                                         | Może                                                                                                                                           | Nie może                                                                             | Logowanie (docelowo)                          |
 |----------------------|---------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|-----------------------------------------------|
 | Mieszkaniec          | każda osoba                                 | wyszukać AED; zobaczyć źródło i datę danych; wysłać zgłoszenie; potwierdzić AED                                                                | zmieniać dane; widzieć dane zgłaszających                                            | bez logowania                                 |
-| Dysponent (dostawca) | właściciel AED z kontem dostawcy            | przygotować pliki; opublikować zbiór na swoim koncie; aktualizować własne rekordy; rozpatrywać zgłoszenia o swoich AED                         | zmieniać rekordy innych dostawców; publikować cudze AED                              | konto dostawcy dane.gov.pl, login.gov.pl, 2FA |
+| Dysponent (dostawca) | właściciel AED, zarządca z umową albo podmiot weryfikujący AED na miejscu, z **zatwierdzonym** kontem instytucji | przygotować pliki; opublikować zbiór na swoim koncie; aktualizować własne rekordy; rozpatrywać zgłoszenia o swoich AED                         | zmieniać rekordy innych dostawców; publikować cudze AED                              | konto dostawcy dane.gov.pl, login.gov.pl, 2FA |
 | Administrator (MC)   | wyznaczeni pracownicy MC                    | prowadzić konta i wzorzec; uruchamiać agregację; monitorować aktualność i luki; obsługiwać zgłoszenia bez dostawcy; prowadzić akcję promocyjną | dodawać, poprawiać, usuwać rekordy AED; scalać duplikaty; publikować AED jako własne | konto administratora, 2FA obowiązkowe         |
 | Podmiot wspierający  | fundacja, uczelnia, gmina wobec cudzych AED | pomagać dysponentom przygotować pliki; prowadzić lokalne akcje                                                                                 | publikować dane o cudzych AED                                                        | bez uprawnień w systemie                      |
 | System agregujący    | proces techniczny                           | pobierać i walidować zbiory; budować listę; wysyłać przypomnienia i powiadomienia                                                              | zmieniać treść rekordów                                                              | konto techniczne, tylko odczyt API            |
 
 Ukrycie linku do logowania nie jest zabezpieczeniem. Uprawnienia sprawdza serwer przy każdej operacji (sekcja 9).
+
+**Zaufane konta instytucji (v1.3).** Konto dostawcy zakłada sama instytucja – wniosek z nazwą, REGON, podstawą publikacji (właściciel AED / zarządca z umową / podmiot weryfikujący na miejscu), służbowym e-mailem i telefonem. Do zatwierdzenia przez administratora konto jest nieaktywne (logowanie odrzucone). Administrator sprawdza instytucję i podstawę, zatwierdza albo odrzuca z uzasadnieniem; decyzja trafia do dziennika. Zatwierdzona instytucja może dodać pracowników do swojej organizacji (te same uprawnienia). Administrator może też założyć konto instytucji sam. Za dane odpowiada instytucja, nie osoba zatwierdzająca konto.
+
+**„Zgłoś AED” tylko po zalogowaniu (v1.3).** Nowe urządzenie zgłasza wyłącznie zalogowana instytucja. Mieszkańcy nadal zgłaszają problemy z istniejącymi AED bez logowania (P6) – te zgłoszenia trafiają do dostawcy i nie zmieniają danych.
 
 ## 5. Procesy
 
@@ -94,7 +98,11 @@ Na wspólną listę dane trafiają tylko przez zbiór dysponenta. Administrator 
 
 1.  **P1. Konto dostawcy.** Dysponent zakłada konto organizacji w dane.gov.pl według procedury portalu. Docelowo loguje się przez login.gov.pl.
 
+    **P1a. Wniosek o konto (v1.3).** Instytucja składa wniosek w aplikacji; administrator zatwierdza go po sprawdzeniu instytucji, REGON i podstawy publikacji albo odrzuca z uzasadnieniem. Przed zatwierdzeniem konto jest nieaktywne.
+
 2.  **P2. Przygotowanie plików.** Dysponent wpisuje urządzenia w formularzu albo wgrywa plik. Kreator sprawdza dane ze wzorcem i tworzy komplet: CSV, XML harvestera, opis metadanych.
+
+    **P2a. Zgłoś AED i zatwierdzenie formalne (v1.3).** Zalogowana instytucja zgłasza nowe AED: adres (ulica, numer, kod, miejscowość – położenie z geokodowania adresu albo z pinezki, ewentualnie „Użyj mojej lokalizacji”), opis miejsca, dostęp, godziny albo „całą dobę”, czy szafka jest zamknięta (tak/nie – bez „nie wiem”) i jak ją otworzyć, **zdjęcie** (obowiązkowe; metadane, w tym położenie GPS, są usuwane). Administrator sprawdza zgłoszenie **formalnie**: kompletność, zdjęcie, zgodność położenia z adresem. **Nie edytuje pól** – zatwierdza albo odsyła do poprawy z komentarzem; instytucja poprawia i wysyła ponownie. Zatwierdzone AED trafia do kopii roboczej instytucji; publikuje je ona sama na swoim koncie (P3), więc odpowiedzialność i publikacja zostają po jej stronie. Decyzja (kto, kiedy, komentarz) jest widoczna dla instytucji i zapisana w dzienniku.
 
 3.  **P3. Publikacja.** Dysponent publikuje zbiór na swoim koncie: wgrywa pliki albo podaje adres https pliku XML, który portal pobiera cyklicznie. Kreator kończy się przyciskiem „Pobierz pliki do publikacji”, nie „Opublikuj”.
 
@@ -235,6 +243,10 @@ Model uznaje się za wdrożony w prototypie, gdy przechodzą wszystkie testy z t
 | K10 | Każdy zapis jest w dzienniku zdarzeń                                 | operacja testowa daje wpis: kto, kiedy, co, przed i po                            |
 | K11 | Kreator kończy się pobraniem plików, nie publikacją                  | przycisk „Pobierz pliki do publikacji”; brak przycisku „Opublikuj”                |
 | K12 | Interfejs mieszkańca spełnia WCAG 2.1 AA                             | test automatyczny i obsługa samej klawiatury                                      |
+| K13 | Konto instytucji działa dopiero po zatwierdzeniu wniosku             | logowanie przed zatwierdzeniem odrzucone (403), po zatwierdzeniu działa            |
+| K14 | Zdjęcie AED jest wymagane, a jego metadane są usuwane                | zgłoszenie bez zdjęcia odrzucone; zapisane zdjęcie bez EXIF/GPS                    |
+| K15 | „Zgłoś AED” tylko po zalogowaniu i bez wartości „nie wiem”           | bez logowania 401; „nie wiem”/„nieznane” odrzucone (422)                           |
+| K16 | Administrator zatwierdza formalnie, nie edytuje danych               | próba zmiany pól przez administratora → 403; decyzja widoczna u nadawcy            |
 
 ## 13. Kwestie do potwierdzenia z MC
 
@@ -266,5 +278,9 @@ Do czasu odpowiedzi MC zespół stosuje założenia robocze z tabeli.
 | K10 | tabela `dziennik` (kto, kiedy, operacja, obiekt, przed, po); UPDATE/DELETE blokowane wyzwalaczami | `test_k10…` |
 | K11 | kreator kończy się `POST /moje-aed/pakiet` („Pobierz pliki do publikacji”); brak trasy publikacji | `test_k11…` |
 | K12 | interfejs (Model B) | `docs/a11y/` |
+| K13 | `POST /konta/wnioski` (bez logowania) → konto nieaktywne, logowanie 403 `konto_oczekuje`; `POST /konta/wnioski/{id}/decyzja` → aktywne konto dostawcy, wpis w dzienniku | `tests/test_konta_zgloszenia_aed.py::test_wniosek…` |
+| K14 | `POST /zgloszenia-aed` bez zdjęcia → 422; JPEG/PNG/WebP bez EXIF, XMP, komentarzy (`src/core/zdjecia.py`, bez ponownej kompresji) | `test_zglos_aed_zatwierdzenie…`, `test_metadane_png_webp` |
+| K15 | `POST /zgloszenia-aed` tylko z tokenem instytucji (401 bez, 403 administrator); `szafka_zamknieta` tylko true/false; „nie wiem”, „nieznane” → 422 | `test_zglos_aed_walidacja` |
+| K16 | decyzja administratora z polami danych, `PUT`/`PATCH` zgłoszenia przez administratora → 403; `GET /moje-zgloszenia`: status, decyzja, komentarz, kto, kiedy | `test_zglos_aed_zatwierdzenie…`, `test_zglos_aed_do_poprawy…` |
 
-Dane prototypu: 3 fikcyjnych dostawców w `data/dostawcy/` (odpowiedzi w kształcie API 1.4; `python -m scripts.build_dostawcy`). Prawdziwe zbiory AED samorządów z dane.gov.pl (Krosno, Przemyśl, Marki, Warszawa) nie mają słowa kluczowego ani 44 pól wzorca – agregacja pokazuje je w raporcie jako `poza_lista` (zaproszenie do publikacji według wzorca), nie na mapie. Logowanie: konta testowe (`dysponent`, `administrator`) i konta dostawców zakładane przez administratora; docelowo login.gov.pl i 2FA (§9, §11).
+Dane prototypu: 3 fikcyjnych dostawców w `data/dostawcy/` (odpowiedzi w kształcie API 1.4; `python -m scripts.build_dostawcy`). Prawdziwe zbiory AED samorządów z dane.gov.pl opublikowane przed wzorcem (Krosno, Przemyśl, Marki) są na liście jako **zbiory przejściowe** (CR-TL-5: rekordy bez zmian, etykieta, zaproszenie do wzorca); Warszawa (brak pliku do odczytu) – `poza_lista`. Logowanie: konta testowe (`dysponent`, `administrator`), konta instytucji z zatwierdzonego wniosku albo założone przez administratora, pracownicy dodani przez instytucję; docelowo login.gov.pl i 2FA (§9, §11).
