@@ -7,7 +7,7 @@ import type { AedView } from '../api/types';
 import { AedListItem } from '../components/AedListItem';
 import { MapView } from '../components/MapView';
 import { CoverageList, MapLegend, MapModeSwitch, useCoverage, useMapMode } from '../components/MapMode';
-import { Emergency, ErrorBox, Loading } from '../components/ui';
+import { ErrorBox, Loading } from '../components/ui';
 import { Link, navigate, usePageTitle } from '../router';
 
 type Pos = { lat: number; lon: number; label: string };
@@ -80,7 +80,6 @@ export function Nearest() {
       <section className="hero" aria-labelledby="page-title">
         <h1 id="page-title">Znajdź najbliższe AED</h1>
         <p className="lead">Defibrylatora AED może użyć każdy. Urządzenie prowadzi głosem krok po kroku.</p>
-        <Emergency />
         <button type="button" className="btn btn--primary btn--xl" onClick={locate} disabled={!!busy}>
           Pokaż najbliższe AED
         </button>

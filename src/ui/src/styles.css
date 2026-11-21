@@ -39,16 +39,14 @@ main:focus, h1:focus, h2[tabindex="-1"]:focus { outline: none; }
 .brand { display: inline-flex; align-items: center; gap: var(--space-m); color: var(--color-text); font-weight: var(--font-weight-bold); font-size: 1.25rem; text-decoration: none; min-height: var(--control-height); }
 .brand:hover { color: var(--color-text); }
 .brand__mark { display: inline-flex; }
-.brand__slogan { display: block; white-space: nowrap; font-size: 1rem; font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); line-height: 1.2; }
-@media (max-width: 420px) { .brand__slogan { display: none; } }
-.header-112 { margin-left: auto; display: inline-flex; align-items: center; gap: var(--space-s); color: var(--color-text); font-weight: var(--font-weight-bold); padding: 0 var(--space-m); min-height: var(--control-height); border: var(--border-width) solid var(--color-border-input); border-radius: var(--radius); text-decoration: none; }
+@media (max-width: 420px) { .header-112 { margin-left: auto; display: inline-flex; align-items: center; gap: var(--space-s); color: var(--color-text); font-weight: var(--font-weight-bold); padding: 0 var(--space-m); min-height: var(--control-height); border: var(--border-width) solid var(--color-border-input); border-radius: var(--radius); text-decoration: none; }
 .header-112:hover { color: var(--color-action-hover); border-color: var(--color-action-hover); }
 .menu-btn { display: none; }
 .main-nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0 var(--space-s); margin: 0; padding: 0; }
 .main-nav a { display: inline-flex; align-items: center; min-height: var(--control-height); padding: 0 var(--space-s); color: var(--color-action); font-weight: var(--font-weight-semibold); text-decoration: none; border-bottom: 3px solid transparent; }
 .main-nav a:hover { color: var(--color-action-hover); text-decoration: underline; }
 .main-nav a[aria-current="page"] { color: var(--color-text); border-bottom-color: var(--color-action); }
-@media (max-width: 899px) {
+@media (max-width: 1099px) {
   .menu-btn { display: inline-flex; align-items: center; min-height: var(--control-height); padding: 0 var(--space); background: var(--color-bg); color: var(--color-action); border: 2px solid var(--color-action); border-radius: var(--radius); font: inherit; font-size: var(--font-size-button); font-weight: var(--font-weight-bold); text-transform: uppercase; cursor: pointer; }
   .main-nav { display: none; flex-basis: 100%; padding-bottom: var(--space-m); }
   .main-nav.is-open { display: block; }
@@ -56,7 +54,7 @@ main:focus, h1:focus, h2[tabindex="-1"]:focus { outline: none; }
   .main-nav a { width: 100%; border-bottom: 0; border-left: 3px solid transparent; padding-left: var(--space-m); }
   .main-nav a[aria-current="page"] { border-left-color: var(--color-action); }
 }
-@media (min-width: 900px) { .site-header__inner { flex-wrap: nowrap; } .header-112 { order: 3; margin-left: var(--space-s); } .main-nav { margin-left: auto; } }
+@media (min-width: 1100px) { .site-header__inner { flex-wrap: nowrap; } .main-nav { margin-left: auto; } }
 
 /* Prototype notice + demo banner */
 .prototype-bar { background: var(--color-surface-strong); border-bottom: var(--border-width) solid var(--color-border); font-size: 1rem; padding: var(--space-s) 0; }
@@ -104,10 +102,6 @@ main > * + * { margin-top: 0; }
 
 /* ---------- E1 ---------- */
 .hero { display: grid; gap: var(--space-m); max-width: 760px; }
-.emergency { display: flex; align-items: center; gap: var(--space-m); background: var(--color-error-tint); border: 2px solid var(--color-error); color: var(--color-text); padding: var(--space-m) var(--space); border-radius: var(--radius); font-weight: var(--font-weight-semibold); }
-.emergency p { margin: 0; }
-.emergency .icon { color: var(--color-error); }
-.emergency__link { color: var(--color-error); font-weight: var(--font-weight-bold); font-size: 1.1em; }
 .place-form label { display: block; font-weight: var(--font-weight-semibold); margin-bottom: var(--space-s); }
 .input-row { display: flex; gap: var(--space-s); flex-wrap: wrap; }
 .input-row input { flex: 1 1 14rem; }
@@ -290,11 +284,7 @@ thead th { background: var(--color-surface); }
 /* ---------- Simple site (TL: rare internet users) ---------- */
 .site-header { position: sticky; top: 0; z-index: 1100; }
 @media (min-width: 900px) { .split__map { top: 96px; } }
-.btn-call { display: inline-flex; align-items: center; gap: var(--space-s); min-height: var(--control-height); padding: 0 var(--space-m); margin-left: auto; background: var(--color-call); color: var(--color-on-action); border: 2px solid var(--color-call); border-radius: var(--radius); font-weight: var(--font-weight-bold); text-decoration: none; white-space: nowrap; }
-.btn-call:hover, .btn-call:active { color: var(--color-on-action); background: var(--color-text); border-color: var(--color-text); }
-.btn-call--big { font-size: 1.4rem; padding: var(--space-s) var(--space-l); min-height: 64px; margin-left: 0; }
-@media (min-width: 900px) { .btn-call { order: 3; margin-left: var(--space-s); } }
-.leaflet-container .leaflet-control-attribution, .leaflet-container .leaflet-popup-content { font-size: 1rem; line-height: 1.35; }
+@media (min-width: 900px) { .leaflet-container .leaflet-control-attribution, .leaflet-container .leaflet-popup-content { font-size: 1rem; line-height: 1.35; }
 .leaflet-control-zoom a { width: var(--control-height) !important; height: var(--control-height) !important; line-height: var(--control-height) !important; }
 
 /* Home tiles */
@@ -428,8 +418,6 @@ thead th { background: var(--color-surface); }
 .map-popup__helper { color: var(--color-text-secondary); }
 .main-nav__role a { font-weight: var(--font-weight-bold); }
 .main-nav__logout { font: inherit; color: var(--color-action); background: none; border: 0; padding: 0 var(--space-s); min-height: var(--control-height); cursor: pointer; text-decoration: underline; }
-.brand__mark--app { display: inline-flex; color: var(--color-error, #b3261e); }
-.brand__mark--app svg { width: 30px; height: 30px; }
 .toc ul { display: flex; flex-wrap: wrap; gap: var(--space-s) var(--space); list-style: none; padding: 0; }
 .notif-list { list-style: none; padding: 0; }
 .notif-list li { padding: var(--space-s) 0; border-bottom: 1px solid var(--color-border); }
@@ -459,3 +447,23 @@ thead th { background: var(--color-surface); }
 .submission__facts dd { margin: 0; overflow-wrap: anywhere; }
 .submission__decide textarea { width: 100%; }
 @media (max-width: 700px) { .submission { grid-template-columns: 1fr; } }
+
+/* CR-TL-8: header – white, ~64 px, campaign mark + app name left, menu right, thin bottom line, no tagline */
+.site-header { background: #fff; border-bottom: 1px solid var(--color-border); }
+.site-header__inner { min-height: 64px; gap: 0 var(--space); }
+.brand { display: inline-flex; align-items: center; gap: var(--space-s); font-size: 1.25rem; min-height: 0; }
+.brand__mark { display: inline-flex; align-items: center; justify-content: center; min-width: 48px; min-height: 48px; border-radius: var(--radius); }
+.brand__name { display: inline-flex; align-items: center; min-height: 48px; color: var(--color-text); font-weight: var(--font-weight-bold); text-decoration: none; white-space: nowrap; }
+.brand__name:hover { color: var(--color-text); text-decoration: underline; }
+.menu-btn { margin-left: auto; }
+.main-nav a { white-space: nowrap; }
+/* CR-TL-8: campaign page */
+.campaign-hero__kicker { margin: 0 0 var(--space-s); font-weight: var(--font-weight-semibold); color: var(--brand-deep); }
+.campaign-hero .form-actions { display: flex; flex-wrap: wrap; gap: var(--space-s); }
+.campaign-hero svg { max-width: 100%; height: auto; }
+.steps-simple { padding-left: 1.4rem; }
+.steps-simple li { margin-bottom: var(--space-s); }
+.downloads { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-s) var(--space); }
+.downloads a { display: inline-flex; align-items: center; min-height: 48px; font-weight: var(--font-weight-semibold); }
+.material { margin: 0; display: grid; gap: var(--space-s); justify-items: start; }
+.material img { max-width: 100%; height: auto; border: 1px solid var(--color-border); }

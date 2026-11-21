@@ -38,14 +38,6 @@ export function LockedCabinet({ aed, compact = false }: { aed: AedView; compact?
   );
 }
 
-export function Emergency() {
-  return (
-    <aside className="emergency" aria-label="Numer alarmowy">
-      <Icon name="phone" />
-      <p>W nagłym wypadku najpierw <a href="tel:112" className="emergency__link">dzwoń 112</a>.</p>
-    </aside>
-  );
-}
 
 export function Loading({ text = 'Wczytuję dane…' }: { text?: string }) {
   return <p className="loading" role="status">{text}</p>;
