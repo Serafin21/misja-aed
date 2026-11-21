@@ -40,6 +40,8 @@ CREATE TRIGGER IF NOT EXISTS dziennik_bez_usuwania BEFORE DELETE ON dziennik BEG
 CREATE TABLE IF NOT EXISTS powiadomienia (
   id INTEGER PRIMARY KEY AUTOINCREMENT, dostawca TEXT NOT NULL, typ TEXT NOT NULL, tresc TEXT NOT NULL, ref TEXT,
   czas TEXT NOT NULL, przeczytane INTEGER NOT NULL DEFAULT 0, UNIQUE (dostawca, typ, ref));
+-- small persistent state (e.g. the last aggregation report)
+CREATE TABLE IF NOT EXISTS stan (klucz TEXT PRIMARY KEY, data TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS konta (
   login TEXT PRIMARY KEY, rola TEXT NOT NULL, dysponent_nazwa TEXT, haslo TEXT NOT NULL, aktywne INTEGER NOT NULL DEFAULT 1,
   utworzono TEXT, utworzyl TEXT, email TEXT);

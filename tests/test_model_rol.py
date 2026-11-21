@@ -196,3 +196,10 @@ def test_kreator_dodaje_tylko_wlasne_i_uzupelnia_teryt(client, dysp):
     assert a["attributes"]["dysponent_nazwa"] == "Urząd Gminy Przykładowo" and a["attributes"]["teryt_terc"] == "1465011"
     assert a["meta"]["zgodny_ze_wzorcem"], a["meta"]["problemy"]
     assert client.delete(f"/api/v1/moje-aed/{a['id']}", headers=dysp).status_code == 200
+
+
+def test_raport_agregacji_przetrwa_restart(client, admin):
+    from src.core import dostawcy
+    dostawcy.OSTATNI_RAPORT.update(czas=None, zbiory=[])  # as after a restart of the API process
+    r = client.get("/api/v1/admin/agregacja", headers=admin).json()["data"]
+    assert r["czas"] and len(r["zbiory"]) == 3

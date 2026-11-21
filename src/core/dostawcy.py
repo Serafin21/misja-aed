@@ -37,6 +37,16 @@ XMLNS = "urn:otwarte-dane:harvester:1.13"
 OSTATNI_RAPORT: dict = {"czas": None, "zbiory": []}
 
 
+def raport(store: Store) -> dict:
+    """Last aggregation report – kept in the database, so it survives a restart of the API."""
+    if OSTATNI_RAPORT["czas"] is None:
+        from . import db
+        row = store.conn.execute("SELECT data FROM stan WHERE klucz='raport_agregacji'").fetchone()
+        if row:
+            OSTATNI_RAPORT.update(db.loads(row["data"]))
+    return OSTATNI_RAPORT
+
+
 def slug(t: str) -> str:
     t = unicodedata.normalize("NFKD", t.replace("ł", "l").replace("Ł", "L"))
     t = "".join(c for c in t if not unicodedata.combining(c)).lower()
@@ -265,6 +275,9 @@ def agreguj(store: Store, online: bool | None = None) -> dict:
                 "czestotliwosc_aktualizacji": e.get("czestotliwosc"), "obszar": e["dostawca"], "url": e.get("zbior_url"),
                 "data_importu": now_min(), "odrzucone": e["odrzucone"]})
     OSTATNI_RAPORT.update(czas=now_min(), zbiory=raport)
+    from . import db
+    store.conn.execute("INSERT OR REPLACE INTO stan VALUES (?,?)", ("raport_agregacji", db.dumps(OSTATNI_RAPORT)))
+    store.conn.commit()
     dziennik.zapisz("system-agregujacy", "agregacja", "wspolna-lista",
                     po={"zbiory": len(raport), "rekordy": len(items), "wlaczone": [e["zbior_id"] for e in raport if e["status"] == "wlaczony"]})
     return {"czas": OSTATNI_RAPORT["czas"], "rekordy": len(items), "zbiory": raport}

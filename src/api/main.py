@@ -479,10 +479,11 @@ def my_aed(role: str = Depends(require("dysponent", "administrator"))):
     work = _robocze(dostawca)
     st = get_store()
     published = [i for i, p in st.lista.items() if p["dostawca"].lower() == dostawca.lower()]
-    raport = [z for z in dostawcy.OSTATNI_RAPORT["zbiory"] if (z.get("dostawca") or "").lower() == dostawca.lower()]
+    rap = dostawcy.raport(st)
+    raport = [z for z in rap["zbiory"] if (z.get("dostawca") or "").lower() == dostawca.lower()]
     return {"data": [_robocze_out(r, dostawca) for r in sorted(work.values(), key=lambda r: r.get("nazwa_obiektu") or "")],
             "meta": {"dostawca": dostawca, "w_kopii_roboczej": len(work), "na_wspolnej_liscie": len(published),
-                     "raport_agregacji": raport, "agregacja_z": dostawcy.OSTATNI_RAPORT["czas"]}}
+                     "raport_agregacji": raport, "agregacja_z": rap["czas"]}}
 
 
 @app.post(f"{API}/moje-aed/z-opublikowanego", tags=["kreator"], summary="Wczytaj do kopii roboczej moje AED z opublikowanego zbioru")
@@ -1069,7 +1070,7 @@ def run_aggregation(role: str = Depends(require("administrator"))):
 @app.get(f"{API}/admin/agregacja", tags=["administrator"], summary="Raport ostatniej agregacji (walidacja każdego zbioru)")
 def aggregation_report(role: str = Depends(require("administrator"))):
     from src.core import dostawcy
-    return {"data": dostawcy.OSTATNI_RAPORT}
+    return {"data": dostawcy.raport(get_store())}
 
 
 @app.get(f"{API}/admin/luki", tags=["administrator"], summary="Mapa luk: gminy bez żadnego zbioru dostawcy (cel akcji promocyjnej)",
@@ -1099,7 +1100,7 @@ def gaps(wojewodztwo: Optional[str] = None, limit: int = Query(100, ge=1, le=300
 @app.get(f"{API}/admin/przypomnienia", tags=["administrator"], summary="Zbiory po terminie aktualizacji (P9)")
 def reminders(role: str = Depends(require("administrator"))):
     from src.core import dostawcy
-    late = [z for z in dostawcy.OSTATNI_RAPORT["zbiory"] if z.get("nieaktualny") and z["status"] in ("wlaczony", "odrzucony")]
+    late = [z for z in dostawcy.raport(get_store())["zbiory"] if z.get("nieaktualny") and z["status"] in ("wlaczony", "odrzucony")]
     return {"data": late, "meta": {"count": len(late)}}
 
 
@@ -1107,7 +1108,7 @@ def reminders(role: str = Depends(require("administrator"))):
 def send_reminders(role: str = Depends(require("administrator"))):
     from src.core import dostawcy, dziennik
     sent = []
-    for z in dostawcy.OSTATNI_RAPORT["zbiory"]:
+    for z in dostawcy.raport(get_store())["zbiory"]:
         if z.get("nieaktualny") and z.get("dostawca"):
             if dziennik.powiadom(z["dostawca"], "przypomnienie",
                                  f"Przypomnienie: zbiór „{z['tytul']}” wymaga aktualizacji (częstotliwość: {z.get('czestotliwosc')}, "
