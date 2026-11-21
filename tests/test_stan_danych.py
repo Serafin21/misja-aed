@@ -75,13 +75,21 @@ def test_przypisanie_do_gminy_i_stan_gminy():
     assert sum(f["properties"]["stan"] == "brak_danych" for f in fc["features"]) == 143
 
 
+def test_granice_16_wojewodztw():
+    files = coverage.boundary_files()
+    assert len(files) == 16
+    assert sum(len(coverage.gminy(w)["features"]) for w in files) == 2479
+
+
 def test_statystyki_liczniki(client):
     d = client.get("/api/v1/statystyki").json()["data"]
     assert d["aktualne"] + d["nieaktualne"] == d["liczba_aed"]
-    assert d["gminy_bez_danych"] == 144  # sample data has no AED in kujawsko-pomorskie
+    # sample data: 7 AED in 4 gminy (Warszawa, Kraków, Gdańsk, …) → all other gminy of Poland have no data
+    assert 2470 <= d["gminy_bez_danych"] < 2479
+    assert sum(d["wg_wojewodztw_polozenie"].values()) == d["liczba_aed"]
 
 
 def test_zrodla_zawiera_prg(client):
     rows = client.get("/api/v1/zrodla").json()["data"]
-    prg = next(r for r in rows if r["kod_zrodla"].startswith("prg-gugik"))
-    assert prg["liczba_rekordow"] == 144 and "GUGiK" in prg["nazwa"] and prg["licencja"]
+    prg = next(r for r in rows if r["kod_zrodla"] == "prg-gugik:gminy")
+    assert prg["liczba_rekordow"] == 2479 and "GUGiK" in prg["nazwa"] and prg["licencja"] and prg["obszar"] == "Polska"

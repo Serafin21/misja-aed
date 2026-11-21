@@ -2,4 +2,4 @@ kod_zrodla,nazwa,typ_zrodla,format,licencja,czestotliwosc_aktualizacji,liczba_re
 dysponent:gmina-przykladowo,Urząd Gminy Przykładowo (plik CSV),dysponent,"CSV (średnik, przecinek dziesiętny)",CC0-1.0,monthly,3,3,100,29,gmina Przykładowo
 dysponent:uczelnia-testowa,Uczelnia Testowa (JSON),dysponent,JSON,CC0-1.0,monthly,2,2,100,32,kampus Kraków
 osm,OpenStreetMap – warstwa AED (eksport AED OSM Polska),spolecznosc,GeoJSON,ODbL-1.0,daily,18057,18034,71,2,Polska
-prg-gugik:gminy-kujawsko-pomorskie,"Granice gmin – kujawsko-pomorskie (PRG, GUGiK; uproszczone). Źródło: Państwowy Rejestr Granic – Główny Urząd Geodezji i Kartografii",referencyjne,GeoJSON (z WFS GML PRG),PZGiK – bez opłat i ograniczeń (art. 40a ust. 2 pkt 1 Pgik),irregular,144,144,0,0,województwo kujawsko-pomorskie
+prg-gugik:gminy,"Granice gmin (PRG, GUGiK; uproszczone z zachowaniem topologii). Źródło: Państwowy Rejestr Granic – Główny Urząd Geodezji i Kartografii",referencyjne,GeoJSON (z WFS GML PRG),PZGiK – bez opłat i ograniczeń (art. 40a ust. 2 pkt 1 Pgik),irregular,2479,2479,0,0,Polska

@@ -27,7 +27,7 @@
 | `dedup.py` | Odległość haversine, podobieństwo nazw i adresów, siatka przestrzenna, scalanie pole po polu według priorytetu źródeł, stały `id_aed`. |
 | `store.py` | Rekordy źródłowe (`pochodzenie`) → rekord scalony (`aed`). Pamięć podręczna w RAM z zapisem do SQLite (WAL). |
 | `quality.py` | Kompletność rekordu i pokrycie pól dla każdego źródła (zakres referencyjny). |
-| `coverage.py` | CR-TL-1: `stan_danych` rekordu (weryfikacja ≤ 365 dni → `aktualne`, starsza lub brak daty → `nieaktualne`) i pokrycie gmin: przypisanie AED do gminy (punkt w wielokącie, czysty Python) na uproszczonych granicach PRG z `data/granice/`. |
+| `coverage.py` | CR-TL-1: `stan_danych` rekordu (weryfikacja ≤ 365 dni → `aktualne`, starsza lub brak daty → `nieaktualne`) i pokrycie gmin: przypisanie AED do gminy (punkt w wielokącie z siatką przestrzenną, czysty Python; poza wielokątami – najbliższa gmina do 1 km) na granicach PRG 16 województw z `data/granice/`. |
 | `publish.py`, `linked.py`, `template.py` | Pakiet publikacji, JSON-LD (schema.org), szablon XLSX dla dysponentów. |
 | `connectors/osm.py`, `connectors/dane_gov_pl.py` | Konektory z cache w `data/cache/` (Wi-Fi na sali). |
 | `src/api/main.py`, `auth.py` | REST API zgodne z CONTRACT §5, błędy `{"error": …}`, konta demo, limit zgłoszeń anonimowych. |
@@ -39,5 +39,6 @@
 - **Izolacja ODbL:** wartości z OpenStreetMap nigdy nie trafiają do rekordu na CC0/CC-BY. OSM występuje wtedy tylko w pochodzeniu (CR-5).
 - **`id_aed`** = `AED-PL-` + 10 znaków SHA-1(`kod_zrodla|id_w_zrodle`) pierwszego źródła. Nie zmienia się przy scalaniu i aktualizacjach.
 - **Wydajność:** 20 000 punktów (skala całej warstwy OSM): wczytanie 14 s, najbliższe AED 0,04 s, `GET /aed?per_page=1000` 0,1 s, eksport CSV 0,3 s.
-- **Tryb mapy „aktualność danych” (CR-TL-1):** brak daty weryfikacji nigdy nie jest zastępowany dzisiejszą datą (OSM bez `check_date` → `data_weryfikacji` puste). Gmina ma stan `nieaktualne`, gdy choć jeden jej AED jest nieaktualny. Granice: `python -m scripts.build_granice --woj 04` (WFS PRG GUGiK, Douglas–Peucker ok. 70 m, 431 KB). `GET /pokrycie` dla 144 gmin i 18 tys. AED: 0,07 s.
+- **Tryb mapy „aktualność danych” (CR-TL-1):** brak daty weryfikacji nigdy nie jest zastępowany dzisiejszą datą (OSM bez `check_date` → `data_weryfikacji` puste). Gmina ma stan `nieaktualne`, gdy choć jeden jej AED jest nieaktualny. Granice: `python -m scripts.build_granice` (WFS PRG GUGiK, 2479 gmin, uproszczenie z zachowaniem topologii – wspólne odcinki upraszczane raz, Douglas–Peucker ok. 65 m, razem 7,3 MB). Test `test_brak_szczelin_w_danych_prg`: w województwach śródlądowych każdy odcinek granicy gminy należy do dokładnie dwóch gmin. Czasy na 18 tys. AED: `GET /pokrycie` 0,05 s, `/statystyki` 0,2 s (pierwsze wywołanie 1,5 s – budowa indeksu).
+- **Warstwa mapy `GET /aed/punkty` (CR-TL-2):** 18 tys. punktów = 3,2 MB JSON, 339 KB gzip; odpowiedź budowana raz na minutę i wersję zbioru (`Store.version`), `ETag` = skrót treści, więc zmiana pola, które nie wpływa na mapę, nie unieważnia pamięci podręcznej przeglądarki.
 - **Bez danych osobowych:** zgłoszenie obywatela nie ma pola kontaktu; telefonów i e-maili z OSM nie importujemy.

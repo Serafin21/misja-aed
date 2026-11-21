@@ -134,23 +134,32 @@ def refresh(store: Store, source: str | None = None) -> dict:
     feats, origin = load_features(source)
     counts = {"dodane": 0, "zaktualizowane": 0, "scalone": 0, "odrzucone": 0}
     problems = 0
+    powody: dict[str, int] = {}  # rejection reasons (for zrodla meta and docs/tech/LICZBY.md)
+
+    def reject(reason: str):
+        counts["odrzucone"] += 1
+        powody[reason] = powody.get(reason, 0) + 1
+
     for f in feats:
         try:
             if (f.get("geometry") or {}).get("type") != "Point":
-                counts["odrzucone"] += 1
+                reject(f"geometria inna niż punkt ({(f.get('geometry') or {}).get('type')})")
                 continue
             rec, probs = to_record(f)
             probs += check(rec, osm_id(f.get("properties") or {}, f))
-            if any(pr["poziom"] == "blad" for pr in probs):
-                counts["odrzucone"] += 1
+            errors = [pr for pr in probs if pr["poziom"] == "blad"]
+            if errors:
+                reject(f"{errors[0]['pole'] or 'rekord'}: {errors[0]['komunikat']}")
                 continue
             problems += sum(pr["poziom"] == "ostrzezenie" for pr in probs)
             res = store.upsert_source(KOD, osm_id(f.get("properties") or {}, f), rec, commit=False)
             counts[res["status"]] += 1
-        except Exception:  # malformed feature
-            counts["odrzucone"] += 1
+        except Exception as e:  # malformed feature
+            reject(f"nieczytelny obiekt ({type(e).__name__})")
     store.commit()
     store.register_source(KOD, {"nazwa": "OpenStreetMap – warstwa AED (eksport AED OSM Polska)", "typ_zrodla": "spolecznosc",
                                 "format": "GeoJSON", "licencja": "ODbL-1.0", "czestotliwosc_aktualizacji": "daily",
-                                "obszar": "Polska", "odrzucone": counts["odrzucone"], "url": URL})
-    return counts | {"zrodlo": origin, "liczba_obiektow": len(feats), "ostrzezenia": problems}
+                                "obszar": "Polska", "odrzucone": counts["odrzucone"], "url": URL,
+                                "odrzucone_powody": powody, "wynik_importu": counts | {"liczba_obiektow": len(feats)},
+                                "data_importu": now_min()})
+    return counts | {"zrodlo": origin, "liczba_obiektow": len(feats), "ostrzezenia": problems, "odrzucone_powody": powody}
