@@ -10,7 +10,7 @@ import json
 from .. import hours, normalize as N, quality, validate
 from ..pipeline import PLACEHOLDER_ID, _p
 from ..schema import ROOT
-from ..store import Store, now_min, today
+from ..store import Store, now_min
 from .net import fetch
 
 URL = "https://aed.openstreetmap.org.pl/aed_poland.geojson"
@@ -23,8 +23,9 @@ ACCESS = {"yes": "publiczny", "public": "publiczny", "permissive": "ograniczony"
           "employees": "prywatny"}
 # OSM layer: address is often missing in OSM – these required fields are downgraded to warnings (CR-3)
 RELAXED = {"wojewodztwo", "gmina", "miejscowosc", "numer_budynku", "kod_pocztowy", "dysponent_nazwa",
-           "godziny_dostepnosci"}
-_FILL = {"wojewodztwo": "mazowieckie", "kod_pocztowy": "00-000", "godziny_dostepnosci": "24/7"}
+           "godziny_dostepnosci", "data_weryfikacji"}
+_FILL = {"wojewodztwo": "mazowieckie", "kod_pocztowy": "00-000", "godziny_dostepnosci": "24/7",
+         "data_weryfikacji": "2000-01-01"}
 
 
 def osm_id(props: dict, feature: dict) -> str:
@@ -83,11 +84,12 @@ def to_record(feature: dict) -> tuple[dict, list[dict]]:
     lock = (p.get("defibrillator:cabinet:lock") or p.get("locked") or "").lower()
     rec["szafka_zamknieta"] = lock in ("yes", "key", "code", "true")
     rec["tryb_pediatryczny"] = True if p.get("defibrillator:pediatric") == "yes" else False if p.get("defibrillator:pediatric") == "no" else None
+    # CR-TL-1: no check_date in OSM = date unknown (never "today"), so the record counts as "nieaktualne"
     check = p.get("check_date") or p.get("survey:date")
     try:
-        rec["data_weryfikacji"] = N.to_date(check) if check else today()
+        rec["data_weryfikacji"] = N.to_date(check) if check else None
     except ValueError:
-        rec["data_weryfikacji"] = today()
+        rec["data_weryfikacji"] = None
     if rec.get("kod_pocztowy"):
         rec["wojewodztwo"] = N.woj_from_postal(rec["kod_pocztowy"])
     if rec.get("miejscowosc"):

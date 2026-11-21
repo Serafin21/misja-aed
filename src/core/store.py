@@ -190,13 +190,26 @@ class Store:
             meta.setdefault("zgloszenia", {"nazwa": "Zgłoszenia obywateli", "typ_zrodla": "obywatel",
                                            "format": "formularz", "licencja": "CC0-1.0",
                                            "czestotliwosc_aktualizacji": "na bieżąco", "obszar": "Polska"})
+        # reference datasets (not AED records): municipality boundaries from PRG used by GET /pokrycie (CR-TL-1)
+        from . import coverage
+        for woj, path in coverage.boundary_files().items():
+            md = coverage.gminy(woj).get("metadata", {})
+            kod_prg = f"prg-gugik:gminy-{woj}"
+            meta[kod_prg] = {
+                "nazwa": f"Granice gmin – {woj} (PRG, GUGiK; uproszczone). {md.get('atrybucja', '')}",
+                "typ_zrodla": "referencyjne", "format": "GeoJSON (z WFS GML PRG)",
+                "licencja": "PZGiK – bez opłat i ograniczeń (art. 40a ust. 2 pkt 1 Pgik)",
+                "czestotliwosc_aktualizacji": "irregular", "obszar": f"województwo {woj}",
+                "liczba_obiektow": md.get("liczba_gmin", len(coverage.gminy(woj)["features"]))} | meta.get(kod_prg, {})
         out = []
         for kod in sorted(set(meta) | set(rows)):
             m = meta.get(kod, {})
             recs = rows.get(kod, [])
             req, zal = quality.coverage(recs)
             n = len(recs) + int(m.get("odrzucone", 0))
-            if kod == "zgloszenia":
+            if "liczba_obiektow" in m and not recs:  # reference dataset: all objects are used
+                n = recs_inc = int(m["liczba_obiektow"])
+            elif kod == "zgloszenia":
                 n = sum(r["c"] for r in zg)
                 recs_inc = sum(r["c"] for r in zg if r["status"] == "zatwierdzone")
             else:
