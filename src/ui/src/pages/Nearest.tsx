@@ -1,13 +1,14 @@
 // E1 – Najbliższe AED (start). Goal: a stressed person on a phone finds the nearest available AED in 2 taps.
-import { useState, type FormEvent } from 'react';
-import { listAed, nearestAed } from '../api/client';
+import { useState } from 'react';
+import { nearestAed } from '../api/client';
+import { PlaceSearch, type Wybor } from '../components/PlaceSearch';
 import { useMockMode } from '../lib/useMockMode';
 import type { AedView } from '../api/types';
 import { AedListItem } from '../components/AedListItem';
 import { MapView } from '../components/MapView';
 import { CoverageList, MapLegend, MapModeSwitch, useCoverage, useMapMode } from '../components/MapMode';
 import { Emergency, ErrorBox, Loading } from '../components/ui';
-import { Link, usePageTitle } from '../router';
+import { Link, navigate, usePageTitle } from '../router';
 
 type Pos = { lat: number; lon: number; label: string };
 
@@ -28,7 +29,6 @@ export function Nearest() {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<Error | null>(null);
-  const [place, setPlace] = useState('');
   const mock = useMockMode();
   const [mode, setMode] = useMapMode();
   const cov = useCoverage(mode);
@@ -59,19 +59,12 @@ export function Nearest() {
     );
   }
 
-  // CR-B2 variant 2: no geocoder – centre of records matching the place name.
-  async function search(e: FormEvent) {
-    e.preventDefault();
-    const q = place.trim();
-    if (!q) { setMsg('Wpisz adres lub miejscowość.'); return; }
-    setBusy('Szukam miejsca…');
-    try {
-      const r = await listAed({ q, per_page: 100 });
-      if (!r.items.length) { setBusy(null); setMsg(`Nie znaleźliśmy „${q}” w zbiorze. Spróbuj samej nazwy miejscowości albo użyj lokalizacji.`); return; }
-      const lat = r.items.reduce((s, a) => s + a.szerokosc_geograficzna, 0) / r.items.length;
-      const lon = r.items.reduce((s, a) => s + a.dlugosc_geograficzna, 0) / r.items.length;
-      await load({ lat, lon, label: `okolice: ${q}` });
-    } catch (ex) { setBusy(null); setErr(ex as Error); }
+  // address, street or locality → nearest AED from that point; gmina or voivodeship → the map of that area
+  function onPlace(w: Wybor) {
+    if (w.typ === 'tekst') return;
+    if (w.typ === 'gmina' && w.teryt) { navigate(`/mapa?gm=${w.teryt}&gmn=${encodeURIComponent(w.nazwa)}`); return; }
+    if (w.typ === 'wojewodztwo') { navigate(`/mapa?wojewodztwo=${encodeURIComponent(w.nazwa)}`); return; }
+    load({ lat: w.lat, lon: w.lon, label: w.nazwa });
   }
 
   function toggleNow(v: boolean) {
@@ -90,13 +83,10 @@ export function Nearest() {
         </button>
         <p className="hint">Użyjemy Twojej lokalizacji tylko do wyszukania. Nie zapisujemy jej.</p>
 
-        <form className="place-form" onSubmit={search} role="search" aria-label="Szukaj po adresie lub miejscowości">
-          <label htmlFor="place">Albo wpisz adres lub miejscowość</label>
-          <div className="input-row">
-            <input id="place" name="place" type="text" autoComplete="address-level2" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="np. Warszawa, Królewska" />
-            <button type="submit" className="btn btn--secondary" disabled={!!busy}>Szukaj</button>
-          </div>
-        </form>
+        <div className="place-form" role="search">
+          <PlaceSearch label="Albo wpisz adres lub miejscowość" placeholder="np. Kraków, Floriańska 3"
+            hint="Wybierz podpowiedź z listy – pokażemy najbliższe AED od tego miejsca." onSelect={onPlace} />
+        </div>
         {mock && (
           <p className="hint">
             Tryb demonstracyjny: dane przykładowe obejmują Warszawę, Kraków i Gdańsk.{' '}

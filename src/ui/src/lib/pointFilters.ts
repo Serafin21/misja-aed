@@ -12,9 +12,12 @@ export interface PointFilters {
   zrodlo: Zrodlo[];
   mobilne: boolean;
   wojewodztwo: string;
+  /** gmina chosen in the search (TERYT from PRG) – exact AED count in its boundaries */
+  gmina: string;
+  gminaNazwa: string;
 }
 
-export const EMPTY: PointFilters = { dostepnosc: [], aktualnosc: [], zrodlo: [], mobilne: true, wojewodztwo: '' };
+export const EMPTY: PointFilters = { dostepnosc: [], aktualnosc: [], zrodlo: [], mobilne: true, wojewodztwo: '', gmina: '', gminaNazwa: '' };
 
 export const DOSTEPNOSC: { v: Dostepnosc; label: string; hint: string }[] = [
   { v: 'teraz', label: 'Dostępne teraz', hint: 'otwarte o tej godzinie' },
@@ -51,6 +54,7 @@ type Group = 'dostepnosc' | 'aktualnosc' | 'zrodlo';
 function passes(p: AedPoint, f: PointFilters, skip?: Group): boolean {
   if (!f.mobilne && p.mobilny) return false;
   if (f.wojewodztwo && p.wojewodztwo !== undefined && p.wojewodztwo !== f.wojewodztwo) return false;
+  if (f.gmina && p.gmina_teryt !== undefined && p.gmina_teryt !== f.gmina) return false;
   if (skip !== 'dostepnosc' && f.dostepnosc.length && !f.dostepnosc.includes(dostepnosc(p))) return false;
   if (skip !== 'aktualnosc' && f.aktualnosc.length && !f.aktualnosc.includes(aktualnosc(p))) return false;
   if (skip !== 'zrodlo' && f.zrodlo.length && !f.zrodlo.includes(zrodlo(p))) return false;
@@ -80,9 +84,9 @@ export function counts(points: AedPoint[], f: PointFilters, only?: Set<string> |
 const list = <T extends string>(v: string | null, allowed: readonly T[]): T[] =>
   (v ?? '').split(',').filter((x): x is T => (allowed as readonly string[]).includes(x));
 
-export function readFilters(search: string): PointFilters & { q: string; gmina: string } {
+export function readFilters(search: string): PointFilters & { q: string } {
   const p = new URLSearchParams(search);
-  // backwards compatible with the old ?dostepne_teraz=true / ?dostep=prywatny links
+  // backwards compatible with the old ?dostepne_teraz=true links
   const dost = list(p.get('dostepnosc'), DOSTEPNOSC.map((o) => o.v));
   if (!dost.length && p.get('dostepne_teraz') === 'true') dost.push('teraz');
   return {
@@ -91,14 +95,15 @@ export function readFilters(search: string): PointFilters & { q: string; gmina: 
     zrodlo: list(p.get('zrodlo'), ZRODLO.map((o) => o.v)),
     mobilne: p.get('mobilne') !== 'false',
     wojewodztwo: p.get('wojewodztwo') ?? '',
+    gmina: /^\d{7}$/.test(p.get('gm') ?? '') ? p.get('gm')! : '',
+    gminaNazwa: p.get('gmn') ?? '',
     q: p.get('q') ?? '',
-    gmina: p.get('gmina') ?? '',
   };
 }
 
-export function writeFilters(f: PointFilters & { q: string; gmina: string }, p: URLSearchParams): URLSearchParams {
+export function writeFilters(f: PointFilters & { q: string }, p: URLSearchParams): URLSearchParams {
   if (f.q) p.set('q', f.q);
-  if (f.gmina) p.set('gmina', f.gmina);
+  if (f.gmina) { p.set('gm', f.gmina); p.set('gmn', f.gminaNazwa); }
   if (f.wojewodztwo) p.set('wojewodztwo', f.wojewodztwo);
   if (f.dostepnosc.length) p.set('dostepnosc', f.dostepnosc.join(','));
   if (f.aktualnosc.length) p.set('aktualnosc', f.aktualnosc.join(','));

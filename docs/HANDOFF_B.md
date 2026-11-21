@@ -193,3 +193,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - **Treść „Pierwszej pomocy” do sprawdzenia przez ratownika lub mentora.**
 - Użycie AI (jedna linia): przebudowa na prostą stronę (kafle, kreatory E4/E5, pierwsza pomoc – układ i piktogramy, treść medyczna od TL), prosty język i dokumentacja z Claude (Model B).
 - Następny krok: typecheck/build u człowieka, test klawiaturą i przy 320 px na nowych ekranach, zrzuty.
+
+## HANDOFF #17
+
+- Czas: sob 21:00
+- Zrobione: **inteligentna wyszukiwarka miejsc** (`components/PlaceSearch.tsx`, wzorzec ARIA combobox: strzałki, Enter, Esc) na `/mapa` i `/znajdz`, dane z `GET /miejsca` (HANDOFF A #7): województwa, gminy, miejscowości (także wsie), ulice („Kraków, Floriańska” albo sama „Floriańska” przy przybliżonej mapie), adresy („Kraków, Floriańska 3”; gdy numeru nie ma – ulica); bez polskich znaków też działa („krakow”, „lodz”). Na `/mapa`: gmina → **filtr po granicy gminy** (`gmina_teryt` w punktach; Kraków: 350 AED zamiast 56 z nazwą „Kraków”) + przybliżenie i znacznik „Gmina: Kraków · Usuń”; województwo → filtr + przybliżenie; miejscowość, ulica, adres → przybliżenie i podpisany punkt na mapie, lista od najbliższych; ostatnia opcja „Szukaj „…” w nazwach i opisach AED” (np. „Biedronka”), mapa przybliża się do wyników. Enter przed przyjściem podpowiedzi czeka na nie (nie szuka w nazwach). Na `/znajdz`: adres/ulica/miejscowość → 5 najbliższych AED od tego miejsca; gmina/województwo → `/mapa` z filtrem. URL: `?gm=1261011&gmn=Kraków`. Pole „Gmina” w filtrach usunięte (zastąpione wyszukiwarką). Kolumna filtrów nie jest już przyklejona z przewijaniem (przycinała podpowiedzi).
+- Jak uruchomić / zobaczyć: API z `a/core` (`/miejsca`, `gmina_teryt`; internet do geokodera GUGiK) + `npm run dev` → `/mapa`, `/znajdz`.
+- Założenia: bez internetu działają województwa i gminy (z PRG), ulice i adresy nie.
+- CR: –
+- Znane błędy: –
+- Użycie AI (jedna linia): wyszukiwarka i integracja z mapą z Claude.
+- Następny krok: test czytnikiem ekranu podpowiedzi.

@@ -1,11 +1,12 @@
 // E2 – Mapa i lista. Whole Poland from GET /aed/punkty; filters work instantly in the browser (with counts);
 // the list next to the map shows the AED visible on the map, nearest to its centre first (accessible equivalent of the map).
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type L from 'leaflet';
 import { listAedByIds, listPoints, searchAedIds } from '../api/client';
 import type { AedPoint, AedView } from '../api/types';
 import { AedListItem } from '../components/AedListItem';
-import { MapView } from '../components/MapView';
+import { MapView, type GoTo } from '../components/MapView';
+import { PlaceSearch, type Wybor } from '../components/PlaceSearch';
 import { CoverageList, MapLegend, MapModeSwitch, useCoverage, useMapMode, withMode } from '../components/MapMode';
 import { ErrorBox, Loading } from '../components/ui';
 import { dictValues, haversine } from '../lib/format';
@@ -19,7 +20,7 @@ import { currentSearch, toHref, usePageTitle } from '../router';
 const PAGE = 30;
 const NO_ITEMS: AedView[] = [];
 type View = { bounds: L.LatLngBounds; center: L.LatLng; zoom: number };
-type Full = PointFilters & { q: string; gmina: string };
+type Full = PointFilters & { q: string };
 
 function toggle<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
@@ -30,7 +31,8 @@ const fmt = (n: number) => n.toLocaleString('pl-PL');
 export function MapList() {
   usePageTitle('Mapa i lista AED');
   const [f, setF] = useState<Full>(() => readFilters(currentSearch()));
-  const [text, setText] = useState({ q: f.q, gmina: f.gmina });
+  const [goTo, setGoTo] = useState<GoTo | null>(null);
+  const [searchKey, setSearchKey] = useState(0); // new key = empty search box
   const [view, setView] = useState<'oba' | 'lista' | 'mapa'>('oba');
   const [mode, setMode] = useMapMode();
   const [mapView, setMapView] = useState<View | null>(null);
@@ -45,8 +47,8 @@ export function MapList() {
     apply({ ...f, [k]: toggle(f[k] as string[], v as string) } as Full);
 
   const pts = useAsync(() => listPoints(), []);
-  // text search / gmina: ids from the API (names and addresses are not in the light point layer)
-  const search = useAsync(() => (f.q || f.gmina ? searchAedIds(f.q, f.gmina) : Promise.resolve(null)), [f.q, f.gmina]);
+  // text search in AED names: ids from the API (names are not in the light point layer)
+  const search = useAsync(() => (f.q ? searchAedIds(f.q, '') : Promise.resolve(null)), [f.q]);
   const only = search.data ?? null;
 
   const filtered = useMemo(() => (pts.data ? applyFilters(pts.data, f, only) : null), [pts.data, f, only]);
@@ -94,8 +96,24 @@ export function MapList() {
   const cov = useCoverage(covWoj ? mode : 'dostepnosc', covWoj);
 
   const active = f.dostepnosc.length + f.aktualnosc.length + f.zrodlo.length + (f.wojewodztwo ? 1 : 0) + (f.q ? 1 : 0) + (f.gmina ? 1 : 0) + (f.mobilne ? 0 : 1);
-  const submitText = (e: FormEvent) => { e.preventDefault(); apply({ ...f, ...text }); };
-  const clear = () => { setText({ q: '', gmina: '' }); apply({ ...EMPTY, q: '', gmina: '' }); };
+  const clear = () => { setGoTo(null); setSearchKey((k) => k + 1); apply({ ...EMPTY, q: '' }); };
+
+  // search: voivodeship / gmina → filter to its boundaries and zoom; locality, street, address → zoom and mark
+  const onPlace = (w: Wybor) => {
+    if (w.typ === 'tekst') { setGoTo(null); apply({ ...f, q: w.nazwa, gmina: '', gminaNazwa: '' }); return; }
+    const key = `${w.typ}:${w.nazwa}:${Date.now()}`;
+    if (w.typ === 'wojewodztwo') {
+      apply({ ...f, q: '', wojewodztwo: w.nazwa, gmina: '', gminaNazwa: '' });
+      setGoTo({ key, lat: w.lat, lon: w.lon, bbox: w.bbox });
+    } else if (w.typ === 'gmina') {
+      apply({ ...f, q: '', wojewodztwo: '', gmina: w.teryt ?? '', gminaNazwa: w.nazwa });
+      setGoTo({ key, lat: w.lat, lon: w.lon, bbox: w.bbox });
+    } else {
+      // keep area filters only if the place is inside them – otherwise the map would show nothing
+      apply({ ...f, q: '', gmina: '', gminaNazwa: '', wojewodztwo: w.wojewodztwo && w.wojewodztwo === f.wojewodztwo ? f.wojewodztwo : '' });
+      setGoTo({ key, lat: w.lat, lon: w.lon, bbox: w.bbox, zoom: w.typ === 'miejscowosc' ? 14 : w.typ === 'ulica' ? 17 : 17, label: w.nazwa });
+    }
+  };
 
   const group = <T extends string>(title: string, key: 'dostepnosc' | 'aktualnosc' | 'zrodlo', opts: { v: T; label: string; hint: string }[], cnt?: Record<T, number>) => (
     <fieldset className="facet">
@@ -123,20 +141,21 @@ export function MapList() {
 
       <div className="e2">
         <aside className="e2__filters" aria-label="Filtry">
-          <form className="facet facet--text" onSubmit={submitText}>
-            <div className="field">
-              <label htmlFor="f-q">Szukaj</label>
-              <input id="f-q" type="search" autoComplete="off" value={text.q} onChange={(e) => setText({ ...text, q: e.target.value })} placeholder="nazwa, ulica, miejscowość" />
-            </div>
-            <div className="field">
-              <label htmlFor="f-gm">Gmina</label>
-              <input id="f-gm" type="text" autoComplete="off" value={text.gmina} onChange={(e) => setText({ ...text, gmina: e.target.value })} />
-            </div>
-            <button type="submit" className="btn btn--secondary btn--small">Szukaj</button>
-          </form>
+          <div className="facet facet--text" role="search">
+            <PlaceSearch key={searchKey} label="Szukaj miejsca" placeholder="miasto, gmina, ulica, adres" textOption
+              hint="Np. Kraków · Wieliczka · Kraków, Floriańska · Kraków, Floriańska 3 · mazowieckie"
+              near={mapView && mapView.zoom >= 11 ? { lat: mapView.center.lat, lon: mapView.center.lng } : null}
+              initial={f.q || f.gminaNazwa} onSelect={onPlace} />
+            {(f.gmina || f.q) && (
+              <p className="area-chip">
+                <span>{f.gmina ? <>Gmina: <strong>{f.gminaNazwa}</strong></> : <>Nazwa AED zawiera: <strong>„{f.q}”</strong></>}</span>
+                <button type="button" className="btn btn--tertiary btn--small" onClick={() => { setSearchKey((k) => k + 1); apply({ ...f, gmina: '', gminaNazwa: '', q: '' }); }}>Usuń</button>
+              </p>
+            )}
+          </div>
           <div className="field">
             <label htmlFor="f-woj">Województwo</label>
-            <select id="f-woj" value={f.wojewodztwo} onChange={(e) => apply({ ...f, wojewodztwo: e.target.value })}>
+            <select id="f-woj" value={f.wojewodztwo} onChange={(e) => apply({ ...f, wojewodztwo: e.target.value, gmina: '', gminaNazwa: '' })}>
               <option value="">cała Polska</option>
               {dictValues('wojewodztwo').map((w) => <option key={w.wartosc} value={w.wartosc}>{w.wartosc}</option>)}
             </select>
@@ -193,7 +212,7 @@ export function MapList() {
                 <section aria-labelledby="map-title" className="split__map">
                   <h2 id="map-title" className="visually-hidden">Mapa</h2>
                   <MapView items={NO_ITEMS} points={filtered as AedPoint[]} mode={mode} coverage={cov.data} fitCoverage={!!f.wojewodztwo}
-                    fitKey={f.wojewodztwo || 'PL'} onView={setMapView} height={640}
+                    fitKey={f.q ? `q:${f.q}` : f.wojewodztwo || 'PL'} onView={setMapView} height={640} goTo={goTo}
                     label={`Mapa AED, tryb: ${mode === 'dane' ? 'aktualność danych' : 'dostępność'}. Te same informacje są na liście.`} />
                   <MapLegend mode={mode} coverage={!!cov.data && mode === 'dane'} />
                   {mode === 'dane' && covWoj && !cov.loading && <CoverageList coverage={cov.data} collapsed />}
