@@ -1,5 +1,18 @@
 # HANDOFF – Model A
 
+## 2026-11-22 – HANDOFF #10: CR-TL-5 i CR-TL-6 (strona A) – dostawcy i zbiory, zbiory przejściowe, podstawa publikacji
+
+- **Zrobione (CR od B #23, #24):**
+  - `GET /api/v1/zbiory` (publiczny) w kształcie z CR-TL-5: `zbior_id, tytul, dostawca, zbior_url, status (wzorzec|przejsciowy|poza_lista), nieaktualny, rekordy, data_danych, licencja, problemy` (+ `fikcyjny`); `meta.agregacja`, `meta.warstwa_pomocnicza {zrodlo, licencja, obiekty}`. Kolejność: wzorzec → przejściowe → poza listą.
+  - **Zbiory przejściowe:** zbiór AED dostawcy opublikowany przed wzorcem (bez słowa kluczowego `wspolna-lista-aed` i bez kolumn wzorca), którego plik da się odczytać, trafia na listę ze statusem `przejsciowy`: rekordy z współrzędnymi pokazane tak, jak je opublikowano (tylko odczyt do formatu pól, nic nie jest dopisywane ani scalane), dostawca dostaje powiadomienie „wzorzec” z zaproszeniem. Plik nieczytelny (PDF, link do portalu) → `poza_lista`. Na żywo: **Krosno (21 AED), Przemyśl (21), Marki (8) – przejściowe; Warszawa – poza listą** (brak pliku). W prototypie dwa nowe fikcyjne zbiory: Gmina Przykładowa Druga (przejściowy, 3 z 4 wierszy) i Miasto Przykładowe (PDF, poza listą) – `scripts/build_dostawcy.py`.
+  - `meta.zgodnosc` (`wzorzec|przejsciowy`) w rekordach listy, `zgodnosc` w `/aed/punkty` (`null` dla OSM), kolumna `zgodnosc` w eksporcie listy.
+  - **CR-TL-6:** `meta.dostawca_podstawa` (`wlasciciel|zarzadca|weryfikujacy`) – z konta dostawcy; bez konta `wlasciciel` (wzorzec wymaga `dysponent_nazwa` = dostawca). `POST /konta` przyjmuje `dostawca_podstawa` (wymagane dla roli `dysponent`, inna wartość → 422), `GET /konta` ją zwraca (+ `regon`). Stare bazy dostają kolumny `podstawa`, `regon`, `telefon` w `konta` automatycznie.
+  - `docs/tech/LICZBY.md` wygenerowane dla modelu listy (`scripts/liczby.py`): lista vs warstwa pomocnicza, tabela zbiorów ze statusami, fikcyjni dostawcy nie liczeni w liczbach o Polsce. `deliverables/dataset/` wygenerowane ponownie (10 AED: 7 wzorzec + 3 przejściowe).
+- **Jak sprawdzić:** `python -m scripts.seed --reset --osm full --lista auto` → `GET /api/v1/zbiory`; `pytest` (88, nowy `tests/test_zbiory_podstawa.py`).
+- **Liczby w testach:** lista 7 → 10 AED (doszedł fikcyjny zbiór przejściowy), dostawców 3 → 4.
+- **CR:** – · **Znane błędy:** – · **Użycie AI:** kod, testy i dokumentacja z Claude.
+- **Następny krok:** CR-TL-8.
+
 ## 2026-11-22 – HANDOFF #9: model ról i odpowiedzialności (CONTRACT v2.0, `docs/MODEL_ROL.md`)
 
 - **Zrobione:** wdrożenie dokumentu „Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności”. Kryteria K1–K11 mają testy (`tests/test_model_rol.py`, 84 testy razem).

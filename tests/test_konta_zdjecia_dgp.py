@@ -13,7 +13,7 @@ def _login(client, login, haslo):
 
 def test_konto_instytucji_pelny_cykl(client):
     _, mod = _login(client, "moderator", "moderator-demo")
-    r = client.post("/api/v1/konta", headers=mod, json={"login": "uczelnia.testowa", "dysponent_nazwa": "Uczelnia Testowa"})
+    r = client.post("/api/v1/konta", headers=mod, json={"login": "uczelnia.testowa", "dysponent_nazwa": "Uczelnia Testowa", "dostawca_podstawa": "wlasciciel"})
     assert r.status_code == 201
     haslo = r.json()["haslo_jednorazowe"]
     assert r.json()["data"]["liczba_aed"] == 2 and "haslo" not in r.json()["data"]  # its AED on the common list

@@ -24,7 +24,7 @@ MIME_BY_NAME = {"aed.jsonld": "application/ld+json"}
 KOMPILACJA = ("Kompilacja zbiorów dostawców AED opublikowanych w dane.gov.pl (wspólna lista AED). Za każdy rekord odpowiada "
               "wskazany dostawca; warunki ponownego wykorzystywania – jak w zbiorze źródłowym (kolumna licencja_zbioru).")
 # provenance columns appended to the 44 fields of the standard
-PROV_COLS = ["dostawca", "dostawca_regon", "zbior_id", "zbior_url", "zasob_url", "data_danych", "licencja_zbioru", "mozliwy_duplikat"]
+PROV_COLS = ["dostawca", "dostawca_regon", "zbior_id", "zbior_url", "zasob_url", "data_danych", "licencja_zbioru", "mozliwy_duplikat", "zgodnosc"]
 
 
 def fmt(v, field: str | None = None) -> str:
@@ -67,7 +67,8 @@ def layers(store: Store) -> tuple[list[dict], list[dict]]:
         if p:
             lista.append(r | {"dostawca": p["dostawca"], "dostawca_regon": p.get("regon"), "zbior_id": p["zbior_id"],
                               "zbior_url": p["zbior_url"], "zasob_url": p["zasob_url"], "data_danych": p.get("data_danych"),
-                              "licencja_zbioru": p.get("licencja_zbioru"), "mozliwy_duplikat": ";".join(p.get("mozliwe_duplikaty") or [])})
+                              "licencja_zbioru": p.get("licencja_zbioru"), "mozliwy_duplikat": ";".join(p.get("mozliwe_duplikaty") or []),
+                              "zgodnosc": p.get("zgodnosc", "wzorzec")})
         else:
             pom.append(r)
     return lista, pom

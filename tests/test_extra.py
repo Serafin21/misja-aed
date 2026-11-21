@@ -52,7 +52,7 @@ def test_jsonld(client):
     j = client.get("/api/v1/aed/AED-PL-B939F7EBA4", headers={"Accept": "application/ld+json"}).json()
     assert j["@context"]["nazwa_obiektu"] == "schema:name" and j["licencja"].startswith("http://creativecommons.org")
     g = client.get("/api/v1/eksport/aed.jsonld").json()
-    assert len(g["@graph"]) == 7  # the common list only
+    assert len(g["@graph"]) == 10  # the common list only
 
 
 def test_rate_limit(client, monkeypatch):

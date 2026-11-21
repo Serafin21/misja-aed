@@ -110,7 +110,16 @@ def lista_meta(rec: dict) -> dict:
             "data_danych": p.get("data_danych"), "zbior_zmodyfikowany": p.get("zbior_zmodyfikowany"),
             "czestotliwosc_aktualizacji": p.get("czestotliwosc"), "zbior_nieaktualny": p.get("zbior_nieaktualny", False),
             "licencja_zbioru": p.get("licencja_zbioru"), "mozliwe_duplikaty": p.get("mozliwe_duplikaty", []),
-            "fikcyjny_dostawca": p.get("fikcyjny", False)}
+            "fikcyjny_dostawca": p.get("fikcyjny", False), "zgodnosc": p.get("zgodnosc", "wzorzec"),
+            "dostawca_podstawa": podstawa(p["dostawca"])}
+
+
+def podstawa(dostawca: str) -> str:
+    """CR-TL-6: on what basis the provider publishes – declared with its account; without an account the template
+    requires dysponent_nazwa = the provider, i.e. the owner."""
+    r = get_store().conn.execute("SELECT podstawa FROM konta WHERE lower(dysponent_nazwa)=lower(?) AND podstawa IS NOT NULL "
+                                 "ORDER BY utworzono LIMIT 1", (dostawca or "",)).fetchone()
+    return r["podstawa"] if r else "wlasciciel"
 
 
 def available_now(rec: dict, when=None) -> bool | None:
@@ -303,6 +312,7 @@ def aed_points(request: Request, bbox: Optional[str] = Query(None, description="
                                          "warstwa": warstwa(r),
                                          "zbior_nieaktualny": bool(st.lista.get(r["id_aed"], {}).get("zbior_nieaktualny")),
                                          "duplikat": bool(st.lista.get(r["id_aed"], {}).get("mozliwe_duplikaty")),
+                                         "zgodnosc": (st.lista[r["id_aed"]].get("zgodnosc", "wzorzec") if r["id_aed"] in st.lista else None),
                                          # for client-side filters next to the map (availability, freshness, area)
                                          "dostep": r.get("dostep"), "wiek_danych_dni": coverage.wiek_danych_dni(r),
                                          "mobilny": bool(r.get("mobilny")),
@@ -920,11 +930,13 @@ class KontoIn(BaseModel):
     email: Optional[str] = Field(None, max_length=200)
     rola: str = Field("dysponent", pattern="^(dysponent|administrator)$")
     regon: Optional[str] = Field(None, pattern=r"^\d{9}(\d{5})?$")
+    dostawca_podstawa: Optional[str] = Field(None, pattern="^(wlasciciel|zarzadca|weryfikujacy)$",
+                                             description="CR-TL-6: właściciel AED | zarządca z umową | podmiot weryfikujący na miejscu")
 
 
 def _konto_out(a: dict) -> dict:
-    return {k: a.get(k) for k in ("login", "rola", "dysponent_nazwa", "email", "aktywne", "utworzono", "utworzyl")} | \
-        {"aktywne": bool(a.get("aktywne")),
+    return {k: a.get(k) for k in ("login", "rola", "dysponent_nazwa", "email", "aktywne", "utworzono", "utworzyl", "regon", "telefon")} | \
+        {"aktywne": bool(a.get("aktywne")), "dostawca_podstawa": a.get("podstawa"),
          "liczba_aed": sum(1 for p in get_store().lista.values() if _same(p["dostawca"], a.get("dysponent_nazwa")))}
 
 
@@ -943,9 +955,12 @@ def account_create(body: KontoIn, role: str = Depends(require("administrator")))
         err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
     haslo = auth.new_password()
     st = get_store()
-    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email) VALUES (?,?,?,?,1,?,?,?)",
+    if body.rola == "dysponent" and not body.dostawca_podstawa:
+        err(422, "walidacja", "Podaj podstawę publikacji.", {"dostawca_podstawa": "wlasciciel | zarzadca | weryfikujacy"})
+    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon) "
+                    "VALUES (?,?,?,?,1,?,?,?,?,?)",
                     (login, body.rola, body.dysponent_nazwa.strip(), auth.hash_password(haslo), now_min(), getattr(role, "login", str(role)),
-                     body.email))
+                     body.email, body.dostawca_podstawa if body.rola == "dysponent" else None, body.regon))
     st.conn.commit()
     from src.core import dziennik
     dziennik.zapisz(role, "konto:zalozenie", login, po=_konto_out(auth.account(login)))
@@ -1065,6 +1080,33 @@ def run_aggregation(role: str = Depends(require("administrator"))):
     r = dostawcy.agreguj(get_store())
     dziennik.zapisz(role, "agregacja:uruchomienie", "wspolna-lista", po={"rekordy": r["rekordy"], "zbiory": len(r["zbiory"])})
     return {"data": r}
+
+
+STATUS_ZBIORU = {"wlaczony": "wzorzec", "przejsciowy": "przejsciowy"}
+
+
+@app.get(f"{API}/zbiory", tags=["zrodla"], summary="Dostawcy i zbiory wspólnej listy (CR-TL-5)",
+         description="Zbiory AED dostawców z dane.gov.pl i ich status na wspólnej liście: `wzorzec` (zgodny ze wzorcem, na liście), "
+                     "`przejsciowy` (opublikowany przed wzorcem – rekordy pokazane bez zmian z etykietą), `poza_lista` (nie spełnia "
+                     "wymagań albo nie da się go odczytać – nie jest na liście; `problemy` mówią dlaczego). Publiczne, bez logowania.")
+def datasets():
+    from src.core import dostawcy
+    st = get_store()
+    rep = dostawcy.raport(st)
+    rows = []
+    for e in rep.get("zbiory", []):
+        rows.append({"zbior_id": e.get("zbior_id"), "tytul": e.get("tytul"), "dostawca": e.get("dostawca"), "zbior_url": e.get("zbior_url"),
+                     "status": STATUS_ZBIORU.get(e.get("status"), "poza_lista"), "nieaktualny": bool(e.get("nieaktualny")),
+                     "rekordy": e.get("wlaczone") if e.get("status") in STATUS_ZBIORU else (e.get("rekordy") or 0),
+                     "data_danych": e.get("data_danych") or e.get("zmodyfikowany") or None, "licencja": e.get("licencja"),
+                     "problemy": list(e.get("problemy") or []) + ([f"{e['odrzucone']} rekordów nie trafiło na listę (błędy wzorca)."]
+                                                                  if e.get("odrzucone") and e.get("status") in STATUS_ZBIORU else []),
+                     "fikcyjny": bool(e.get("fikcyjny"))})
+    order = {"wzorzec": 0, "przejsciowy": 1, "poza_lista": 2}
+    rows.sort(key=lambda r: (order[r["status"]], (r["dostawca"] or "").lower()))
+    osm = sum(1 for r in st.records.values() if warstwa(r) == "pomocnicza")
+    return {"data": rows, "meta": {"count": len(rows), "agregacja": rep.get("czas"),
+                                   "warstwa_pomocnicza": {"zrodlo": "OpenStreetMap", "licencja": "ODbL-1.0", "obiekty": osm}}}
 
 
 @app.get(f"{API}/admin/agregacja", tags=["administrator"], summary="Raport ostatniej agregacji (walidacja każdego zbioru)")

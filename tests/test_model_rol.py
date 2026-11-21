@@ -179,7 +179,7 @@ def test_luki_i_mierniki(client, admin):
     gd = next(g for g in j["data"] if g["gmina"] == "Gdańsk")
     assert gd["do_sprawdzenia"] >= 1  # OSM points show where to send the campaign
     s = client.get("/api/v1/statystyki").json()["data"]
-    assert s["liczba_dostawcow"] == 3 and s["liczba_aed"] == 7 and s["warstwa_pomocnicza"] == 3 and s["zbiory_nieaktualne"] == 1
+    assert s["liczba_dostawcow"] == 4 and s["liczba_aed"] == 10 and s["warstwa_pomocnicza"] == 3 and s["zbiory_nieaktualne"] == 1
     assert 0 < s["gminy_z_dostawca_proc"] < 1
 
 
@@ -202,4 +202,4 @@ def test_raport_agregacji_przetrwa_restart(client, admin):
     from src.core import dostawcy
     dostawcy.OSTATNI_RAPORT.update(czas=None, zbiory=[])  # as after a restart of the API process
     r = client.get("/api/v1/admin/agregacja", headers=admin).json()["data"]
-    assert r["czas"] and len(r["zbiory"]) == 3
+    assert r["czas"] and len(r["zbiory"]) == 5

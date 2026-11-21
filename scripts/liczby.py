@@ -1,12 +1,12 @@
 """Numbers for the presentation from the full data → docs/tech/LICZBY.md.
 
 Usage: python -m scripts.seed --reset --osm full && python -m scripts.liczby
-Counts only real AED (OpenStreetMap national export + AED datasets of municipalities from dane.gov.pl); the fictional
-sample records from data/sample/ are left out.
+Model ról (docs/MODEL_ROL.md): the common list = provider datasets (fictional providers of the prototype are reported
+separately and NOT counted as real), the helper layer = OpenStreetMap "Do sprawdzenia". The "all known AED" numbers
+(gaps, data age) count real records of both layers: OSM points + real providers' records.
 """
 from __future__ import annotations
 
-import json
 import statistics
 import sys
 from datetime import datetime
@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.core import coverage, db, hours  # noqa: E402
+from src.core import coverage, db, dostawcy, hours  # noqa: E402
 from src.core.store import TZ, get_store  # noqa: E402
 
 OUT = ROOT / "docs" / "tech" / "LICZBY.md"
@@ -32,12 +32,12 @@ def n(x: int) -> str:
 def main():
     st = get_store()
     osm_meta = next((db.loads(r["data"]) for r in st.conn.execute("SELECT * FROM zrodla WHERE kod_zrodla='osm'")), {})
-    sample_ids = {f["properties"]["id_aed"] for f in json.loads(
-        (ROOT / "data" / "sample" / "aed_ujednolicone.geojson").read_text(encoding="utf-8"))["features"]}
-    real = [r for i, r in st.records.items()
-            if any((s["kod_zrodla"] == "osm" and not s["id_w_zrodle"].startswith("node/9000000"))
-                   or s["kod_zrodla"].startswith("dane_gov_pl:") for s in st.sources.get(i, []))]
-    dgp = [(r["kod_zrodla"], db.loads(r["data"])) for r in st.conn.execute("SELECT * FROM zrodla WHERE kod_zrodla LIKE 'dane_gov_pl:%'")]
+    osm = [r for i, r in st.records.items() if i not in st.lista
+           and any(s["kod_zrodla"] == "osm" and not s["id_w_zrodle"].startswith("node/9000000") for s in st.sources.get(i, []))]
+    lista_real = [st.records[i] for i, p in st.lista.items() if i in st.records and not p.get("fikcyjny")]
+    lista_fikc = [i for i, p in st.lista.items() if p.get("fikcyjny")]
+    real = osm + lista_real
+    rap = dostawcy.raport(st)
     if len(real) < 1000:
         raise SystemExit("Za mało rekordów OSM – najpierw: python -m scripts.seed --reset --osm full")
     now = datetime.now(TZ)
@@ -72,15 +72,30 @@ def main():
         "# Liczby z pełnych danych (do prezentacji)",
         "",
         f"> Wygenerowane {now:%d.%m.%Y %H:%M} przez `python -m scripts.liczby` z bazy po `python -m scripts.seed --reset --osm full`. "
-        "Źródła AED: eksport AED OSM Polska (OpenStreetMap, ODbL-1.0, © autorzy OpenStreetMap) i zbiory AED samorządów z dane.gov.pl. Granice gmin: "
-        "Państwowy Rejestr Granic – Główny Urząd Geodezji i Kartografii. Rekordy przykładowe (fikcyjne) z `data/sample/` **nie są liczone**.",
+        "Model ról (`docs/MODEL_ROL.md`): **wspólna lista** = zbiory dostawców z dane.gov.pl (bez scalania), **warstwa pomocnicza** "
+        "„Do sprawdzenia” = eksport AED OSM Polska (OpenStreetMap, ODbL-1.0, © autorzy OpenStreetMap), osobno od listy. Granice gmin: "
+        "Państwowy Rejestr Granic – Główny Urząd Geodezji i Kartografii. Fikcyjni dostawcy prototypu (`data/dostawcy/`) **nie są liczeni** "
+        "w liczbach o Polsce – są tylko w tabeli zbiorów.",
         "> Aktualne = `data_weryfikacji` (w OSM `check_date`/`survey:date`) nie starsza niż 365 dni; brak daty = nieaktualne (CONTRACT §8).",
         "",
-        "## Najważniejsze",
+        "## Wspólna lista i warstwa pomocnicza",
         "",
         "| Wskaźnik | Wartość |",
         "|---|---|",
-        f"| AED w Polsce (OpenStreetMap + zbiory samorządów, po deduplikacji) | **{n(len(real))}** |",
+        f"| Prawdziwe zbiory dostawców na liście (wzorzec / przejściowe) | **{sum(1 for e in rap['zbiory'] if e.get('status') == 'wlaczony' and not e.get('fikcyjny'))}** / "
+        f"**{sum(1 for e in rap['zbiory'] if e.get('status') == 'przejsciowy' and not e.get('fikcyjny'))}** |",
+        f"| Zbiory fikcyjnych dostawców prototypu | {sum(1 for e in rap['zbiory'] if e.get('fikcyjny'))} |",
+        f"| Zbiory AED w dane.gov.pl poza listą (nieczytelne albo bez wymagań) | {sum(1 for e in rap['zbiory'] if e.get('status') not in ('wlaczony', 'przejsciowy') and not e.get('fikcyjny'))} |",
+        f"| AED na wspólnej liście od prawdziwych dostawców | **{n(len(lista_real))}** |",
+        f"| AED fikcyjnych dostawców prototypu (nie liczone dalej) | {n(len(lista_fikc))} |",
+        f"| Warstwa pomocnicza „Do sprawdzenia” (OpenStreetMap) | **{n(len(osm))}** |",
+        f"| Gminy z co najmniej jednym AED od prawdziwego dostawcy | {n(len({coverage.index().teryt(r['dlugosc_geograficzna'], r['szerokosc_geograficzna']) for r in lista_real} - {None}))} z 2 479 |",
+        "",
+        "## Wszystkie znane AED (obie warstwy, bez fikcyjnych)",
+        "",
+        "| Wskaźnik | Wartość |",
+        "|---|---|",
+        f"| AED znane w Polsce (lista + OpenStreetMap; warstw się nie scala) | **{n(len(real))}** |",
         f"| Aktualne (sprawdzone w ostatnich 12 miesiącach) | **{n(akt)}** ({pct(akt, len(real))}) |",
         f"| Nieaktualne (starsza weryfikacja albo brak daty) | **{n(len(real) - akt)}** ({pct(len(real) - akt, len(real))}) |",
         f"| – w tym bez żadnej daty weryfikacji | {n(len(real) - len(wieki))} ({pct(len(real) - len(wieki), len(real))}) |",
@@ -107,8 +122,7 @@ def main():
         "## Import OpenStreetMap: co weszło, co odrzucone i dlaczego",
         "",
         f"- Obiektów w eksporcie: **{n(imp.get('liczba_obiektow', 0))}** (import {osm_meta.get('data_importu', '?').replace('T', ' ')}).",
-        f"- Nowe rekordy: {n(imp.get('dodane', 0))}; scalone z rekordem dysponenta: {n(imp.get('scalone', 0))}; "
-        f"połączone jako duplikaty w samym OSM (≤ 5 m od innego punktu i prawie ta sama nazwa): {n(imp.get('zaktualizowane', 0))}.",
+        f"- Rekordy warstwy pomocniczej: {n(imp.get('dodane', 0) + imp.get('zaktualizowane', 0))} (OSM nie jest scalany z listą dostawców).",
         f"- **Odrzucone: {n(imp.get('odrzucone', 0))}** ({pct(imp.get('odrzucone', 0), imp.get('liczba_obiektow', 0))})."
         + (" Powody:" if powody else " Zbyt długie nazwy i opisy są skracane (z adnotacją w raporcie), a nie odrzucane."),
     ]
@@ -121,22 +135,20 @@ def main():
                   "przyjąć po skróceniu tekstu – do decyzji."]
     L += [
         "",
-        "## Zbiory AED samorządów z dane.gov.pl (prawdziwe dane od dysponentów)",
+        "## Zbiory dostawców (ostatnia agregacja: " + str(rap.get("czas") or "–").replace("T", " ") + ")",
         "",
-        "| Zbiór | Wiersze | Nowe AED | Połączone z OSM | Odrzucone | Licencja |",
-        "|---|---:|---:|---:|---:|---|",
+        "| Zbiór | Dostawca | Status | Na liście | Odrzucone | Licencja |",
+        "|---|---|---|---:|---:|---|",
     ]
-    for kod, m in sorted(dgp):
-        w = m.get("wynik_importu") or {}
-        if w:
-            L.append(f"| [{m.get('nazwa')}]({m.get('url')}) | {w.get('wiersze', '–')} | {w.get('dodane', 0)} | "
-                     f"{w.get('scalone', 0) + w.get('zaktualizowane', 0)} | {w.get('odrzucone', 0)} | {m.get('licencja')} |")
-        else:
-            L.append(f"| [{m.get('nazwa')}]({m.get('url')}) | – | – | – | – | {m.get('licencja')} (brak pliku do pobrania – tylko link do portalu miasta) |")
+    nazwy = {"wlaczony": "wzorzec", "przejsciowy": "przejściowy", "odrzucony": "poza listą (błędy)", "poza_lista": "poza listą", "blad": "błąd odczytu"}
+    for e in sorted(rap["zbiory"], key=lambda e: (["wlaczony", "przejsciowy"].index(e["status"]) if e.get("status") in ("wlaczony", "przejsciowy") else 2, e.get("dostawca") or "")):
+        t = f"[{e.get('tytul')}]({e['zbior_url']})" if e.get("zbior_url") else str(e.get("tytul"))
+        L.append(f"| {t} | {e.get('dostawca') or '–'}{' (fikcyjny)' if e.get('fikcyjny') else ''} | {nazwy.get(e.get('status'), e.get('status'))} | "
+                 f"{e.get('wlaczone', 0)} | {e.get('odrzucone', 0)} | {e.get('licencja') or '–'} |")
     L += [
         "",
-        "AED z zestawów samorządów mają pierwszeństwo przed OpenStreetMap przy scalaniu (CONTRACT §4). "
-        "Brakujące godziny i numery budynków są ostrzeżeniami do uzupełnienia przez dysponenta.",
+        "Rekordy zbiorów przejściowych są pokazane tak, jak je opublikowano (bez uzupełniania), z etykietą „Zbiór przejściowy”. "
+        "Warstwa OSM nie jest scalana z listą – punkt OSM obok AED dostawcy zostaje osobnym punktem „Do sprawdzenia”.",
         "",
         "## Jakość danych (czego brakuje do wzorcowego zakresu)",
         "",

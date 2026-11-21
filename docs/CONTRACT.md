@@ -1,4 +1,4 @@
-# CONTRACT v2.0 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
+# CONTRACT v2.1 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
 
 > Wspólny plik: edytuje tylko Team Leader. Zamrożenie: sob 15:00 (po konsultacji na stoisku danych). Zmiany wyłącznie przez CR (tabela na końcu).
 > **Od v2.0 obowiązuje model ról i odpowiedzialności: `docs/MODEL_ROL.md`.** Dane o AED publikuje wyłącznie właściciel urządzenia (dostawca) na własnym koncie w dane.gov.pl; wspólna lista łączy zbiory dostawców bez zmian; administrator (MC) nie wprowadza danych; OSM to tylko warstwa pomocnicza „Do sprawdzenia”.
@@ -75,7 +75,7 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 
 1. **Kreator dostawcy (P2):** formularz pojedynczego AED albo plik (CSV, XLSX, JSON, GeoJSON) → mapowanie kolumn → normalizacja (`TAK/NIE` → `true/false`, przecinek → kropka, adres w jednym polu → pola, „pn-pt 8-16” → `Mo-Fr 08:00-16:00`) → walidacja ze wzorcem; `teryt_terc` uzupełniany z położenia (PRG). Wynik trafia do **kopii roboczej** dostawcy, nie na listę.
 2. **Pliki do publikacji (P3, K11):** `POST /moje-aed/pakiet` → ZIP (CSV, XML harmonizatora, słownik, metadane, instrukcja). Dostawca publikuje je sam na swoim koncie w dane.gov.pl; aplikacja nie ma funkcji „Opublikuj”.
-3. **Agregacja (P5):** zbiory oznaczone `wspolna-lista-aed` (prototyp: 3 fikcyjnych dostawców w `data/dostawcy/`, w kształcie odpowiedzi API 1.4) → walidacja zbioru i rekordów → lista. Rekord niezgodny ze wzorcem nie trafia na mapę; dostawca dostaje raport. Lista niczego nie poprawia i **nie scala** rekordów różnych dostawców; rekordy ≤ 25 m od siebie dostają `mozliwe_duplikaty`, oba zostają, obaj dostawcy dostają powiadomienie (P8). Zbiory AED w dane.gov.pl bez słowa kluczowego i 44 pól → raport `poza_lista` (zaproszenie do wzorca). Agregacja: co noc (`AED_ODSWIEZANIE`), przy starcie i na żądanie administratora.
+3. **Agregacja (P5):** zbiory oznaczone `wspolna-lista-aed` (prototyp: 3 fikcyjnych dostawców w `data/dostawcy/`, w kształcie odpowiedzi API 1.4) → walidacja zbioru i rekordów → lista. Rekord niezgodny ze wzorcem nie trafia na mapę; dostawca dostaje raport. Lista niczego nie poprawia i **nie scala** rekordów różnych dostawców; rekordy ≤ 25 m od siebie dostają `mozliwe_duplikaty`, oba zostają, obaj dostawcy dostają powiadomienie (P8). Zbiory AED w dane.gov.pl opublikowane przed wzorcem (bez słowa kluczowego i 44 pól), których plik da się odczytać → **zbiór przejściowy** (CR-TL-5): rekordy z położeniem pokazane bez zmian, `meta.zgodnosc = przejsciowy`, zaproszenie do wzorca; nieczytelne (PDF, brak pliku) → `poza_lista`. Agregacja: co noc (`AED_ODSWIEZANIE`), przy starcie i na żądanie administratora.
 4. **Aktualność (§7, K9):** rekord „do weryfikacji” (`stan_danych = nieaktualne`), gdy `data_weryfikacji` > 12 mies. albo brak; zbiór „nieaktualny” (`zbior_nieaktualny`), gdy minął okres z `updateFrequency` + 30 dni (P9: przypomnienie dla dostawcy).
 5. **Zgłoszenia mieszkańców (P6, P7):** z `id_aed` rekordu listy → kolejka i powiadomienie jego dostawcy, który decyduje `przyjete` / `odrzucone`; bez dostawcy (urządzenie spoza listy, punkt OSM) → kolejka administratora: `zaproszenie` / `odrzucone`. Zgłoszenie **nigdy nie zmienia danych**. Opis przechodzi filtr (bez e-maili, telefonów, linków); opcjonalny e-mail zgłaszającego jest usuwany po zamknięciu. Potwierdzenia „jest na miejscu” trafiają do dostawcy i są pokazywane osobno od daty weryfikacji.
 6. **Rozliczalność (§9, K10):** każdy zapis – w dzienniku zdarzeń (kto, kiedy, operacja, obiekt, przed, po), którego nie da się zmienić ani usunąć.
@@ -84,9 +84,10 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 
 | Metoda i ścieżka | Kto | Opis |
 |---|---|---|
-| `GET /aed` | publiczny | wspólna lista (domyślnie `warstwa=lista`; `pomocnicza` = OSM, `wszystkie`); filtry: `bbox`, `wojewodztwo` (po położeniu), `gmina`, `dostep`, `dostepne_teraz`, `stan_danych`, `q`, `ids`, `page`, `per_page`; w `meta` rekordu: `warstwa`, `dostawca`, `zbior_url`, `zasob_url`, `data_danych`, `zbior_nieaktualny`, `mozliwe_duplikaty` |
-| `GET /aed/punkty?bbox=&warstwa=` | publiczny | warstwa mapy (domyślnie obie warstwy): `id`, współrzędne, `dostepny_teraz`, `stan_danych`, `warstwa`, `zbior_nieaktualny`, `duplikat`, `dostep`, `wiek_danych_dni`, `mobilny`, `wojewodztwo`, `gmina_teryt`; gzip, `ETag` |
+| `GET /aed` | publiczny | wspólna lista (domyślnie `warstwa=lista`; `pomocnicza` = OSM, `wszystkie`); filtry: `bbox`, `wojewodztwo` (po położeniu), `gmina`, `dostep`, `dostepne_teraz`, `stan_danych`, `q`, `ids`, `page`, `per_page`; w `meta` rekordu: `warstwa`, `dostawca`, `zbior_url`, `zasob_url`, `data_danych`, `zbior_nieaktualny`, `mozliwe_duplikaty`, `zgodnosc` (`wzorzec`/`przejsciowy`), `dostawca_podstawa` (`wlasciciel`/`zarzadca`/`weryfikujacy`, CR-TL-6) |
+| `GET /aed/punkty?bbox=&warstwa=` | publiczny | warstwa mapy (domyślnie obie warstwy): `id`, współrzędne, `dostepny_teraz`, `stan_danych`, `warstwa`, `zbior_nieaktualny`, `duplikat`, `zgodnosc`, `dostep`, `wiek_danych_dni`, `mobilny`, `wojewodztwo`, `gmina_teryt`; gzip, `ETag` |
 | `GET /aed/{id_aed}`, `GET /aed/najblizsze` | publiczny | rekord z pochodzeniem i potwierdzeniami; najbliższe (domyślnie z listy) |
+| `GET /zbiory` | publiczny | dostawcy i zbiory: `status` = `wzorzec` / `przejsciowy` / `poza_lista`, `nieaktualny`, `rekordy`, `data_danych`, `licencja`, `problemy`; `meta.warstwa_pomocnicza` (CR-TL-5) |
 | `GET /miejsca?q=&blisko=` | publiczny | wyszukiwarka miejsc (województwa, gminy, miejscowości, ulice, adresy) |
 | `POST /aed`, `PATCH /aed/{id_aed}` | dostawca – tylko własne AED; administrator 403 | formularz kreatora → kopia robocza (K1, K2) |
 | `POST /import`, `/import/{id}/mapowanie`, `/import/{id}/zatwierdz` | dostawca; administrator 403 | plik → kopia robocza; licencja CC0-1.0 albo CC-BY-4.0 |
@@ -100,7 +101,7 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 | `POST /admin/agregacja`, `GET /admin/agregacja` | administrator | agregacja i raport walidacji zbiorów |
 | `GET /admin/luki`, `GET/POST /admin/przypomnienia` | administrator | gminy bez dostawcy (z liczbą punktów OSM – cel akcji); zbiory po terminie |
 | `GET /dziennik` | administrator | dziennik zdarzeń (tylko odczyt) |
-| `GET/POST /konta`, `POST /konta/{login}/reset-hasla`, `PATCH /konta/{login}` | administrator | konta dostawców (organizacja = `dysponent_nazwa`), hasło jednorazowe, blokada |
+| `GET/POST /konta`, `POST /konta/{login}/reset-hasla`, `PATCH /konta/{login}` | administrator | konta dostawców (organizacja = `dysponent_nazwa`, `dostawca_podstawa` wymagana), hasło jednorazowe, blokada |
 | `GET /konta/ja`, `POST /konta/ja/haslo` | zalogowany | kim jestem, zmiana hasła |
 | `GET /zrodla`, `POST /zrodla/odswiez`, `GET /zrodla/odswiezanie`, `POST /zrodla/osm/odswiez`, `POST /zrodla/dane-gov-pl/szukaj` | publiczny / administrator | źródła, odświeżanie (agregacja + OSM), podgląd zbiorów AED w dane.gov.pl (bez importu) |
 | `GET /eksport`, `GET /eksport/{plik}`, `GET /szablon.csv`, `GET /szablon.xlsx` | publiczny | kompilacja listy (§3), szablony dla dostawców |
@@ -138,3 +139,4 @@ Mapa ma dwa tryby. **Dostępność** – jak dotąd (§7, `dostepny_teraz`). **A
 | CR-TL-2 | Team Leader | Zgłoszenia rozpatruje moderator albo dysponent (tylko swoich AED) – spójnie z API (§4 pkt 6, §5); `GET /aed/punkty` (lekka warstwa mapy, gzip, ETag); granice gmin dla 16 województw bez szczelin (§8) | przyjęta | 1.2 |
 | CR-TL-3 | właściciel projektu | Odświeżanie źródeł (noc, start, przycisk), konta instytucji zakładane przez moderatora, zdjęcie i szczegóły w zgłoszeniu, import prawdziwych zbiorów AED samorządów z dane.gov.pl | przyjęta | 1.3 |
 | CR-TL-4 | Team Leader | Model ról i odpowiedzialności (`docs/MODEL_ROL.md`): publikuje tylko dostawca, wspólna lista bez scalania, administrator bez zapisu do danych, OSM jako warstwa pomocnicza, kreator kończy się pobraniem plików, dziennik zdarzeń; `teryt_terc` 7 cyfr | przyjęta | 2.0 |
+| CR-TL-5/6 | Team Leader | `GET /zbiory`, zbiory przejściowe (`meta.zgodnosc`), `meta.dostawca_podstawa` i podstawa publikacji przy koncie dostawcy | przyjęta | 2.1 |

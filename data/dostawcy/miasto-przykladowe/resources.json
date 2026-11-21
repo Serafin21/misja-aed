@@ -1,0 +1,14 @@
+{
+ "data": [
+  {
+   "type": "resource",
+   "id": "9900050",
+   "attributes": {
+    "title": "Lokalizacje AED – Miasto Przykładowe – PDF",
+    "format": "pdf",
+    "data_date": "2024-09-01",
+    "file_url": "https://dane.gov.pl/media/resources/fikcyjne/miasto-przykladowe.pdf"
+   }
+  }
+ ]
+}

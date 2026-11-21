@@ -1951,6 +1951,26 @@
         }
       }
     },
+    "/api/v1/zbiory": {
+      "get": {
+        "tags": [
+          "zrodla"
+        ],
+        "summary": "Dostawcy i zbiory wspólnej listy (CR-TL-5)",
+        "description": "Zbiory AED dostawców z dane.gov.pl i ich status na wspólnej liście: `wzorzec` (zgodny ze wzorcem, na liście), `przejsciowy` (opublikowany przed wzorcem – rekordy pokazane bez zmian z etykietą), `poza_lista` (nie spełnia wymagań albo nie da się go odczytać – nie jest na liście; `problemy` mówią dlaczego). Publiczne, bez logowania.",
+        "operationId": "datasets_api_v1_zbiory_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/luki": {
       "get": {
         "tags": [
@@ -2692,6 +2712,19 @@
               }
             ],
             "title": "Regon"
+          },
+          "dostawca_podstawa": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(wlasciciel|zarzadca|weryfikujacy)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dostawca Podstawa",
+            "description": "CR-TL-6: właściciel AED | zarządca z umową | podmiot weryfikujący na miejscu"
           }
         },
         "type": "object",

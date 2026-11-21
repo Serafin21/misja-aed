@@ -1,0 +1,15 @@
+{
+ "data": [
+  {
+   "type": "resource",
+   "id": "9900040",
+   "attributes": {
+    "title": "Wykaz defibrylatorów – Gmina Przykładowa Druga – CSV",
+    "format": "csv",
+    "data_date": "2026-03-10",
+    "file_url": "https://dane.gov.pl/media/resources/fikcyjne/gmina-przykladowa-druga.csv",
+    "_plik_prototypu": "aed.csv"
+   }
+  }
+ ]
+}

@@ -141,8 +141,9 @@ def _local() -> list[dict]:
                     "update_frequency": a.get("update_frequency"), "modified": a.get("modified"),
                     "licencja": {"CC0 1.0": "CC0-1.0", "CC BY 4.0": "CC-BY-4.0"}.get(a.get("license_name"), a.get("license_name")),
                     "zbior_url": f"{PORTAL}/pl/dataset/{ds['id']},{a.get('slug', '')}", "zasob_id": str(res["id"]),
-                    "zasob_url": ra.get("file_url"), "data_danych": ra.get("data_date"),
-                    "plik": (d.parent / ra["_plik_prototypu"]).read_bytes(), "fikcyjny": True})
+                    "zasob_url": ra.get("file_url"), "data_danych": ra.get("data_date"), "format": ra.get("format"),
+                    "plik": (d.parent / ra["_plik_prototypu"]).read_bytes() if ra.get("_plik_prototypu") else None,
+                    "fikcyjny": True})
     return out
 
 
@@ -175,6 +176,98 @@ def _csv_rows(data: bytes) -> tuple[list[str], list[dict]]:
     return [h.strip() for h in (r.fieldnames or [])], list(r)
 
 
+def _w_formacie_wzorca(s: dict, header: list[str]) -> bool:
+    """The provider published for the list (keyword) or with the template columns – judged by the template rules."""
+    return KEYWORD in [k.lower() for k in s.get("keywords") or []] or all(f in header for f in ("id_aed", "teryt_terc"))
+
+
+def _przejsciowy(s: dict, entry: dict, taken: set[str]) -> list[tuple[dict, dict]]:
+    """CR-TL-5: a dataset published BEFORE the template (own columns, no list keyword). Records that can be read and
+    placed on the map are shown unchanged (nothing is filled in or fixed) with the label "Zbiór przejściowy"; the
+    provider is invited to publish following the template. Unreadable file (e.g. PDF) → "poza_lista"."""
+    from . import importers, mapping, pipeline
+    from .connectors import dane_gov_pl as D
+    entry.update(status="poza_lista", zgodnosc=None)
+    if not s.get("plik"):
+        entry["problemy"].append(f"Brak pliku do odczytu maszynowego ({(s.get('format') or 'nieznany format').upper()}) – nie da się pokazać rekordów na liście.")
+        return []
+    try:
+        rows, _ = importers.read_any(s.get("zasob_url") or "plik.csv", s["plik"])
+        rows = D._geometry(D._unwrap(rows))
+    except Exception as e:  # noqa: BLE001
+        entry["problemy"].append(f"Nie udało się odczytać pliku: {e}")
+        return []
+    entry["rekordy"] = len(rows)
+    if not rows:
+        return []
+    m = D._fix_mapping(rows, mapping.propose(rows))
+    defaults = {"kod_zrodla": f"dostawca:{s['id']}", "licencja": s.get("licencja"), "zrodlo_danych": "dysponent",
+                "metoda_weryfikacji": "deklaracja_dysponenta", "status_urzadzenia": "nieznany",
+                "dysponent_nazwa": s["dostawca"], "dysponent_regon": s.get("regon"), "dysponent_typ": "administracja_publiczna",
+                "data_weryfikacji": (s.get("data_danych") or s.get("modified") or "")[:10] or None}
+    out, seen = [], {}
+    for i, row in enumerate(rows, start=2):
+        rec, probs = D._record(row, m, defaults, i)
+        lat, lon = rec.get("szerokosc_geograficzna"), rec.get("dlugosc_geograficzna")
+        errs = [p["komunikat"] for p in probs if p["poziom"] == "blad"]
+        if not (isinstance(lat, (int, float)) and isinstance(lon, (int, float))):
+            errs = ["Brak współrzędnych – rekordu nie da się pokazać na mapie."]
+        if errs:
+            entry["odrzucone"] += 1
+            entry["problemy_rekordow"].append({"wiersz": i, "id_aed": None, "problemy": errs[:3]})
+            continue
+        sid = pipeline.source_id(rec, row, i)
+        seen[sid] = seen.get(sid, 0) + 1
+        rec["id_aed"] = dedup.make_id(f"dostawca:{s['id']}", sid if seen[sid] == 1 else f"{sid} #{seen[sid]}")
+        if rec["id_aed"] in taken:
+            continue
+        taken.add(rec["id_aed"])
+        if not rec.get("teryt_terc"):
+            rec["teryt_terc"] = coverage.index().teryt(lon, lat)
+        out.append((rec, _prov(s, entry, "przejsciowy")))
+        entry["wlaczone"] += 1
+    if out:
+        entry.update(status="przejsciowy", zgodnosc="przejsciowy")
+        entry["problemy"].insert(0, "Zbiór opublikowany przed wzorcem AED – rekordy pokazane bez zmian, z etykietą „Zbiór przejściowy”. "
+                                    "Zapraszamy do publikacji według wzorca (44 pola, słowo kluczowe „" + KEYWORD + "”).")
+    return out
+
+
+def _prov(s: dict, entry: dict, zgodnosc: str) -> dict:
+    return {"dostawca": s["dostawca"], "regon": s.get("regon"), "zbior_id": s["id"],
+            "zbior_tytul": s["tytul"], "zbior_url": s["zbior_url"], "zasob_id": s.get("zasob_id"), "zasob_url": s.get("zasob_url"),
+            "data_danych": s.get("data_danych"), "zbior_zmodyfikowany": (s.get("modified") or "")[:10],
+            "czestotliwosc": s.get("update_frequency"), "zbior_nieaktualny": entry["nieaktualny"],
+            "licencja_zbioru": s.get("licencja"), "fikcyjny": s.get("fikcyjny", False), "mozliwe_duplikaty": [],
+            "zgodnosc": zgodnosc}
+
+
+def _zrodlo_online(d: dict, dostawca: str | None = None) -> dict:
+    """A dane.gov.pl dataset (API 1.4) → the same shape as a local one (downloads the first readable resource)."""
+    from .connectors import dane_gov_pl
+    from .connectors.net import fetch
+    a = d["attributes"]
+    rel = (((d.get("relationships") or {}).get("resources") or {}).get("links") or {}).get("related") \
+        or f"{dane_gov_pl.API}/datasets/{d['id']}/resources"
+    rb, _ = fetch(rel, f"dgp_res_{d['id']}.json", timeout=20, max_age_h=1)
+    res = sorted(json.loads(rb)["data"], key=lambda r: dane_gov_pl.PREFERRED.index(r["attributes"].get("format"))
+                 if r["attributes"].get("format") in dane_gov_pl.PREFERRED else 99)
+    plik, r0 = None, (res[0] if res else {"id": None, "attributes": {}})
+    for r in res:
+        url = r["attributes"].get("file_url") or r["attributes"].get("download_url")
+        if r["attributes"].get("format") in dane_gov_pl.PREFERRED and url:
+            plik, _ = fetch(url, f"dgp_file_{r['id']}.{r['attributes']['format']}", timeout=60, max_age_h=1)
+            r0 = r
+            break
+    ra = r0["attributes"]
+    return {"id": str(d["id"]), "tytul": dane_gov_pl._clean(a.get("title")), "dostawca": dostawca or dane_gov_pl._institution(str(d["id"])) or "",
+            "keywords": a.get("keywords") or [], "update_frequency": a.get("update_frequency") or a.get("updateFrequency"),
+            "modified": a.get("modified"), "licencja": dane_gov_pl.LICENCES.get(a.get("license_name")),
+            "zbior_url": f"{PORTAL}/pl/dataset/{d['id']}" + (f",{a['slug']}" if a.get("slug") else ""),
+            "zasob_id": str(r0.get("id")), "zasob_url": ra.get("file_url") or ra.get("download_url"),
+            "data_danych": ra.get("data_date"), "format": ra.get("format"), "plik": plik}
+
+
 # ---------- aggregation (P5, P8, P9) ----------
 def agreguj(store: Store, online: bool | None = None) -> dict:
     from . import dziennik
@@ -182,29 +275,33 @@ def agreguj(store: Store, online: bool | None = None) -> dict:
     raport, items = [], []
     marked, other = _remote(online)
     sources = _local()
-    for d in marked:  # real datasets marked with the keyword: same path as the local ones (download the CSV resource)
+    for d in marked:  # real datasets marked with the keyword: same path as the local ones
         try:
-            from .connectors import dane_gov_pl
-            from .connectors.net import fetch
-            a = d["attributes"]
-            rb, _ = fetch(d["relationships"]["resources"]["links"]["related"], f"dgp_res_{d['id']}.json", timeout=20, max_age_h=1)
-            res = next(r for r in json.loads(rb)["data"] if r["attributes"].get("format") == "csv")
-            fb, _ = fetch(res["attributes"]["file_url"], f"dgp_file_{res['id']}.csv", timeout=60, max_age_h=1)
-            sources.append({"id": str(d["id"]), "tytul": a["title"], "dostawca": dane_gov_pl._institution(str(d["id"])) or "",
-                            "keywords": a.get("keywords"), "update_frequency": a.get("update_frequency") or a.get("updateFrequency"),
-                            "modified": a.get("modified"), "licencja": dane_gov_pl.LICENCES.get(a.get("license_name")),
-                            "zbior_url": f"{PORTAL}/pl/dataset/{d['id']}", "zasob_id": str(res["id"]),
-                            "zasob_url": res["attributes"]["file_url"], "data_danych": res["attributes"].get("data_date"), "plik": fb})
+            sources.append(_zrodlo_online(d))
         except Exception as e:  # noqa: BLE001
             raport.append({"zbior_id": str(d.get("id")), "tytul": d.get("attributes", {}).get("title"), "status": "blad", "problemy": [str(e)]})
     taken: set[str] = set()
     for s in sources:
-        header, rows = _csv_rows(s["plik"])
-        ds_problems = sprawdz_zbior(s, header)
+        try:
+            header, rows = _csv_rows(s["plik"]) if s.get("plik") and (s.get("format") or "csv") == "csv" else ([], [])
+        except (UnicodeDecodeError, csv.Error):
+            header, rows = [], []
         entry = {"zbior_id": s["id"], "tytul": s["tytul"], "dostawca": s["dostawca"], "zbior_url": s["zbior_url"],
                  "zasob_url": s["zasob_url"], "czestotliwosc": s.get("update_frequency"), "zmodyfikowany": (s.get("modified") or "")[:10],
                  "nieaktualny": dataset_nieaktualny(s.get("modified"), s.get("update_frequency")), "fikcyjny": s.get("fikcyjny", False),
-                 "rekordy": len(rows), "wlaczone": 0, "odrzucone": 0, "problemy": list(ds_problems), "problemy_rekordow": []}
+                 "rekordy": len(rows), "wlaczone": 0, "odrzucone": 0, "problemy": [], "problemy_rekordow": [],
+                 "licencja": s.get("licencja"), "data_danych": s.get("data_danych"), "zgodnosc": "wzorzec"}
+        if not _w_formacie_wzorca(s, header):  # CR-TL-5: published before the template
+            new = _przejsciowy(s, entry, taken)
+            items.extend(new)
+            raport.append(entry)
+            if new:
+                dziennik.powiadom(s["dostawca"], "wzorzec",
+                                  f"Zbiór „{s['tytul']}” jest na liście jako przejściowy ({entry['wlaczone']} AED). Opublikuj go według wzorca AED, "
+                                  "aby mieszkańcy widzieli pełne dane (godziny, dostęp, data sprawdzenia).", f"{s['id']}:{s.get('modified')}")
+            continue
+        ds_problems = sprawdz_zbior(s, header)
+        entry["problemy"] = list(ds_problems)
         if ds_problems:
             entry.update(status="odrzucony", odrzucone=len(rows))
             raport.append(entry)
@@ -219,11 +316,8 @@ def agreguj(store: Store, online: bool | None = None) -> dict:
                 entry["problemy_rekordow"].append({"wiersz": i, "id_aed": rec.get("id_aed"), "problemy": probs})
                 continue
             taken.add(rec["id_aed"])
-            prov = {"dostawca": s["dostawca"], "regon": s.get("regon") or rec.get("dysponent_regon"), "zbior_id": s["id"],
-                    "zbior_tytul": s["tytul"], "zbior_url": s["zbior_url"], "zasob_id": s["zasob_id"], "zasob_url": s["zasob_url"],
-                    "data_danych": s.get("data_danych"), "zbior_zmodyfikowany": (s.get("modified") or "")[:10],
-                    "czestotliwosc": s.get("update_frequency"), "zbior_nieaktualny": entry["nieaktualny"],
-                    "licencja_zbioru": s.get("licencja"), "fikcyjny": s.get("fikcyjny", False), "mozliwe_duplikaty": []}
+            prov = _prov(s, entry, "wzorzec")
+            prov["regon"] = s.get("regon") or rec.get("dysponent_regon")
             items.append((rec, prov))
             entry["wlaczone"] += 1
         entry["status"] = "wlaczony" if entry["wlaczone"] else "odrzucony"
@@ -236,12 +330,26 @@ def agreguj(store: Store, online: bool | None = None) -> dict:
             dziennik.powiadom(s["dostawca"], "przypomnienie",
                               f"Zbiór „{s['tytul']}” przekroczył termin aktualizacji ({s.get('update_frequency')}) o ponad {ZAPAS_DNI} dni – na mapie jest oznaczony jako nieaktualny.",
                               f"{s['id']}:{s.get('modified')}")
-    # AED datasets on dane.gov.pl without the keyword: not on the list, report what is missing (invitation to the standard)
+    # AED datasets on dane.gov.pl without the keyword: published before the template → transitional if readable (CR-TL-5)
     for o in other:
-        raport.append({"zbior_id": o["id"], "tytul": o["tytul"], "dostawca": o.get("instytucja"), "zbior_url": o.get("strona"),
-                       "status": "poza_lista", "rekordy": None, "wlaczone": 0, "odrzucone": 0, "nieaktualny": None,
-                       "problemy": [f"Zbiór nie jest oznaczony słowem kluczowym „{KEYWORD}” i nie ma 44 pól wzorca AED – "
-                                    "administrator zaprasza dostawcę do publikacji według wzorca."], "problemy_rekordow": []})
+        entry = {"zbior_id": o["id"], "tytul": o["tytul"], "dostawca": o.get("instytucja"), "zbior_url": o.get("strona"),
+                 "zasob_url": None, "czestotliwosc": None, "zmodyfikowany": o.get("zmodyfikowano"), "nieaktualny": None,
+                 "fikcyjny": False, "rekordy": 0, "wlaczone": 0, "odrzucone": 0, "problemy": [], "problemy_rekordow": [],
+                 "licencja": o.get("licencja"), "data_danych": o.get("zmodyfikowano"), "zgodnosc": None, "status": "poza_lista"}
+        try:
+            if not o.get("licencja"):
+                raise ValueError(f"Licencja {o.get('licencja_portalu')} spoza słownika (CC0 1.0, CC BY 4.0).")
+            src = _zrodlo_online({"id": o["id"], "attributes": {"title": o["tytul"], "slug": o.get("slug"), "modified": o.get("zmodyfikowano"),
+                                                                 "license_name": o.get("licencja_portalu")},
+                                  "relationships": {"resources": {"links": {"related": o.get("zasoby_url")}}}}, o.get("instytucja"))
+            entry.update(zasob_url=src.get("zasob_url"), data_danych=src.get("data_danych") or entry["data_danych"])
+            items.extend(_przejsciowy(src, entry, taken))
+        except Exception as e:  # noqa: BLE001
+            entry["problemy"].append(str(e))
+        if entry["status"] == "poza_lista":
+            entry["problemy"].append(f"Zbiór nie jest oznaczony słowem kluczowym „{KEYWORD}” i nie ma 44 pól wzorca AED – "
+                                     "administrator zaprasza dostawcę do publikacji według wzorca.")
+        raport.append(entry)
     # P8: possible duplicates between DIFFERENT providers – flag both, notify both, never merge
     grid = dedup.GridIndex()
     for idx, (rec, _) in enumerate(items):
@@ -268,9 +376,10 @@ def agreguj(store: Store, online: bool | None = None) -> dict:
     store.replace_list(items)
     # reference scope of sources = the providers' datasets
     for e in raport:
-        if e["status"] in ("wlaczony", "odrzucony"):
+        if e["status"] in ("wlaczony", "odrzucony", "przejsciowy"):
             store.register_source(f"dostawca:{e['zbior_id']}", {
-                "nazwa": f"{e['tytul']} ({e['dostawca']})", "typ_zrodla": "dostawca", "format": "CSV (wzorzec AED)",
+                "nazwa": f"{e['tytul']} ({e['dostawca']})", "typ_zrodla": "dostawca",
+                "format": "CSV (wzorzec AED)" if e["status"] != "przejsciowy" else "zbiór przejściowy (przed wzorcem)",
                 "licencja": next((p["licencja_zbioru"] for _, p in items if p["zbior_id"] == e["zbior_id"]), ""),
                 "czestotliwosc_aktualizacji": e.get("czestotliwosc"), "obszar": e["dostawca"], "url": e.get("zbior_url"),
                 "data_importu": now_min(), "odrzucone": e["odrzucone"]})
