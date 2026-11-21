@@ -329,3 +329,11 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Zrobione (zrzut od B): ścieżka okruszków usunięta ze wszystkich stron (komponent `Breadcrumbs` zostaje w kodzie, nieużywany). Błąd 404 bez treści od API pokazuje zamiast „Błąd 404”: „Serwer danych nie ma tej funkcji – uruchom go ponownie po pobraniu nowej wersji (git pull)”.
 - Diagnoza „Moje AED: Błąd 404” i „nie działa konto administratora”: kod API ma `/moje-aed`, `/moje-aed/powiadomienia` i konto `administrator` / `administrator-demo` (`src/api/auth.py`) – B miał uruchomiony serwer sprzed `git pull` (uvicorn bez `--reload`). Rozwiązanie: restart serwera danych.
 - Użycie AI (jedna linia): poprawki i diagnoza z Claude (Model B).
+
+## HANDOFF #29
+
+- Czas: sob 23:30
+- Zrobione: nowa księga znaku od zespołu (9 stron, `AED_w_danych_pakiet.zip`) w `src/ui/public/akcja/`: `ksiega_znaku.pdf`, `AED_w_danych_logo.zip` i `logo/{svg,png,jpg,pdf}/` (48 plików). Strona 9 księgi ma linki względne (`logo/svg/…`) – leżą obok PDF-a, więc kliknięcie formatu w PDF otwartym ze strony pobiera plik (sprawdzone: wszystkie 50 linków ma plik docelowy). Strona główna: na dole sekcja „Akcja „AED w danych” – księga znaku” (znak, „Otwórz księgę znaku (PDF)” w nowym oknie, „Pobierz wszystkie pliki logo (ZIP)”).
+- Do decyzji: `brand/ksiega_znaku.pdf` w repo to wciąż wcześniejsza wersja (generator) – podmienić na nową od zespołu?
+- Sprawdzone: składnia TS; linki PDF → pliki. Klikanie linków w przeglądarkowym podglądzie PDF – do sprawdzenia u B (Chrome).
+- Użycie AI (jedna linia): umieszczenie plików i sekcji na stronie głównej z Claude (Model B); księga i logo – zespół.

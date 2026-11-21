@@ -503,3 +503,9 @@ thead th { background: var(--color-surface); }
 .place-search__locate .icon, .place-search__locate svg { width: 26px; height: 26px; }
 .e2__geo:empty { display: none; }
 .e2__geo { margin: var(--space-s) 0 0; }
+/* Home: brand book of the campaign at the bottom */
+.brandbook { display: flex; gap: var(--space); align-items: flex-start; margin-top: var(--space-l, 2rem); padding: var(--space); border: var(--border-width) solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.brandbook h2 { margin-top: 0; }
+.brandbook svg { flex: none; }
+.brandbook__links { display: flex; flex-wrap: wrap; gap: var(--space-s); margin-bottom: 0; }
+@media (max-width: 480px) { .brandbook { flex-direction: column; } }
