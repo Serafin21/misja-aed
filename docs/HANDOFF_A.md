@@ -1,5 +1,11 @@
 # HANDOFF – Model A
 
+## 2026-11-21 19:00 – HANDOFF #6: CR od B (#14) + pod nową mapę E2
+
+- **Zrobione:** (1) `tzdata` w `requirements.txt` (tylko Windows, Apache-2.0) i w `check_licenses.py`; (2) `GET /aed?wojewodztwo=` filtruje **po położeniu** w granicach PRG (pole rekordu tylko gdy punkt poza granicami); (3) `GET /aed/punkty` ma dodatkowo `dostep`, `wiek_danych_dni` (null = brak daty), `mobilny`, `wojewodztwo` (z położenia) – do filtrów po stronie przeglądarki; (4) `GET /aed?ids=a,b,c` (maks. 200) – rekordy w podanej kolejności, dla listy obok mapy. 66 testów.
+- **CR do B:** kształt punktu: `properties: {dostepny_teraz, stan_danych, osm, dostep, wiek_danych_dni, mobilny, wojewodztwo}`.
+- **Użycie AI:** Claude.
+
 ## 2026-11-21 17:10 – HANDOFF #5: obraz Docker naprawiony i sprawdzony
 
 - **Zrobione:** `Dockerfile` kopiuje `data/granice/` (bez tego w Dockerze `/pokrycie` dawało 404, a `gminy_bez_danych` = 0). Nowy `.dockerignore` (bez `.git`, `deliverables`, `node_modules` – szybszy build). **Pierwszy pełny build i start obu obrazów (api + ui) przetestowany**: 18 039 AED, `/pokrycie`, `/aed/punkty` z gzip, UI przez nginx bez trybu demonstracyjnego.

@@ -208,6 +208,24 @@
             "description": "aktualne (weryfikacja ≤ 365 dni) | nieaktualne (starsza lub brak daty) – CR-TL-1"
           },
           {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "lista id_aed rozdzielonych przecinkami (maks. 200) – rekordy w podanej kolejności, np. lista obok mapy",
+              "title": "Ids"
+            },
+            "description": "lista id_aed rozdzielonych przecinkami (maks. 200) – rekordy w podanej kolejności, np. lista obok mapy"
+          },
+          {
             "name": "page",
             "in": "query",
             "required": false,
@@ -401,7 +419,7 @@
           "aed"
         ],
         "summary": "Lekka warstwa punktów do mapy (GeoJSON, gzip, ETag)",
-        "description": "Cała Polska albo `bbox`. Każdy punkt: `id`, współrzędne i trzy pola do kolorowania: `dostepny_teraz` (true/false/null), `stan_danych` (aktualne/nieaktualne), `osm` (true = warstwa ODbL). Odpowiedź skompresowana gzip, gdy klient to obsługuje; nagłówek `ETag` – przy `If-None-Match` serwer zwraca 304. `dostepny_teraz` przeliczane co minutę.",
+        "description": "Cała Polska albo `bbox`. Każdy punkt: `id`, współrzędne i pola do kolorowania i filtrowania: `dostepny_teraz` (true/false/null), `stan_danych` (aktualne/nieaktualne), `osm` (true = warstwa ODbL), `dostep` (publiczny/ograniczony/prywatny), `wiek_danych_dni` (null = brak daty), `mobilny`, `wojewodztwo` (z położenia). Odpowiedź skompresowana gzip, gdy klient to obsługuje; nagłówek `ETag` – przy `If-None-Match` serwer zwraca 304. `dostepny_teraz` przeliczane co minutę.",
         "operationId": "aed_points_api_v1_aed_punkty_get",
         "parameters": [
           {

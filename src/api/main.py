@@ -147,9 +147,16 @@ def list_aed(request: Request,
              warstwa_: Optional[str] = Query(None, alias="warstwa", description="otwarta | osm (domyślnie obie)"),
              zrodlo_danych: Optional[str] = None,
              stan_danych: Optional[str] = Query(None, description="aktualne (weryfikacja ≤ 365 dni) | nieaktualne (starsza lub brak daty) – CR-TL-1"),
+             ids: Optional[str] = Query(None, description="lista id_aed rozdzielonych przecinkami (maks. 200) – rekordy w podanej kolejności, np. lista obok mapy"),
              page: int = Query(1, ge=1), per_page: int = Query(50, ge=1, le=1000)):
     st = get_store()
-    recs = list(st.records.values())
+    if ids:
+        wanted = [i.strip() for i in ids.split(",") if i.strip()]
+        if len(wanted) > 200:
+            err(422, "walidacja", "Parametr ids: maksymalnie 200 identyfikatorów.", {"ids": "Za dużo identyfikatorów."})
+        recs = [st.records[i] for i in dict.fromkeys(wanted) if i in st.records]
+    else:
+        recs = list(st.records.values())
     if bbox:
         try:
             a, b, c, d = (float(x) for x in bbox.split(","))
@@ -157,7 +164,9 @@ def list_aed(request: Request,
             err(422, "walidacja", "Parametr bbox: minLon,minLat,maxLon,maxLat.", {"bbox": "Nieprawidłowy format."})
         recs = [r for r in recs if a <= r["dlugosc_geograficzna"] <= c and b <= r["szerokosc_geograficzna"] <= d]
     if wojewodztwo:
-        recs = [r for r in recs if r.get("wojewodztwo") == wojewodztwo.lower()]
+        # by location in PRG boundaries (OSM records rarely have the field); the field is the fallback
+        w = wojewodztwo.lower()
+        recs = [r for r in recs if (coverage.wojewodztwo_z_polozenia(r) or r.get("wojewodztwo")) == w]
     if gmina:
         recs = [r for r in recs if (r.get("gmina") or "").lower() == gmina.lower()]
     if dostep:
@@ -177,7 +186,8 @@ def list_aed(request: Request,
     now = datetime.now(TZ)
     if dostepne_teraz is not None:
         recs = [r for r in recs if (available_now(r, now) is True) == dostepne_teraz]
-    recs.sort(key=lambda r: r["id_aed"])
+    if not ids:
+        recs.sort(key=lambda r: r["id_aed"])
     total = len(recs)
     chunk = recs[(page - 1) * per_page: page * per_page]
     return {"data": [resource(r) for r in chunk],
@@ -222,8 +232,10 @@ _points_cache: dict[tuple, tuple[bytes, bytes, str]] = {}
 
 
 @app.get(f"{API}/aed/punkty", tags=["aed"], summary="Lekka warstwa punktów do mapy (GeoJSON, gzip, ETag)",
-         description="Cała Polska albo `bbox`. Każdy punkt: `id`, współrzędne i trzy pola do kolorowania: "
-                     "`dostepny_teraz` (true/false/null), `stan_danych` (aktualne/nieaktualne), `osm` (true = warstwa ODbL). "
+         description="Cała Polska albo `bbox`. Każdy punkt: `id`, współrzędne i pola do kolorowania i filtrowania: "
+                     "`dostepny_teraz` (true/false/null), `stan_danych` (aktualne/nieaktualne), `osm` (true = warstwa ODbL), "
+                     "`dostep` (publiczny/ograniczony/prywatny), `wiek_danych_dni` (null = brak daty), `mobilny`, "
+                     "`wojewodztwo` (z położenia). "
                      "Odpowiedź skompresowana gzip, gdy klient to obsługuje; nagłówek `ETag` – przy `If-None-Match` serwer zwraca 304. "
                      "`dostepny_teraz` przeliczane co minutę.")
 def aed_points(request: Request, bbox: Optional[str] = Query(None, description="minLon,minLat,maxLon,maxLat (WGS 84)")):
@@ -249,7 +261,11 @@ def aed_points(request: Request, bbox: Optional[str] = Query(None, description="
                 continue
             feats.append({"type": "Feature", "id": r["id_aed"], "geometry": {"type": "Point", "coordinates": [x, y]},
                           "properties": {"dostepny_teraz": available_now(r, now), "stan_danych": coverage.stan_danych(r),
-                                         "osm": warstwa(r) == "osm"}})
+                                         "osm": warstwa(r) == "osm",
+                                         # for client-side filters next to the map (availability, freshness, area)
+                                         "dostep": r.get("dostep"), "wiek_danych_dni": coverage.wiek_danych_dni(r),
+                                         "mobilny": bool(r.get("mobilny")),
+                                         "wojewodztwo": coverage.wojewodztwo_z_polozenia(r) or r.get("wojewodztwo")}})
         body = _json.dumps({"type": "FeatureCollection", "features": feats,
                             "meta": {"count": len(feats), "liczone_na": minute, "prog_aktualnosci_dni": coverage.PROG_DNI,
                                      "atrybucja_osm": "© autorzy OpenStreetMap (ODbL)"}},
