@@ -610,3 +610,4 @@ thead th { background: var(--color-surface); }
 @media (max-width: 1099px) { .e2 { grid-template-columns: minmax(0, 1fr); } }
 .e2 > *, .e2__filters { min-width: 0; }
 fieldset.mode-switch, .e2__filters fieldset { min-width: 0; }
+.acc-tabs { margin: var(--space-m) 0; flex-wrap: wrap; }

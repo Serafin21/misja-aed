@@ -17,7 +17,7 @@ export function Report() {
 function NewAedInfo() {
   usePageTitle('Zgłoś AED');
   const s = useSession();
-  if (s?.rola === 'dysponent') { navigate('/zglos-aed', true); return null; }
+  if (s) { navigate('/zgloszenia-aed', true); return null; } // logged in: reporting AED is on "Zgłoszenia AED"
   return (
     <>
       <h1 id="page-title">Zgłoś AED</h1>

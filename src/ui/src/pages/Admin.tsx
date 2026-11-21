@@ -223,7 +223,7 @@ const PODSTAWY: [PodstawaPublikacji, string, string][] = [
 // ---------- institutions and their accounts: create, find, edit everything (also login and password), block, delete ----------
 function Accounts() {
   const st = useAsync(() => listAccounts(), []);
-  const empty = { login: '', dysponent_nazwa: '', dostawca_podstawa: '' as PodstawaPublikacji | '', email: '', telefon: '', regon: '' };
+  const empty = { rola: 'dysponent' as 'dysponent' | 'administrator', login: '', dysponent_nazwa: '', dostawca_podstawa: '' as PodstawaPublikacji | '', email: '', telefon: '', regon: '' };
   const [form, setForm] = useState(empty);
   const [creating, setCreating] = useState(false);
   const [secret, setSecret] = useState<{ login: string; haslo: string } | null>(null);
@@ -237,9 +237,11 @@ function Accounts() {
   async function create(e: FormEvent) {
     e.preventDefault(); setErr(null); setBusy(true); setInfo('');
     try {
-      if (!form.dostawca_podstawa) throw new Error('Wybierz podstawę publikacji.');
-      const r = await createAccount({ login: form.login.trim().toLowerCase(), dysponent_nazwa: form.dysponent_nazwa.trim(), dostawca_podstawa: form.dostawca_podstawa,
-        ...(form.email.trim() ? { email: form.email.trim() } : {}) });
+      const inst = form.rola === 'dysponent';
+      if (inst && !form.dostawca_podstawa) throw new Error('Wybierz podstawę publikacji.');
+      const r = await createAccount({ login: form.login.trim().toLowerCase(), rola: form.rola,
+        dysponent_nazwa: inst ? form.dysponent_nazwa.trim() : (form.dysponent_nazwa.trim() || 'Ministerstwo Cyfryzacji'),
+        ...(inst ? { dostawca_podstawa: form.dostawca_podstawa as PodstawaPublikacji } : {}), ...(form.email.trim() ? { email: form.email.trim() } : {}) });
       const extra = { ...(form.telefon.trim() ? { telefon: form.telefon.trim() } : {}), ...(form.regon.trim() ? { regon: form.regon.trim() } : {}) };
       if (Object.keys(extra).length) await updateAccount(r.data.login, extra);
       setSecret({ login: r.data.login, haslo: r.haslo_jednorazowe });
@@ -272,19 +274,25 @@ function Accounts() {
     if (!window.confirm(`Usunąć konto ${k.login} (${k.dysponent_nazwa})? AED instytucji zostaną na mapie.`)) return;
     try { await deleteAccount(k.login); setInfo(`Usunięto konto ${k.login}.`); st.reload(); } catch (ex) { setErr(ex as Error); }
   }
-  const rows = (st.data ?? []).filter((k) => {
+  // the built-in account "admin" is not in the database – shown first, read-only
+  const all: (Konto & { wbudowane?: boolean })[] = [
+    { login: 'admin', rola: 'administrator', dysponent_nazwa: 'Administrator (konto wbudowane)', email: null, aktywne: true, utworzono: null, utworzyl: null, liczba_aed: 0, wbudowane: true },
+    ...(st.data ?? []),
+  ];
+  const TABS: [string, string, (k: Konto) => boolean][] = [
+    ['', 'Wszystkie', () => true], ['aktywne', 'Aktywne', (k) => k.aktywne], ['oczekuje', 'Czekają na zatwierdzenie', (k) => !!k.oczekuje],
+    ['zablokowane', 'Zablokowane', (k) => !k.aktywne && !k.oczekuje], ['administrator', 'Administratorzy', (k) => k.rola === 'administrator'],
+  ];
+  const tabFn = TABS.find((t) => t[0] === stan)![2];
+  const rows = all.filter((k) => {
     const t = `${k.login} ${k.dysponent_nazwa ?? ''} ${k.email ?? ''} ${k.regon ?? ''} ${k.telefon ?? ''}`.toLowerCase();
-    if (q && !t.includes(q.toLowerCase())) return false;
-    if (stan === 'aktywne' && !k.aktywne) return false;
-    if (stan === 'zablokowane' && (k.aktywne || k.oczekuje)) return false;
-    if (stan === 'oczekuje' && !k.oczekuje) return false;
-    return true;
+    return (!q || t.includes(q.toLowerCase())) && tabFn(k);
   });
 
   return (
     <section className="admin-section" aria-labelledby="h-acc">
       <h2 id="h-acc">Instytucje i konta</h2>
-      <p>Konta instytucji odpowiedzialnych za AED. Możesz zmienić każdą daną konta – także login i hasło (np. po utracie lub kradzieży hasła), zablokować albo usunąć konto.</p>
+      <p>Wszystkie konta: instytucji odpowiedzialnych za AED i administratorów. Możesz zmienić każdą daną konta – także login i hasło (np. po utracie lub kradzieży hasła), zablokować albo usunąć konto. Wnioski instytucji o konto zatwierdzasz w <Link to="/zgloszenia-aed">Zgłoszenia AED</Link>.</p>
       {secret && (
         <div className="callout callout--ok" role="alert">
           <p className="callout__title">Konto założone. Przekaż instytucji login i hasło bezpiecznym kanałem.</p>
@@ -295,12 +303,19 @@ function Accounts() {
       )}
       {info && <p className="callout callout--ok" role="status">{info}</p>}
       {err && <ErrorBox error={err} />}
-      {!creating ? <p><button type="button" className="btn btn--primary" onClick={() => setCreating(true)}>Załóż konto instytucji</button></p> : (
+      {!creating ? <p><button type="button" className="btn btn--primary" onClick={() => setCreating(true)}>Załóż konto</button></p> : (
         <form className="panel" onSubmit={create} aria-labelledby="h-acc-new">
-          <h3 id="h-acc-new">Nowe konto instytucji</h3>
+          <h3 id="h-acc-new">Nowe konto</h3>
+          <fieldset className="field">
+            <legend>Rodzaj konta</legend>
+            <div className="big-choices big-choices--row">
+              <label><input type="radio" name="acc-rola" checked={form.rola === 'dysponent'} onChange={() => setForm({ ...form, rola: 'dysponent' })} /> Instytucja</label>
+              <label><input type="radio" name="acc-rola" checked={form.rola === 'administrator'} onChange={() => setForm({ ...form, rola: 'administrator' })} /> Administrator</label>
+            </div>
+          </fieldset>
           <div className="filters__grid">
-            <div className="field"><label htmlFor="acc-name">Nazwa instytucji</label>
-              <input id="acc-name" required minLength={3} value={form.dysponent_nazwa} onChange={(e) => setForm({ ...form, dysponent_nazwa: e.target.value })} placeholder="np. Urząd Miasta Krosna" /></div>
+            <div className="field"><label htmlFor="acc-name">{form.rola === 'dysponent' ? 'Nazwa instytucji' : 'Imię i nazwisko lub nazwa (nieobowiązkowe)'}</label>
+              <input id="acc-name" required={form.rola === 'dysponent'} minLength={3} value={form.dysponent_nazwa} onChange={(e) => setForm({ ...form, dysponent_nazwa: e.target.value })} placeholder="np. Urząd Miasta Krosna" /></div>
             <div className="field"><label htmlFor="acc-login">Login</label>
               <input id="acc-login" required pattern="[a-z0-9][a-z0-9._\-]{2,40}" title="3–41 znaków: małe litery, cyfry, kropka, _ i -" autoCapitalize="none" spellCheck={false}
                 value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} placeholder="np. um.krosno" /></div>
@@ -311,7 +326,7 @@ function Accounts() {
             <div className="field"><label htmlFor="acc-tel">Telefon (nieobowiązkowy)</label>
               <input id="acc-tel" type="tel" value={form.telefon} onChange={(e) => setForm({ ...form, telefon: e.target.value })} /></div>
           </div>
-          <fieldset className="field">
+          {form.rola === 'dysponent' && <fieldset className="field">
             <legend>Podstawa publikacji</legend>
             <div className="big-choices">
               {PODSTAWY.map(([v, l, h]) => (
@@ -319,7 +334,7 @@ function Accounts() {
                   onChange={() => setForm({ ...form, dostawca_podstawa: v })} /><span>{l}<span className="hint"> – {h}</span></span></label>
               ))}
             </div>
-          </fieldset>
+          </fieldset>}
           <p className="form-actions">
             <button type="submit" className="btn btn--primary" disabled={busy}>{busy ? 'Zakładam…' : 'Załóż konto'}</button>
             <button type="button" className="btn btn--tertiary" onClick={() => setCreating(false)}>Anuluj</button>
@@ -329,28 +344,29 @@ function Accounts() {
       <div className="table-tools">
         <div className="field"><label htmlFor="acc-q">Szukaj (nazwa, login, REGON, e-mail, telefon)</label>
           <input id="acc-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <div className="field"><label htmlFor="acc-stan">Stan</label>
-          <select id="acc-stan" value={stan} onChange={(e) => setStan(e.target.value)}>
-            <option value="">wszystkie</option><option value="aktywne">aktywne</option><option value="oczekuje">czekają na zatwierdzenie</option><option value="zablokowane">zablokowane</option>
-          </select></div>
+      </div>
+      <div className="segmented acc-tabs" role="group" aria-label="Pokaż konta">
+        {TABS.map(([v, l, f]) => <button key={v} type="button" aria-pressed={stan === v} onClick={() => setStan(v)}>{l} ({all.filter(f).length})</button>)}
       </div>
       {st.loading && !st.data && <Loading />}
       {st.error && <ErrorBox error={st.error} onRetry={st.reload} />}
-      {st.data && (rows.length === 0 ? <p>{st.data.length ? 'Brak kont dla tych warunków.' : 'Nie ma jeszcze kont instytucji. Załóż pierwsze albo zatwierdź wniosek w „Zgłoszenia AED”.'}</p> : (
+      {st.data && (rows.length === 0 ? <p>Brak kont dla tych warunków.</p> : (
         <table className="admin-table">
-          <thead><tr><th scope="col">Instytucja</th><th scope="col">Login</th><th scope="col">Kontakt</th><th scope="col">AED</th><th scope="col">Stan</th><th scope="col">Działania</th></tr></thead>
+          <thead><tr><th scope="col">Instytucja / osoba</th><th scope="col">Login</th><th scope="col">Kontakt</th><th scope="col">AED</th><th scope="col">Stan</th><th scope="col">Działania</th></tr></thead>
           <tbody>
             {rows.map((k) => (
               <tr key={k.login}>
-                <td>{k.dysponent_nazwa}<div className="hint">{k.regon ? `REGON ${k.regon} · ` : ''}{k.dostawca_podstawa ? PODSTAWA_LABEL[k.dostawca_podstawa] : ''}</div></td>
-                <td><code>{k.login}</code><div className="hint">od {when(k.utworzono)}</div></td>
+                <td>{k.dysponent_nazwa}<div className="hint">{k.rola === 'administrator' ? 'administrator' : 'instytucja'}{k.regon ? ` · REGON ${k.regon}` : ''}{k.dostawca_podstawa ? ` · ${PODSTAWA_LABEL[k.dostawca_podstawa]}` : ''}</div></td>
+                <td><code>{k.login}</code>{k.utworzono && <div className="hint">od {when(k.utworzono)}</div>}</td>
                 <td>{k.email ?? '—'}<div className="hint">{k.telefon ?? ''}</div></td>
-                <td>{n(k.liczba_aed)}</td>
+                <td>{k.rola === 'administrator' ? '—' : n(k.liczba_aed)}</td>
                 <td>{k.oczekuje ? 'czeka na zatwierdzenie' : k.aktywne ? 'aktywne' : 'zablokowane'}</td>
                 <td className="table-actions">
+                  {k.wbudowane ? <span className="hint">hasło w pliku .env (ADMIN_PASSWORD)</span> : <>
                   <button type="button" className="btn btn--secondary btn--small" onClick={() => setEdit({ ...k, nowy_login: k.login, haslo: '' })}>Edytuj<span className="visually-hidden"> {k.login}</span></button>
                   {!k.oczekuje && <button type="button" className="btn btn--secondary btn--small" onClick={() => toggle(k)}>{k.aktywne ? 'Zablokuj' : 'Odblokuj'}<span className="visually-hidden"> {k.login}</span></button>}
                   <button type="button" className="btn btn--danger btn--small" onClick={() => remove(k)}>Usuń<span className="visually-hidden"> {k.login}</span></button>
+                  </>}
                 </td>
               </tr>
             ))}

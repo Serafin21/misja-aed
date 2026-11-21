@@ -19,8 +19,8 @@ import { WniosekKonto } from './pages/WniosekKonto';
 import { Zgloszenia } from './pages/Zgloszenia';
 import { Link, matchPath, navigate, useLocation, usePageTitle } from './router';
 
-// Top menu (owner's decision 22.11): everyone – Znajdź AED, Pierwsza pomoc, O projekcie; a guest also "Zaloguj się, aby
-// dodać AED"; an institution – "Zgłoszenia AED" instead; the administrator – "Zgłoszenia AED" and "Panel administratora".
+// Top menu (owner's decision 22.11): guest – Znajdź AED, Pierwsza pomoc, O projekcie, "Zaloguj się, aby dodać AED";
+// institution – the same three + "Zgłoszenia AED"; administrator – ONLY "Zgłoszenia AED" and "Panel administratora".
 // Logging out and changing the password are at the top of those pages.
 const NAV = [
   { to: '/znajdz', label: 'Znajdź AED' },
@@ -129,7 +129,7 @@ export function App() {
           </button>
           <nav id="main-nav" aria-label="Główna" className={`main-nav${menu ? ' is-open' : ''}`}>
             <ul>
-              {NAV.map((n) => <li key={n.to}><Link to={n.to}>{n.label}</Link></li>)}
+              {session?.rola !== 'administrator' && NAV.map((n) => <li key={n.to}><Link to={n.to}>{n.label}</Link></li>)}
               {/* role items – the server checks permissions on every operation anyway */}
               {(ROLE_NAV[session ? session.rola : 'gosc'] ?? []).map((n) => <li key={n.to} className={`main-nav__role${session ? '' : ' main-nav__login'}`}><Link to={n.to}>{n.label}</Link></li>)}
             </ul>

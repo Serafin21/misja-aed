@@ -340,7 +340,7 @@ export const searchDgp = (q: string, importuj: boolean) =>
 
 export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; dostawca_podstawa?: PodstawaPublikacji | null; email: string | null; telefon?: string | null; regon?: string | null; aktywne: boolean; oczekuje?: boolean; utworzono: string | null; utworzyl: string | null; liczba_aed: number }
 export const listAccounts = () => http<{ data: Konto[] }>(`/konta`).then((r) => r.data);
-export const createAccount = (b: { login: string; dysponent_nazwa: string; dostawca_podstawa: PodstawaPublikacji; email?: string }) =>
+export const createAccount = (b: { login: string; dysponent_nazwa: string; dostawca_podstawa?: PodstawaPublikacji; email?: string; rola?: Role }) =>
   http<{ data: Konto; haslo_jednorazowe: string }>(`/konta`, json('POST', b));
 export const resetPassword = (login: string) => http<{ data: Konto; haslo_jednorazowe: string }>(`/konta/${encodeURIComponent(login)}/reset-hasla`, json('POST'));
 export const setAccountActive = (login: string, aktywne: boolean) => http<{ data: Konto }>(`/konta/${encodeURIComponent(login)}`, json('PATCH', { aktywne }));
