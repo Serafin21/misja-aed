@@ -1,8 +1,8 @@
 # HANDOFF – Model A
 
-## 2026-11-21 14:30 – HANDOFF #2: CR od B, JSON-LD, docs/tech, utwardzenie
+## 2026-11-21 13:30 – HANDOFF #2: CR od B, JSON-LD, docs/tech, utwardzenie
 
-- **Czas:** sob 13:40–14:30
+- **Czas:** sob 13:25–13:30
 - **Zrobione:** CR-B1…B9 wdrożone (`dostepny_teraz` w atrybutach; `pochodzenie` i `potwierdzenia` na górnym poziomie karty; `POST /zgloszenia` → `{id, status}`; `GET /zgloszenia` w stylu JSON API z `mozliwy_duplikat`; decyzja `scal`; `GET /miejsca?q=`; `GET /eksport` z formatem, licencją i rozmiarem; klucze statystyk jak u B; `/api/docs`). Usługa `ui` w compose (port 80). JSON-LD (poziom 4) z nagłówkiem `Link`, limit anonimowych zgłoszeń, `docs/tech/` (ARCHITECTURE, DATA_PIPELINE, COMPLIANCE, RUN), pakiet `deliverables/dataset/`, kontrola licencji. 35 testów; czysty klon zielony na Pythonie 3.12 i 3.13.
 - **Jak uruchomić:** `docs/tech/RUN.md`.
 - **Założenia:** `AED_AUTH_MODE=demo` – żądanie bez tokenu działa jako konto demo, bo UI jeszcze nie wysyła tokenu.
@@ -11,9 +11,9 @@
 - **Użycie AI:** kod, testy i dokumentacja z Claude (Opus), przegląd człowieka.
 - **Następny krok:** SYNC #1, pełny OSM na Macu, P10.
 
-## 2026-11-21 13:40 – P3 + F1 + F2 + F3 (rdzeń gotowy przed SYNC #1)
+## 2026-11-21 13:20 – P3 + F1 + F2 + F3 (rdzeń gotowy przed SYNC #1)
 
-- **Czas:** sob 13:05–13:40
+- **Czas:** sob 13:05–13:20
 - **Zrobione:** `GET /aed` (bbox, wojewodztwo, gmina, dostep, dostepne_teraz, q, warstwa, stronicowanie), `/aed/{id}`, `/aed/najblizsze`, `POST /import` → `/mapowanie` → `/zatwierdz`, `POST/PATCH /aed`, zgłoszenia + moderacja, potwierdzenia (Paszport AED), `/zrodla`, konektory OSM i dane.gov.pl, `/eksport/*` (10 plików), `/szablon.csv|xlsx`, `/statystyki`, `/auth/login`. 30 testów, w tym end-to-end gmina+uczelnia → `aed_ujednolicone.csv`.
 - **Jak uruchomić:** `pip install -r requirements.txt && python -m scripts.seed --reset && uvicorn src.api.main:app` → http://localhost:8000/api/v1/docs; `docker compose up --build`; `python -m scripts.publish`; `pytest`.
 - **Założenia:** `id_aed` = SHA-1(`kod_zrodla|id_w_zrodle`); SQLite bez SQLAlchemy; telefonów i e-maili z OSM nie importujemy.
