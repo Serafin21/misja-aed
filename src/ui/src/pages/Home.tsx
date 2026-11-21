@@ -1,4 +1,4 @@
-// Home: three big choices (TL: simple site for people who rarely use the internet).
+// Home: three big choices + first aid bar (TL: simple site for people who rarely use the internet).
 import { Link, usePageTitle } from '../router';
 
 const TILES = [
@@ -23,6 +23,10 @@ export function Home() {
           </li>
         ))}
       </ul>
+      <div className="firstaid-bar">
+        <span>Ktoś stracił przytomność i nie oddycha? Dzwoń 112.</span>
+        <Link to="/pierwsza-pomoc">Pierwsza pomoc: jak użyć AED</Link>
+      </div>
     </>
   );
 }

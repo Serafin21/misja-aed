@@ -17,12 +17,16 @@ import {
   type Aktualnosc, type Dostepnosc, type PointFilters, type Zrodlo,
 } from '../lib/pointFilters';
 import { useAsync } from '../lib/useAsync';
-import { useGeolocation } from '../lib/useGeolocation';
 import { currentSearch, toHref, usePageTitle } from '../router';
 
 const PAGE = 30;
 const NEAR = 5;
 type Ref = { lat: number; lon: number; label: string; gps: boolean };
+const GEO_ERR: Record<number, string> = {
+  1: 'Nie mamy zgody na lokalizację. Wpisz adres albo miejscowość w polu „Gdzie jesteś?”.',
+  2: 'Nie udało się ustalić lokalizacji. Wpisz adres albo miejscowość.',
+  3: 'Ustalanie lokalizacji trwa zbyt długo. Wpisz adres albo miejscowość.',
+};
 const NO_ITEMS: AedView[] = [];
 type View = { bounds: L.LatLngBounds; center: L.LatLng; zoom: number };
 type Full = PointFilters & { q: string };
@@ -44,8 +48,7 @@ export function MapList() {
   const [limit, setLimit] = useState(PAGE);
   const [ref, setRef] = useState<Ref | null>(null);
   const [nearN, setNearN] = useState(NEAR);
-  // CR-TL-8 p. 7: shared hook – best reading within 20 s or ≤ 30 m; accuracy circle on the map
-  const geo = useGeolocation();
+  const [geoMsg, setGeoMsg] = useState('');
 
   const apply = (next: Full) => {
     setF(next);
@@ -132,11 +135,14 @@ export function MapList() {
   const setPoint = (r: Ref | null) => { setRef(r); setNearN(NEAR); };
 
   function locate() {
-    geo.start((f) => {
-      if (!f) return;
-      setSearchKey((k) => k + 1);
-      setPoint({ lat: f.lat, lon: f.lon, label: 'Twoja lokalizacja', gps: true });
-    });
+    setGeoMsg('');
+    if (!('geolocation' in navigator)) { setGeoMsg('Ta przeglądarka nie podaje lokalizacji. Wpisz adres albo miejscowość.'); return; }
+    setGeoMsg('Ustalam Twoją lokalizację…');
+    navigator.geolocation.getCurrentPosition(
+      (g) => { setGeoMsg(''); setSearchKey((k) => k + 1); setPoint({ lat: +g.coords.latitude.toFixed(6), lon: +g.coords.longitude.toFixed(6), label: 'Twoja lokalizacja', gps: true }); },
+      (e) => setGeoMsg(GEO_ERR[e.code] ?? GEO_ERR[2]),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
   }
 
   // search: voivodeship / gmina → filter to its boundaries and zoom; locality, street, address → zoom and mark
@@ -185,7 +191,7 @@ export function MapList() {
   return (
     <div className="e2-page">
       <h1 id="page-title">Znajdź AED</h1>
-      <p className="lead e2__lead">Wpisz, gdzie jesteś, albo użyj lokalizacji – pokażemy najbliższe defibrylatory.</p>
+      <p className="lead e2__lead">Wpisz, gdzie jesteś, albo użyj lokalizacji – pokażemy najbliższe defibrylatory. W nagłym wypadku dzwoń <a href="tel:112">112</a>.</p>
 
       <div className="e2__search" role="search" aria-label="Gdzie jesteś?">
         <div className="e2__search-box">
@@ -195,8 +201,8 @@ export function MapList() {
             initial={f.q || f.gminaNazwa} onSelect={onPlace} />
         </div>
         <div className="e2__locate">
-          <button type="button" className="btn btn--primary btn--locate" onClick={locate} disabled={geo.status === 'locating'}><Icon name="locate" />Najbliższe AED ode mnie</button>
-          <p role="status" className="hint">{geo.message}</p>
+          <button type="button" className="btn btn--primary btn--locate" onClick={locate}><Icon name="locate" />Najbliższe AED ode mnie</button>
+          <p role="status" className="hint">{geoMsg}</p>
         </div>
       </div>
       {(f.gmina || f.q || ref) && (
@@ -283,7 +289,6 @@ export function MapList() {
                   <MapView items={NO_ITEMS} points={filtered as AedPoint[]} mode={mode} coverage={cov.data} fitCoverage={!!f.wojewodztwo}
                     fitKey={f.q ? `q:${f.q}` : f.wojewodztwo || 'PL'} onView={setMapView} height={640} goTo={goTo}
                     user={ref?.gps ? { lat: ref.lat, lon: ref.lon } : null} highlight={highlight}
-                    accuracy={ref?.gps && geo.fix && geo.fix.lat === ref.lat && geo.fix.lon === ref.lon ? geo.fix.accuracy : null}
                     label={`Mapa AED, tryb: ${mode === 'dane' ? 'aktualność danych' : 'dostępność'}. Te same informacje są na liście.`} />
                   <MapLegend mode={mode} coverage={!!cov.data && mode === 'dane'} />
                   {mode === 'dane' && covWoj && !cov.loading && <CoverageList coverage={cov.data} collapsed />}

@@ -1,4 +1,4 @@
-# Prezentacja – „Mapa danych AED: wspólna lista AED w dane.gov.pl” (treść slajdów, v2)
+# Prezentacja – „Mapa AED: wspólna lista AED w dane.gov.pl” (treść slajdów, v2)
 
 > Model: `docs/MODEL_ROL.md` (CR-TL-5). Wymagania formalne (treść zadania, pkt 4): min. 5 slajdów z dowodami realizacji wymagań technicznych (zrzuty ekranu), opis funkcjonalności z krokami użytkownika, lista ograniczeń. PDF ≤ 10 MB.
 > Liczby: tylko z `docs/tech/LICZBY.md` **po regeneracji przez A** (model listy). Wartości poniżej są z wersji 18:13 – przed eksportem PDF sprawdzić każdą (oznaczenie ⟲).
@@ -7,7 +7,7 @@
 
 ---
 
-## Slajd 1 – Mapa danych AED: wspólna lista AED w dane.gov.pl
+## Slajd 1 – Mapa AED: wspólna lista AED w dane.gov.pl
 
 Dane o każdym AED publikuje jego właściciel. Portal łączy zbiory dostawców we wspólną listę.
 
@@ -51,9 +51,8 @@ Korzystamy z mechanizmów, które portal już ma: konta dostawców, harvester XM
 ## Slajd 4 – Dostawca: kreator i pakiet do publikacji
 
 Kroki dysponenta (urząd, szkoła, szpital, firma):
-1. Zakłada zaufane konto instytucji (wniosek z REGON i podstawą publikacji) – działa po zatwierdzeniu przez administratora; docelowo login.gov.pl.
-2. **Zgłoś AED**: adres z podpowiedziami albo „Użyj mojej lokalizacji” (z dokładnością), pinezka do przeciągnięcia, godziny, szafka, **obowiązkowe zdjęcie**. Administrator sprawdza zgłoszenie formalnie: zatwierdza albo odsyła do poprawy z komentarzem – nie edytuje danych.
-2a. Po zatwierdzeniu AED jest w **Moje AED** (tam też wgranie pliku z wieloma AED); kreator sprawdza dane ze wzorcem 44 pól.
+1. Loguje się (w prototypie konto testowe, docelowo login.gov.pl) → **Moje AED**.
+2. Dodaje AED w formularzu albo wgrywa plik; kreator sprawdza dane ze wzorcem 44 pól.
 3. **„Pobierz pliki do publikacji”**: CSV wg wzorca, XML harvestera 1.13 zgodny z XSD, słownik pól, instrukcja.
 4. Publikuje zbiór na **własnym koncie** w dane.gov.pl – wgrywa pliki albo podaje adres https pliku XML, który portal pobiera cyklicznie.
 

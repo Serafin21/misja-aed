@@ -18,7 +18,7 @@ export const emptyDraft = (): AedDraft => ({
   lat: null, lon: null, opis: '', hours: emptyHours(), cabinet: '', access: '', nazwa: '', miejscowosc: '', ulica: '', numer: '', kod: '',
 });
 
-const CAB_WORDS: Record<Cabinet, string> = { '': '—', nie_wiem: '—', tak: 'Tak, jest zamknięta', nie: 'Nie, jest otwarta' };
+const CAB_WORDS: Record<Cabinet, string> = { '': 'Nie wiem', nie_wiem: 'Nie wiem', tak: 'Tak, jest zamknięta', nie: 'Nie, jest otwarta' };
 
 /** Citizen report: the API takes only place + description, so hours and cabinet go into the description (CR to A). */
 export function citizenDescription(d: AedDraft): string {
@@ -71,10 +71,11 @@ export function AedWizard({ variant, draft, setDraft, step, setStep, onSubmit, s
   );
 }
 
-function Nav({ back, nextLabel = 'Dalej', busy }: { back?: () => void; nextLabel?: string; busy?: boolean }) {
+function Nav({ back, nextLabel = 'Dalej', skip, busy }: { back?: () => void; nextLabel?: string; skip?: () => void; busy?: boolean }) {
   return (
     <p className="form-actions">
       <button type="submit" className="btn btn--primary" disabled={busy}>{nextLabel}</button>
+      {skip && <button type="button" className="btn btn--tertiary" onClick={skip}>Pomiń</button>}
       {back && <button type="button" className="btn btn--secondary" onClick={back}>Wstecz</button>}
     </p>
   );
@@ -128,6 +129,19 @@ function StepWhere({ variant, d, set, next, back }: { variant: Variant; d: AedDr
         onPick={(p) => { set({ lat: p.lat, lon: p.lon }); setGeoMsg('Ustawiliśmy pinezkę w wybranym miejscu.'); v.check('pt'); }}
         label="Mapa: kliknij miejsce, w którym jest AED. Bez myszy użyj przycisku „Użyj mojej lokalizacji”." height={320} cluster={false} />
       {e.pt && <p className="field-error">{e.pt}</p>}
+      <details className="details">
+        <summary>Wpisz współrzędne ręcznie</summary>
+        <div className="filters__grid">
+          <div className="field">
+            <label htmlFor="w-lat">Szerokość (np. 52.2297)</label>
+            <input id="w-lat" type="text" inputMode="decimal" autoComplete="off" value={d.lat ?? ''} onChange={(ev) => set({ lat: ev.target.value ? Number(ev.target.value.replace(',', '.')) : null })} />
+          </div>
+          <div className="field">
+            <label htmlFor="w-lon">Długość (np. 21.0122)</label>
+            <input id="w-lon" type="text" inputMode="decimal" autoComplete="off" value={d.lon ?? ''} onChange={(ev) => set({ lon: ev.target.value ? Number(ev.target.value.replace(',', '.')) : null })} />
+          </div>
+        </div>
+      </details>
       {inst && <>
         {field('nazwa', 'Nazwa budynku lub miejsca', { hint: 'Np. Szkoła Podstawowa nr 5, Urząd Gminy.' })}
         {field('miejscowosc', 'Miejscowość', { auto: 'off' })}
@@ -151,24 +165,25 @@ function StepWhere({ variant, d, set, next, back }: { variant: Variant; d: AedDr
   );
 }
 
-function StepHours({ d, set, back, next }: { variant: Variant; d: AedDraft; set: (p: Partial<AedDraft>) => void; back: () => void; next: () => void }) {
+function StepHours({ variant, d, set, back, next }: { variant: Variant; d: AedDraft; set: (p: Partial<AedDraft>) => void; back: () => void; next: () => void }) {
+  const inst = variant === 'institution';
   const h = d.hours;
   const setH = (p: Partial<Hours>) => set({ hours: { ...h, ...p } });
   const v = useValidation({
-    mode: () => (h.mode === '' || h.mode === 'unknown' ? 'Wybierz: całą dobę albo w określonych godzinach.' : ''),
+    mode: () => (inst && (h.mode === '' || h.mode === 'unknown') ? 'Wybierz godziny – bez nich AED nie trafi na mapę.' : ''),
     days: () => hoursError(h),
   });
   const modes: { m: HoursMode; label: string }[] = [
-    { m: '24h', label: 'Całą dobę' }, { m: 'hours', label: 'W określonych godzinach' },
+    { m: '24h', label: 'Całą dobę' }, { m: 'hours', label: 'W określonych godzinach' }, ...(inst ? [] : [{ m: 'unknown' as HoursMode, label: 'Nie wiem' }]),
   ];
   const setDay = (i: number, p: { open?: string; close?: string }) => setH({ days: h.days.map((x, j) => (j === i ? { ...x, ...p } : x)) });
   const copyMonday = () => setH({ days: h.days.map((x, j) => (j > 0 && j < 5 ? { ...h.days[0] } : x)) });
   return (
-    <form noValidate onSubmit={(ev) => { ev.preventDefault(); if (v.validateAll()) next(); }}>
-      <RequiredNote />
+    <form noValidate onSubmit={(ev) => { ev.preventDefault(); if (!inst && h.mode === '') setH({ mode: 'unknown' }); if (v.validateAll()) next(); }}>
+      {inst && <RequiredNote />}
       <ErrorSummary errors={v.summary} fieldIds={{ mode: 'w-mode-0', days: 'w-day-0-open' }} focusToken={v.focusToken} />
       <fieldset>
-        <legend>Kiedy AED jest dostępne?<Req /></legend>
+        <legend>Kiedy AED jest dostępne?{inst && <Req />}</legend>
         <div className="big-choices">
           {modes.map((o, i) => (
             <label key={o.m} htmlFor={`w-mode-${i}`}><input id={`w-mode-${i}`} type="radio" name="w-mode" checked={h.mode === o.m} onChange={() => setH({ mode: o.m })} /> {o.label}</label>
@@ -199,26 +214,22 @@ function StepHours({ d, set, back, next }: { variant: Variant; d: AedDraft; set:
           <p className="preview" aria-live="polite"><strong>Godziny:</strong> {hoursInWords(h)}</p>
         </fieldset>
       )}
-      <Nav back={back} />
+      <Nav back={back} skip={inst ? undefined : () => { setH({ mode: 'unknown' }); next(); }} />
     </form>
   );
 }
 
 function StepCabinet({ d, set, back, next }: { d: AedDraft; set: (p: Partial<AedDraft>) => void; back: () => void; next: () => void }) {
-  const opts: { c: Cabinet; label: string }[] = [{ c: 'tak', label: 'Tak' }, { c: 'nie', label: 'Nie' }];
-  const v = useValidation({ cab: () => (d.cabinet === 'tak' || d.cabinet === 'nie' ? '' : 'Zaznacz: Tak albo Nie.') });
+  const opts: { c: Cabinet; label: string }[] = [{ c: 'tak', label: 'Tak' }, { c: 'nie', label: 'Nie' }, { c: 'nie_wiem', label: 'Nie wiem' }];
   return (
-    <form noValidate onSubmit={(ev) => { ev.preventDefault(); if (v.validateAll()) next(); }}>
-      <RequiredNote />
-      <ErrorSummary errors={v.summary} fieldIds={{ cab: 'w-cab-tak' }} focusToken={v.focusToken} />
+    <form noValidate onSubmit={(ev) => { ev.preventDefault(); if (d.cabinet === '') set({ cabinet: 'nie_wiem' }); next(); }}>
       <fieldset>
-        <legend>Czy szafka z AED jest zamknięta na klucz lub kod?<Req /></legend>
+        <legend>Czy szafka z AED jest zamknięta na klucz lub kod?</legend>
         <div className="big-choices">
           {opts.map((o) => (
             <label key={o.c} htmlFor={`w-cab-${o.c}`}><input id={`w-cab-${o.c}`} type="radio" name="w-cab" checked={d.cabinet === o.c} onChange={() => set({ cabinet: o.c })} /> {o.label}</label>
           ))}
         </div>
-        {v.errors.cab && <p className="field-error">{v.errors.cab}</p>}
       </fieldset>
       {d.cabinet === 'tak' && (
         <div className="field">
@@ -227,7 +238,7 @@ function StepCabinet({ d, set, back, next }: { d: AedDraft; set: (p: Partial<Aed
           <textarea id="w-access" autoComplete="off" maxLength={250} rows={3} aria-describedby="w-access-hint" value={d.access} onChange={(ev) => set({ access: ev.target.value })} />
         </div>
       )}
-      <Nav back={back} />
+      <Nav back={back} skip={() => { set({ cabinet: 'nie_wiem' }); next(); }} />
     </form>
   );
 }

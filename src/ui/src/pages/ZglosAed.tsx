@@ -2,17 +2,16 @@
 // (geocoded, or "Użyj mojej lokalizacji" → nearest address), pin to correct, place, access, hours, cabinet (yes/no, never
 // "I don't know") and a REQUIRED photo. The administrator checks it formally and approves it or sends it back with a
 // comment – never edits it. Approved AED land in the institution's "Moje AED"; the institution publishes them itself.
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import {
   HttpError, geocodeAddress, mySubmissions, resubmitAed, reverseGeocode, submitAed, type ZgloszenieAed, type ZgloszenieAedIn,
 } from '../api/client';
-import { RequireLogin, useSession } from '../components/Auth';
+import { RequireLogin } from '../components/Auth';
 import { ErrorSummary, Req, RequiredNote } from '../components/form';
 import { MapView } from '../components/MapView';
 import { PhotoField } from '../components/PhotoField';
 import { ErrorBox, Icon, Loading } from '../components/ui';
 import { useAsync } from '../lib/useAsync';
-import { useGeolocation } from '../lib/useGeolocation';
 import { Link, usePageTitle } from '../router';
 
 type YesNo = '' | 'tak' | 'nie';
@@ -47,11 +46,11 @@ function validate(d: Draft): Record<string, string> {
   if (d.opis_lokalizacji.trim().length < 5) e.opis_lokalizacji = 'Opisz, gdzie dokładnie wisi AED, np. „hol na parterze, przy recepcji”.';
   if (!d.wewnatrz) e.wewnatrz_budynku = 'Zaznacz, czy AED jest w budynku.';
   if (!d.dostep) e.dostep = 'Zaznacz, kto może skorzystać z AED.';
-  if (!d.calodobowo) e.dostepny_24h = 'Zaznacz: całą dobę albo w określonych godzinach.';
+  if (!d.calodobowo) e.dostepny_24h = 'Zaznacz, czy AED jest dostępne całą dobę.';
   if (d.calodobowo === 'nie' && !d.godziny.trim()) e.godziny = 'Wpisz godziny, np. „pn-pt 8-16; sob 9-13”.';
   if (!d.szafka) e.szafka_zamknieta = 'Zaznacz, czy szafka jest zamknięta.';
   if (d.szafka === 'tak' && !d.instrukcja_dostepu.trim()) e.instrukcja_dostepu = 'Napisz, jak otworzyć szafkę, np. „kod podaje dyspozytor 112”.';
-  if (!d.zdjecie) e.zdjecie = 'Bez zdjęcia nie można wysłać zgłoszenia. Dołącz zdjęcie urządzenia lub szafki.';
+  if (!d.zdjecie) e.zdjecie = 'Dołącz zdjęcie urządzenia.';
   return e;
 }
 
@@ -79,57 +78,14 @@ export function ZglosAed() {
     <>
       <h1 id="page-title">Zgłoś AED</h1>
       <p className="lead">Zgłoś defibrylator, za który odpowiada Twoja instytucja. Administrator sprawdzi, czy zgłoszenie jest kompletne (zdjęcie, adres, położenie). Po zatwierdzeniu AED pojawi się w „Moje AED” – stamtąd pobierzesz pliki i opublikujesz je na swoim koncie w dane.gov.pl.</p>
-      <Gate />
+      <RequireLogin role="dysponent">
+        <Form />
+      </RequireLogin>
     </>
   );
 }
 
-/** CR-TL-8: logged out → two choices; "Zaloguj się" shows the login form in place, "Załóż zaufane konto" → account request. */
-function Gate() {
-  const s = useSession();
-  const [login, setLogin] = useState(false);
-  if (s || login) return <RequireLogin role="dysponent"><Form /></RequireLogin>;
-  return (
-    <section aria-labelledby="za-gate">
-      <h2 id="za-gate">Zgłaszać AED mogą tylko zaufane konta instytucji</h2>
-      <p>Zgłoszenie musi pochodzić od instytucji, która odpowiada za AED: właściciela, zarządcy z umową albo podmiotu, który sprawdził AED na miejscu.</p>
-      <ul className="tiles">
-        <li>
-          <button type="button" className="tile tile--button" onClick={() => setLogin(true)}>
-            <span className="tile__title">Zaloguj się kontem instytucji</span>
-            <span className="tile__text">Masz już zatwierdzone konto – zaloguj się i zgłoś AED.</span>
-          </button>
-        </li>
-        <li>
-          <Link to="/wniosek-o-konto" className="tile">
-            <span className="tile__title">Załóż zaufane konto</span>
-            <span className="tile__text">Wypełnij wniosek. Konto zacznie działać po zatwierdzeniu przez administratora.</span>
-          </Link>
-        </li>
-      </ul>
-      <p className="hint">Problem z AED, które już jest na mapie, zgłosisz bez logowania – na karcie tego AED („Zgłoś problem z tym AED”).</p>
-    </section>
-  );
-}
-
-/** Address hints from GET /miejsca (CR-TL-8): locality or street names for a <datalist>. */
-function useSuggestions(q: string, typ: 'miejscowosc' | 'ulica'): string[] {
-  const [list, setList] = useState<string[]>([]);
-  useEffect(() => {
-    if (q.trim().length < 3) { setList([]); return; }
-    const t = window.setTimeout(async () => {
-      try {
-        const hits = await geocodeAddress(q.trim());
-        const names = hits.filter((h) => h.typ === typ).map((h) => (typ === 'ulica' ? h.ulica ?? h.nazwa : h.miejscowosc ?? h.nazwa)).filter(Boolean) as string[];
-        setList([...new Set(names)]);
-      } catch { setList([]); }
-    }, 300);
-    return () => window.clearTimeout(t);
-  }, [q, typ]);
-  return list;
-}
-
-function YesNoField({ name, legend, value, onChange, error, hint, labels = ['Tak', 'Nie'] }: { name: string; legend: string; value: YesNo; onChange: (v: YesNo) => void; error?: string; hint?: string; labels?: [string, string] }) {
+function YesNoField({ name, legend, value, onChange, error, hint }: { name: string; legend: string; value: YesNo; onChange: (v: YesNo) => void; error?: string; hint?: string }) {
   return (
     <fieldset className="field" aria-describedby={error ? `${name}-err` : undefined}>
       <legend>{legend}<Req /></legend>
@@ -137,7 +93,7 @@ function YesNoField({ name, legend, value, onChange, error, hint, labels = ['Tak
       <div className="big-choices big-choices--row">
         {(['tak', 'nie'] as const).map((v) => (
           <label key={v} htmlFor={`${name}-${v}`}>
-            <input id={`${name}-${v}`} type="radio" name={name} required checked={value === v} onChange={() => onChange(v)} aria-invalid={!!error} /> {v === 'tak' ? labels[0] : labels[1]}
+            <input id={`${name}-${v}`} type="radio" name={name} required checked={value === v} onChange={() => onChange(v)} aria-invalid={!!error} /> {v === 'tak' ? 'Tak' : 'Nie'}
           </label>
         ))}
       </div>
@@ -173,25 +129,21 @@ function Form() {
     } catch (ex) { setMsg((ex as Error).message); }
   }
 
-  // CR-TL-8 p. 7: shared hook – best reading within 20 s or ≤ 30 m; address from GET /miejsca/odwrotnie
-  const geo = useGeolocation();
   function locate() {
-    setMsg('');
-    geo.start(async (f) => {
-      if (!f) return;
-      set({ lat: f.lat, lon: f.lon });
-      if (f.accuracy > 1000) return; // "Lokalizacja przybliżona – wpisz adres" comes from the hook
+    if (!('geolocation' in navigator)) { setMsg('Ta przeglądarka nie podaje lokalizacji. Wpisz adres albo kliknij mapę.'); return; }
+    setMsg('Ustalam lokalizację…');
+    navigator.geolocation.getCurrentPosition(async (g) => {
+      const lat = +g.coords.latitude.toFixed(6), lon = +g.coords.longitude.toFixed(6);
+      set({ lat, lon });
       try {
-        const a = await reverseGeocode(f.lat, f.lon);
+        const a = await reverseGeocode(lat, lon);
         set({ ...(a.miejscowosc ? { miejscowosc: a.miejscowosc } : {}), ...(a.ulica ? { ulica: a.ulica } : {}),
           ...(a.numer_budynku ? { numer_budynku: a.numer_budynku } : {}), ...(a.kod_pocztowy ? { kod_pocztowy: a.kod_pocztowy } : {}) });
-        setMsg(a.ulica || a.numer_budynku ? `Najbliższy adres: ${[a.ulica, a.numer_budynku].filter(Boolean).join(' ')}, ${a.kod_pocztowy ?? ''} ${a.miejscowosc ?? ''} (ok. ${a.odleglosc_m ?? 0} m). Sprawdź i popraw, jeśli trzeba. Pinezkę możesz przeciągnąć.`
-          : `Pinezka ustawiona (gmina ${a.gmina ?? '—'}). Nie znaleziono adresu w pobliżu – wpisz go.`);
-      } catch { setMsg('Pinezka ustawiona. Nie udało się pobrać adresu – wpisz go.'); }
-    });
+        setMsg(a.ulica || a.numer_budynku ? `Najbliższy adres: ${[a.ulica, a.numer_budynku].filter(Boolean).join(' ')}, ${a.kod_pocztowy ?? ''} ${a.miejscowosc ?? ''} (ok. ${a.odleglosc_m ?? 0} m). Sprawdź i popraw, jeśli trzeba.`
+          : `Pinezka ustawiona (gmina ${a.gmina ?? '—'}). Nie znaleziono adresu w pobliżu – wpisz go ręcznie.`);
+      } catch { setMsg('Pinezka ustawiona. Nie udało się pobrać adresu – wpisz go ręcznie.'); }
+    }, () => setMsg('Nie udało się ustalić lokalizacji. Wpisz adres albo kliknij mapę.'), { enableHighAccuracy: true, timeout: 10000 });
   }
-  const miejscowosci = useSuggestions(d.miejscowosc, 'miejscowosc');
-  const ulice = useSuggestions(d.miejscowosc.trim() && d.ulica.trim().length >= 2 ? `${d.miejscowosc.trim()}, ${d.ulica.trim()}` : '', 'ulica');
 
   async function send(ev: FormEvent) {
     ev.preventDefault(); setFail(null);
@@ -215,7 +167,7 @@ function Form() {
     setTimeout(() => document.getElementById('za-form')?.scrollIntoView({ behavior: 'smooth' }), 0);
   }
 
-  const text = (k: keyof Draft, id: string, label: string, opts: { hint?: string; req?: boolean; mode?: 'numeric'; area?: boolean; max?: number; list?: string } = {}) => {
+  const text = (k: keyof Draft, id: string, label: string, opts: { hint?: string; req?: boolean; mode?: 'numeric'; area?: boolean; max?: number } = {}) => {
     const errKey = k === 'wewnatrz' ? 'wewnatrz_budynku' : k;
     const er = errors[errKey as string];
     const desc = [opts.hint ? `${id}-hint` : '', er ? `${id}-err` : ''].filter(Boolean).join(' ') || undefined;
@@ -225,7 +177,7 @@ function Form() {
       <div className="field">
         <label htmlFor={id}>{label}{opts.req !== false && <Req />}</label>
         {opts.hint && <p id={`${id}-hint`} className="hint">{opts.hint}</p>}
-        {opts.area ? <textarea rows={3} {...common} /> : <input type="text" autoComplete="off" inputMode={opts.mode} list={opts.list} {...common} />}
+        {opts.area ? <textarea rows={3} {...common} /> : <input type="text" autoComplete="off" inputMode={opts.mode} {...common} />}
         {er && <p id={`${id}-err`} className="field-error">{er}</p>}
       </div>
     );
@@ -248,23 +200,20 @@ function Form() {
         <h3>1. Adres</h3>
         {text('nazwa_obiektu', 'za-nazwa', 'Nazwa budynku lub miejsca', { hint: 'Np. Szkoła Podstawowa nr 5, Urząd Gminy, Hala sportowa.', max: 200 })}
         <div className="filters__grid">
-          {text('miejscowosc', 'za-miejscowosc', 'Miejscowość', { max: 100, list: 'za-miejscowosc-list' })}
-          {text('ulica', 'za-ulica', 'Ulica', { hint: 'Zostaw puste, jeśli w miejscowości nie ma ulic.', req: false, max: 120, list: 'za-ulica-list' })}
+          {text('miejscowosc', 'za-miejscowosc', 'Miejscowość', { max: 100 })}
+          {text('ulica', 'za-ulica', 'Ulica', { hint: 'Zostaw puste, jeśli w miejscowości nie ma ulic.', req: false, max: 120 })}
           {text('numer_budynku', 'za-numer', 'Numer budynku', { max: 20 })}
           {text('kod_pocztowy', 'za-kod', 'Kod pocztowy', { hint: 'W formie 00-000.', mode: 'numeric', max: 6 })}
         </div>
-        <datalist id="za-miejscowosc-list">{miejscowosci.map((m) => <option key={m} value={m} />)}</datalist>
-        <datalist id="za-ulica-list">{ulice.map((u) => <option key={u} value={u} />)}</datalist>
         <p className="form-actions">
-          <button type="button" className="btn btn--secondary" onClick={locate} disabled={geo.status === 'locating'}><Icon name="locate" />Użyj mojej lokalizacji</button>
           <button id="za-szukaj" type="button" className="btn btn--secondary" onClick={findAddress}>Znajdź adres na mapie</button>
+          <button type="button" className="btn btn--secondary" onClick={locate}>Użyj mojej lokalizacji</button>
         </p>
-        <p role="status" className="hint">{geo.message}{geo.message && msg ? ' ' : ''}{msg}</p>
+        <p role="status" className="hint">{msg}</p>
         <MapView items={[]} picked={d.lat !== null && d.lon !== null ? { lat: d.lat, lon: d.lon } : null}
-          accuracy={geo.fix && d.lat === geo.fix.lat && d.lon === geo.fix.lon ? geo.fix.accuracy : null}
           goTo={d.lat !== null && d.lon !== null ? { key: `${d.lat},${d.lon}`, lat: d.lat, lon: d.lon, zoom: 18 } : null}
           onPick={(p) => { set({ lat: p.lat, lon: p.lon }); setMsg('Przesunięto pinezkę w wybrane miejsce.'); }}
-          label="Mapa: pinezka pokazuje położenie AED. Przeciągnij ją albo kliknij mapę, aby ją przesunąć. Bez myszy użyj przycisku „Znajdź adres na mapie”." height={300} cluster={false} />
+          label="Mapa: pinezka pokazuje położenie AED. Kliknij, aby ją przesunąć. Bez myszy użyj przycisku „Znajdź adres na mapie”." height={300} cluster={false} />
         {errors.szerokosc && <p className="field-error">{errors.szerokosc}</p>}
         {d.lat !== null && <p className="hint">Położenie: {d.lat.toFixed(6)}, {d.lon!.toFixed(6)}</p>}
 
@@ -285,8 +234,7 @@ function Form() {
           </div>
           {errors.dostep && <p className="field-error">{errors.dostep}</p>}
         </fieldset>
-        <YesNoField name="za-24" legend="Kiedy AED jest dostępne?" value={d.calodobowo} onChange={(v) => set({ calodobowo: v })} error={errors.dostepny_24h}
-          labels={['Całą dobę', 'W określonych godzinach']} />
+        <YesNoField name="za-24" legend="Czy AED jest dostępne całą dobę?" value={d.calodobowo} onChange={(v) => set({ calodobowo: v })} error={errors.dostepny_24h} />
         {d.calodobowo === 'nie' && text('godziny', 'za-godziny', 'Godziny dostępności', { hint: 'Np. „pn-pt 8-16; sob 9-13”.', max: 200 })}
         <YesNoField name="za-szafka" legend="Czy szafka z AED jest zamknięta?" value={d.szafka} onChange={(v) => set({ szafka: v })} error={errors.szafka_zamknieta}
           hint="Zamknięta = trzeba ją otworzyć kluczem lub kodem." />
@@ -318,7 +266,7 @@ function Form() {
                   <td><span className={`badge ${z.status === 'zatwierdzone' ? 'badge--ok' : z.status === 'do_poprawy' ? 'badge--stale' : ''}`}>{STATUS[z.status]}</span></td>
                   <td>{z.kto ? <>{z.komentarz ?? '—'}<div className="hint">{z.kto}, {z.kiedy?.replace('T', ', ')}</div></> : '—'}</td>
                   <td>
-                    {z.status === 'do_poprawy' && <button type="button" className="btn btn--secondary btn--small" onClick={() => startFix(z)}>Popraw i wyślij ponownie<span className="visually-hidden">: {z.nazwa_obiektu}</span></button>}
+                    {z.status === 'do_poprawy' && <button type="button" className="btn btn--secondary btn--small" onClick={() => startFix(z)}>Popraw<span className="visually-hidden"> {z.nazwa_obiektu}</span></button>}
                     {z.status === 'zatwierdzone' && <Link to="/moje-aed">W „Moje AED”</Link>}
                   </td>
                 </tr>

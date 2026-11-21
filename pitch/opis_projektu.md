@@ -1,4 +1,4 @@
-# Mapa danych AED – wspólna lista AED w dane.gov.pl
+# Mapa AED – wspólna lista AED w dane.gov.pl
 
 **Zadanie:** Misja AED – dane na ratunek (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi), HackNation 2026
 **Repozytorium:** https://github.com/Serafin21/misja-aed

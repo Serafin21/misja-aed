@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { probeApi } from './api/client';
 import { useMockMode } from './lib/useMockMode';
-import { APP_NAME, BRAND_NAME, LogoMark } from './components/Brand';
+import { APP_NAME, APP_TAGLINE, BRAND_NAME } from './components/Brand';
 import { ExternalLink, Icon } from './components/ui';
 import { About, AccessibilityStatement, Contact, Cookies, Licenses, Privacy } from './pages/Info';
 import { AedCard } from './pages/AedCard';
@@ -22,16 +22,15 @@ import { WniosekKonto } from './pages/WniosekKonto';
 import { Approvals } from './pages/Admin';
 import { Link, matchPath, navigate, useLocation, usePageTitle } from './router';
 
-// Top menu (CR-TL-8): five items for everyone. "Zgłoś AED" shows the login / account-request choice when logged out.
-// After logging in the role's own items appear (MODEL_ROL v1.3): institution – "Moje AED"; administrator – approvals and panel.
+// Top menu: three items for everyone. "Dla instytucji", data, sources and login are in the footer. After logging in the
+// role's own items appear (MODEL_ROL v1.3): institution – "Zgłoś AED" and "Moje AED"; administrator – approvals and panel.
 const NAV = [
-  { to: '/zglos-aed', label: 'Zgłoś AED' },
   { to: '/znajdz', label: 'Znajdź AED' },
-  { to: '/akcja', label: 'Akcja „AED w danych”' },
   { to: '/pierwsza-pomoc', label: 'Pierwsza pomoc' },
   { to: '/o-projekcie', label: 'O projekcie' },
 ];
 const ROLE_NAV: Record<string, { to: string; label: string }[]> = {
+  dysponent: [{ to: '/zglos-aed', label: 'Zgłoś AED' }],
   administrator: [{ to: '/zatwierdzanie', label: 'Zgłoszenia AED' }],
 };
 
@@ -125,10 +124,10 @@ export function App() {
       <a className="skip-link" href="#main">Przejdź do treści głównej</a>
       <header className="site-header">
         <div className="container site-header__inner">
-          <span className="brand">
-            <Link to="/akcja" className="brand__mark" aria-label={`Akcja „${BRAND_NAME}”`}><LogoMark size={36} /></Link>
-            <Link to="/" className="brand__name" aria-label={`${APP_NAME} – strona główna`}>{APP_NAME}</Link>
-          </span>
+          <Link to="/" className="brand" aria-label={`${APP_NAME} – strona główna`}>
+            <span className="brand__mark brand__mark--app"><Icon name="pin" /></span>
+            <span>{APP_NAME}<span className="brand__slogan" aria-hidden="true">{APP_TAGLINE}</span></span>
+          </Link>
           <button id="menu-btn" type="button" className="menu-btn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu((m) => !m)}>
             {menu ? 'Zamknij' : 'Menu'}
           </button>

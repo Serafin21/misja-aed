@@ -1493,10 +1493,10 @@ def _sprawdz_zgloszenie_aed(body: ZgloszenieAedIn) -> tuple[dict, str]:
     _bez_nie_wiem(body.model_dump(exclude={"zdjecie"}))
     fields, godziny = {}, "24/7"
     if not body.dostepny_24h:
-        godziny, _ = N.opening_hours(body.godziny or "")
+        godziny, ok = N.opening_hours(body.godziny or "")
         if not body.godziny:
             fields["godziny"] = "Podaj godziny dostępności (albo zaznacz „całą dobę”)."
-        elif not godziny or hours.is_open(godziny) is None:  # not interpretable → ask for a clear form
+        elif not godziny or not ok:
             fields["godziny"] = "Nie rozumiem godzin – wpisz np. „pn-pt 8-16; sob 9-13”."
     if body.szafka_zamknieta and not (body.instrukcja_dostepu or "").strip():
         fields["instrukcja_dostepu"] = "Szafka jest zamknięta – napisz, jak ją otworzyć (np. kod podaje dyspozytor 112)."

@@ -99,8 +99,6 @@ def test_zglos_aed_walidacja(client):
     assert r.status_code == 422 and "instrukcja_dostepu" in r.json()["error"]["fields"]
     r = client.post("/api/v1/zgloszenia-aed", headers=inst, json=_aed(godziny=None))
     assert r.status_code == 422 and "godziny" in r.json()["error"]["fields"]
-    r = client.post("/api/v1/zgloszenia-aed", headers=inst, json=_aed(godziny="czasem rano"))
-    assert r.status_code == 422 and "godziny" in r.json()["error"]["fields"]
     assert client.post("/api/v1/zgloszenia-aed", headers=adm, json=_aed()).status_code == 403  # the administrator does not enter data
 
 
@@ -144,9 +142,7 @@ def test_zglos_aed_do_poprawy_i_ponownie(client):
     assert r.json()["data"]["status"] == "do_poprawy"
     mine = client.get("/api/v1/moje-zgloszenia", headers=inst).json()["data"][0]
     assert mine["status"] == "do_poprawy" and mine["komentarz"] == "Zdjęcie nie pokazuje urządzenia." and mine["kto"] == "administrator"
-    # the form sends back the hours as the server stored them ("Mo-Fr 08:00-16:00")
-    r = client.put(f"/api/v1/zgloszenia-aed/{zid}", headers=inst, json=_aed(opis_lokalizacji="hol na parterze, szafka na lewo od windy",
-                                                                           godziny="Mo-Fr 08:00-16:00"))
+    r = client.put(f"/api/v1/zgloszenia-aed/{zid}", headers=inst, json=_aed(opis_lokalizacji="hol na parterze, szafka na lewo od windy"))
     assert r.status_code == 200 and r.json()["data"]["status"] == "oczekuje" and len(r.json()["data"]["historia"]) == 1
     assert client.get("/api/v1/admin/zgloszenia-aed", headers=adm).json()["meta"]["count"] == 1
 

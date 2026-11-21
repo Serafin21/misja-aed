@@ -4,7 +4,7 @@ import { confirmAed, getAed, HttpError } from '../api/client';
 import { PODSTAWA_LABEL, type AedDetail } from '../api/types';
 import { MapView } from '../components/MapView';
 import { QrSticker } from '../components/QrSticker';
-import { AvailabilityBadge, DataBadge, ErrorBox, ExternalLink, Icon, Loading, LockedCabinet } from '../components/ui';
+import { AvailabilityBadge, DataBadge, Emergency, ErrorBox, ExternalLink, Icon, Loading, LockedCabinet } from '../components/ui';
 import { ErrorSummary, Req, RequiredNote, useValidation } from '../components/form';
 import { address, date, dictMeaning, floor, label, osmDirections } from '../lib/format';
 import { describeHours } from '../lib/hours';
@@ -69,7 +69,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
       )}
 
       <LockedCabinet aed={a} />
-      <p><Link to="/pierwsza-pomoc">Pierwsza pomoc: jak użyć AED</Link></p>
+      <p className="firstaid-bar"><span>W nagłym wypadku dzwoń 112.</span><Link to="/pierwsza-pomoc">Jak użyć AED?</Link></p>
       {!a.szafka_zamknieta && a.instrukcja_dostepu && (
         <div className="callout callout--info" role="note"><p className="callout__title">Jak się dostać</p><p>{a.instrukcja_dostepu}</p></div>
       )}
@@ -165,6 +165,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
         <p className="hint">Identyfikator: <code>{a.id_aed}</code></p>
         </details>
       </section>
+      <Emergency />
     </article>
   );
 }

@@ -22,8 +22,6 @@ export interface MapViewProps {
   /** click on the map picks a point (E4, E5 form) */
   onPick?: (p: { lat: number; lon: number }) => void;
   picked?: { lat: number; lon: number } | null;
-  /** CR-TL-8: location accuracy in metres – drawn as a circle around `user` (or `picked`) */
-  accuracy?: number | null;
   label: string;
   height?: number;
   cluster?: boolean;
@@ -73,7 +71,7 @@ function markerName(a: AedView, mode: MapMode): string {
   return `${a.nazwa_obiektu}, ${a.miejscowosc} – ${state}${a.szafka_zamknieta ? ', szafka zamknięta' : ''}`;
 }
 
-export function MapView({ items, user, focusId, onPick, picked, accuracy, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false, points, wheelZoom = true, fitKey: fitKeyProp, onView, goTo, highlight }: MapViewProps) {
+export function MapView({ items, user, focusId, onPick, picked, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false, points, wheelZoom = true, fitKey: fitKeyProp, onView, goTo, highlight }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -181,10 +179,6 @@ export function MapView({ items, user, focusId, onPick, picked, accuracy, label,
     const g = extra.current;
     if (!g) return;
     g.clearLayers();
-    const centre = user ?? picked;
-    if (centre && accuracy) {
-      L.circle([centre.lat, centre.lon], { radius: accuracy, color: '#2f6fe0', weight: 1, fillColor: '#2f6fe0', fillOpacity: 0.12, interactive: false }).addTo(g);
-    }
     if (user) L.circleMarker([user.lat, user.lon], { radius: 9, color: '#0F3B2B', weight: 3, fillColor: '#2f6fe0', fillOpacity: 0.9 }).bindTooltip('Twoja lokalizacja').addTo(g);
     if (picked) {
       // draggable when the page lets the user pick a point (E4, E5 manual) – move the pin to the exact spot
@@ -192,7 +186,7 @@ export function MapView({ items, user, focusId, onPick, picked, accuracy, label,
       pm.on('dragend', () => { const ll = pm.getLatLng(); pickRef.current?.({ lat: +ll.lat.toFixed(6), lon: +ll.lng.toFixed(6) }); });
       map.current?.setView([picked.lat, picked.lon], Math.max(map.current.getZoom(), 16));
     }
-  }, [user, picked, accuracy]);
+  }, [user, picked]);
 
   // the nearest AED: a big pin with a permanent label, above the clusters; click opens its card
   const hlLayer = useRef<L.LayerGroup | null>(null);
