@@ -8,10 +8,10 @@ import { Pin } from '../components/Brand';
 import { ErrorBox, Loading } from '../components/ui';
 import { dictValues } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
-import { usePageTitle } from '../router';
+import { currentSearch, toHref, usePageTitle } from '../router';
 
 function readFilters(): AedFilters {
-  const p = new URLSearchParams(location.search);
+  const p = new URLSearchParams(currentSearch());
   return {
     q: p.get('q') ?? '',
     wojewodztwo: p.get('wojewodztwo') ?? '',
@@ -31,7 +31,7 @@ function writeFilters(f: AedFilters) {
   if (f.dostepne_teraz) p.set('dostepne_teraz', 'true');
   if (f.pokaz_mobilne === false) p.set('mobilne', 'false');
   const s = p.toString();
-  history.replaceState({}, '', `/mapa${s ? `?${s}` : ''}`);
+  history.replaceState({}, '', toHref(`/mapa${s ? `?${s}` : ''}`));
 }
 
 export function MapList() {
