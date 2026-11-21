@@ -59,3 +59,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: QR, Leaflet i typecheck niesprawdzone na prawdziwych pakietach (brak sieci w środowisku B).
 - Użycie AI (jedna linia): README, SUBMISSION, raport dostępności i skrypt kontroli dostępności przygotowane z Claude (Model B).
 - Następny krok: przełączenie na API A po jego pushu; SYNC #1 o 17:00.
+
+## HANDOFF #5
+
+- Czas: sob 21.11.2026
+- Zrobione: `npm install`, `npm run typecheck` – 0 błędów (bez zmian w kodzie). `npm run build` przechodzi po podmianie rollupa na `@rollup/wasm-node` (`overrides` w `src/ui/package.json`), bo zasady kontroli aplikacji Windows (Smart App Control) blokują natywny `rollup.win32-x64-msvc.node`. Dodany `package-lock.json` (Dockerfile używa `npm ci`). Licencje produkcyjne: MIT 5, BSD-2-Clause 1 (Leaflet); spoza listy tylko nasz pakiet (`UNLICENSED` przez `private`). W devDependencies: `caniuse-lite` (CC-BY-4.0, dane browserslist, nie trafia do builda).
+- Jak uruchomić / zobaczyć: `cd src/ui && npm install && npm run dev`.
+- Założenia: wasm-rollup jest wolniejszy, ale działa na każdej platformie i w Dockerze.
+- CR: bez zmian.
+- Znane błędy: ostrzeżenie Vite o paczce JS 535 kB (nie błąd). Mapa (kafelki, pinezki, klastry) i skan QR na `/aed/AED-PL-CBD53ED4AA` niesprawdzone wzrokowo – sesja bez narzędzi przeglądarki; serwer zwraca 200, kafelki OSM osiągalne.
+- Użycie AI (jedna linia): diagnoza i naprawa builda z Claude (Model B).
+- Następny krok: ręcznie sprawdzić mapę i QR telefonem; audyt axe/Lighthouse/NVDA.
