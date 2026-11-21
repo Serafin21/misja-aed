@@ -1,6 +1,7 @@
 // In-browser implementation of CONTRACT §5 on data/sample/ – used until Model A's API is up.
-import type { WynikImportu, Aed, AedDetail, AedFilters, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo } from '../api/types';
+import type { WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo } from '../api/types';
 import { availableNow, haversine } from '../lib/format';
+import { ageDays, computeState } from '../lib/dataState';
 import geo from './aed_ujednolicone.json';
 import pochodzenie from './aed_pochodzenie.json';
 import raport from './raport_walidacji_przyklad.json';
@@ -18,6 +19,9 @@ const norm = (s: string) => s.toLocaleLowerCase('pl').normalize('NFD').replace(/
 function withAvailability(a: Aed): AedView {
   const v: AedView = { ...a };
   v.dostepny_teraz = availableNow(v);
+  // CR-TL-1: in sample mode freshness is computed here (365-day threshold), like the API does
+  v.stan_danych = computeState(v.data_weryfikacji);
+  v.wiek_danych_dni = ageDays(v.data_weryfikacji);
   return v;
 }
 
@@ -35,6 +39,19 @@ export function mockListAed(f: AedFilters): Promise<{ items: AedView[]; meta: Li
   const per = f.per_page ?? 100;
   const page = f.page ?? 1;
   return delay({ items: items.slice((page - 1) * per, page * per), meta: { count: items.length, page, per_page: per } });
+}
+
+export function mockPoints(): Promise<AedPoint[]> {
+  return delay(records.map(withAvailability).map((a) => ({
+    id_aed: a.id_aed, lat: a.szerokosc_geograficzna, lon: a.dlugosc_geograficzna,
+    dostepny_teraz: a.dostepny_teraz ?? null, stan_danych: a.stan_danych ?? 'nieaktualne', osm: a.licencja === 'ODbL-1.0',
+    dostep: a.dostep, wiek_danych_dni: ageDays(a.data_weryfikacji), mobilny: a.mobilny, wojewodztwo: a.wojewodztwo || null,
+  })));
+}
+
+export function mockByIds(ids: string[]): Promise<AedView[]> {
+  const by = new Map(records.map(withAvailability).map((a) => [a.id_aed, a]));
+  return delay(ids.map((i) => by.get(i)).filter((a): a is AedView => !!a));
 }
 
 export function mockNearest(lat: number, lon: number, limit: number, onlyNow: boolean): Promise<AedView[]> {

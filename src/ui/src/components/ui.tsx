@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { AedView } from '../api/types';
 import { availableNow, label } from '../lib/format';
+import { dataLabel } from '../lib/dataState';
 
 /** Availability never relies on colour alone: icon + text (WCAG 1.4.1). */
 export function AvailabilityBadge({ aed }: { aed: AedView }) {
@@ -14,6 +15,17 @@ export function AvailabilityBadge({ aed }: { aed: AedView }) {
   if (v === true) return <span className="badge badge--ok"><Icon name="check" />Dostępne teraz</span>;
   if (v === false) return <span className="badge badge--no"><Icon name="clock" />Teraz zamknięte</span>;
   return <span className="badge badge--unknown"><Icon name="question" />Sprawdź godziny na miejscu</span>;
+}
+
+/** CR-TL-1: "Dane z MM.RRRR" / "Dane nieaktualne" – icon + text; the full date is in the title and for screen readers. */
+export function DataBadge({ aed }: { aed: Pick<AedView, 'data_weryfikacji' | 'stan_danych'> }) {
+  const d = dataLabel(aed);
+  return (
+    <span className={`badge ${d.state === 'aktualne' ? 'badge--fresh' : 'badge--stale'}`} title={d.long}>
+      <Icon name={d.state === 'aktualne' ? 'check' : 'clock'} />
+      <span aria-hidden="true">{d.short}</span><span className="visually-hidden">{d.long}</span>
+    </span>
+  );
 }
 
 export function LockedCabinet({ aed, compact = false }: { aed: AedView; compact?: boolean }) {
@@ -49,6 +61,15 @@ export function ErrorBox({ error, onRetry }: { error: Error; onRetry?: () => voi
   );
 }
 
+/** Link opened in a new window – always announces it (visible note). */
+export function ExternalLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      {children} <span className="ext-note">(otwiera się w nowym oknie)</span>
+    </a>
+  );
+}
+
 export function VisuallyHidden({ children }: { children: ReactNode }) {
   return <span className="visually-hidden">{children}</span>;
 }
@@ -65,6 +86,7 @@ const PATHS: Record<string, string> = {
   car: 'M3 13l2-5h14l2 5v5h-3v-2H6v2H3zM7 13h.01M17 13h.01',
   arrow: 'M5 12h14M13 6l6 6-6 6',
   download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
+  home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
 };
 
 export function Icon({ name, className }: { name: keyof typeof PATHS | string; className?: string }) {

@@ -1,0 +1,66 @@
+/* Design tokens – the ONLY file with colour values. Visual language modelled on gov.pl services (TL decision);
+   brand colours (from brand/ksiega_znaku.pdf) are used only for the logo, map pins, map legend and screen E8.
+   Contrast of every pair: docs/a11y/raport.md. Values to be confirmed by TL against the Gov UI guide. */
+:root {
+  /* Typography */
+  --font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-size-base: 16px;          /* desktop */
+  --font-size-base-mobile: 14px;   /* < 700 px */
+  --font-size-button: 16px;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Neutral */
+  --color-text: #1B1B1B;           /* 17.2:1 on white */
+  --color-text-secondary: #555555; /* 7.5:1 on white, 6.8:1 on --color-surface */
+  --color-bg: #FFFFFF;
+  --color-surface: #F5F5F5;        /* flat panels, filters, footer */
+  --color-surface-strong: #F2F2F2; /* prototype notice bar */
+  --color-border: #D2D2D2;         /* decorative 1 px borders */
+  --color-border-input: #767676;   /* form controls – 4.5:1 on white (WCAG 1.4.11) */
+  --color-on-action: #FFFFFF;
+
+  /* Action (links, buttons, focus, selected state) */
+  --color-action: #0052A5;         /* 7.6:1 on white */
+  --color-action-hover: #006CD7;   /* white on it 5.1:1 */
+  --color-action-active: #00468D;  /* white on it 9.3:1 */
+  --color-action-tint: #E5EEF8;    /* selected background – action text on it 6.5:1 */
+  --color-focus: #0052A5;
+
+  /* Messages (2 px frame in the message colour) */
+  --color-error: #A7162D;          /* 7.5:1 on white */
+  --color-error-tint: #FBE9EC;
+  --color-success: #1B6B3A;        /* 6.5:1 on white */
+  --color-success-tint: #E8F3EC;
+  --color-warning: #7A4F00;        /* 7.1:1 on white */
+  --color-warning-tint: #FFF4D6;
+  --color-info: #0052A5;
+  --color-info-tint: #E5EEF8;
+
+  /* Brand (księga znaku) – logo, pins, map legend, E8 only */
+  --brand-green: #1A7A50;
+  --brand-deep: #0F3B2B;
+  --brand-frost: #EDF2EC;
+  --brand-amber: #E2A23B;
+  --brand-amber-dark: #B9791A;
+  --brand-sage: #6B7570;
+  --brand-green-tint: rgba(26, 122, 80, .18);
+  --brand-amber-tint: rgba(226, 162, 59, .25);
+  --map-hatch-a: #D9DDDA;
+  --map-hatch-b: #F2EFE6;
+  --map-canvas: #E9ECEF;
+  --map-user: #2F6FE0;
+  --pin-shadow: rgba(15, 59, 43, .45);
+  --forced-outline: CanvasText;
+
+  /* Layout */
+  --space: 20px;                   /* default vertical rhythm */
+  --space-s: 8px;
+  --space-m: 12px;
+  --space-l: 32px;
+  --radius: 4px;
+  --border-width: 1px;
+  --control-height: 44px;
+  --maxw: 1180px;
+}

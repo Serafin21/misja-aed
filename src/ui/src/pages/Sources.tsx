@@ -34,6 +34,8 @@ export function Sources() {
           <li className="stat stat--ok"><span className="stat__n">{String(st.data.liczba_aed ?? '–')}</span> AED w zbiorze</li>
           <li className="stat"><span className="stat__n">{String(st.data.liczba_dysponentow ?? '–')}</span> dysponentów</li>
           {st.data.zweryfikowane_12m_proc !== undefined && <li className="stat"><span className="stat__n">{String(st.data.zweryfikowane_12m_proc)}%</span> zweryfikowanych w 12 mies.</li>}
+          {st.data.aktualne !== undefined && <li className="stat stat--ok"><span className="stat__n">{String(st.data.aktualne)}</span> z aktualnymi danymi (≤ 12 mies.)</li>}
+          {st.data.nieaktualne !== undefined && <li className="stat"><span className="stat__n">{String(st.data.nieaktualne)}</span> z danymi nieaktualnymi lub bez daty</li>}
         </ul>
       )}
 

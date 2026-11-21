@@ -17,8 +17,8 @@ Stan: sob 21.11.2026, 13:45. Wersja: gałąź `b/ux-docs`. Aplikacja działała 
 
 ## Rozwiązania zastosowane w interfejsie
 
-- `lang="pl"`, landmarki `header`, `nav`, `main`, `footer`, link „Przejdź do treści”, tytuł karty zmienia się z ekranem, a po przejściu do innego ekranu fokus trafia na jego `<h1>` (2.4.2, 2.4.3).
-- Widoczny fokus: niebieska obwódka 3 px z odstępem (2.4.7, 2.4.11).
+- `lang="pl"`, landmarki `header`, `nav`, `main`, `footer`, link „Przejdź do treści głównej”, tytuł karty zmienia się z ekranem, a po przejściu do innego ekranu fokus trafia na jego `<h1>` (2.4.2, 2.4.3).
+- Widoczny fokus: obwódka 3 px w kolorze akcji #0052A5 z odstępem 2 px na każdym elemencie interaktywnym (2.4.7, 2.4.11).
 - Kolor nigdy nie jest jedynym nośnikiem informacji (1.4.1): „dostępne teraz” = ikona + tekst; pinezki na mapie różnią się kolorem, kształtem i znaczkiem (zegar, kłódka), zgodnie z księgą znaku.
 - Mapa ma równorzędną listę z tymi samymi informacjami (1.1.1). Znaczniki mają dostępne nazwy (np. „Biblioteka Testowa, Warszawa – dostępne teraz, szafka zamknięta”), obsługują Enter. Kółko myszy przybliża mapę dopiero, gdy ma ona fokus, więc strona się nie blokuje.
 - Formularze (3.3.1–3.3.3): etykiety, podpowiedzi powiązane przez `aria-describedby`, `aria-invalid`, komunikat przy polu i podsumowanie błędów, brak limitu czasu, brak pól na dane osobowe.
@@ -26,7 +26,33 @@ Stan: sob 21.11.2026, 13:45. Wersja: gałąź `b/ux-docs`. Aplikacja działała 
 - Tabele mają `<caption>` i nagłówki `scope`; szerokie tabele przewijają się w ramce dostępnej z klawiatury.
 - `prefers-reduced-motion` i tryb wysokiego kontrastu (`forced-colors`).
 - Cele dotykowe min. 44×44 px (2.5.8 wymaga 24×24).
-- Kontrast kolorów znaku na białym tle: zieleń ratunkowa #1A7A50 (tekst i przyciski, biel na zieleni 5,3:1), głęboka zieleń #0F3B2B (tekst).
+- Kolory znaku (zieleń, bursztyn) tylko w logo, pinezkach, legendzie mapy i na ekranie E8; przyciski i linki w kolorze akcji (paleta poniżej).
+
+
+## Paleta interfejsu w stylu serwisów gov.pl (sob 21.11.2026, 17:50)
+
+Interfejs przejmuje język wizualny serwisów gov.pl (bez ich znaków): Open Sans, tekst #1B1B1B, kolor akcji #0052A5, płaskie powierzchnie, promień 4 px. Wszystkie wartości są w `src/ui/src/tokens.css`. Kontrast policzony wzorem WCAG 2.2 (luminancja względna):
+
+| Para (tekst lub element / tło) | Kontrast | Wymóg | Wynik |
+|---|---|---|---|
+| tekst #1B1B1B / biel | 17,2:1 | 4,5:1 | ✅ |
+| tekst drugorzędny #555555 / biel | 7,5:1 | 4,5:1 | ✅ |
+| tekst drugorzędny #555555 / tło #F5F5F5 | 6,8:1 | 4,5:1 | ✅ |
+| link i obrys przycisku #0052A5 / biel | 7,6:1 | 4,5:1 | ✅ |
+| biel na przycisku #0052A5 | 7,6:1 | 4,5:1 | ✅ |
+| biel na przycisku po najechaniu #006CD7 | 5,1:1 | 4,5:1 | ✅ |
+| biel na przycisku wciśniętym #00468D | 9,3:1 | 4,5:1 | ✅ |
+| #0052A5 na tle zaznaczenia #E5EEF8 | 6,5:1 | 4,5:1 | ✅ |
+| błąd #A7162D / biel | 7,5:1 | 4,5:1 | ✅ |
+| błąd #A7162D / tło błędu #FBE9EC | 6,4:1 | 4,5:1 | ✅ |
+| sukces #1B6B3A / tło #E8F3EC | 5,8:1 | 4,5:1 | ✅ |
+| ostrzeżenie #7A4F00 / tło #FFF4D6 | 6,5:1 | 4,5:1 | ✅ |
+| obramowanie pól #767676 / biel | 4,5:1 | 3:1 (1.4.11) | ✅ |
+| fokus #0052A5 / biel | 7,6:1 | 3:1 (1.4.11) | ✅ |
+| tekst / pasek prototypu #F2F2F2 | 15,4:1 | 4,5:1 | ✅ |
+| tekst / tło E8 (szron #EDF2EC) | 15,2:1 | 4,5:1 | ✅ |
+
+Wartości kolorów do potwierdzenia przez TL z przewodnikiem Gov UI. Na telefonie (poniżej 700 px) tekst podstawowy ma 14 px – wymóg TL; treść można powiększyć do 200% bez utraty informacji (do sprawdzenia ręcznie).
 
 ## Do zrobienia przed finałem
 
