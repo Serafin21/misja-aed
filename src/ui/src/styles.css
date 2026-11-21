@@ -283,7 +283,7 @@ thead th { background: var(--color-surface); }
 
 /* ---------- Simple site (TL: rare internet users) ---------- */
 .site-header { position: sticky; top: 0; z-index: 1100; }
-@media (min-width: 900px) { .split__map { top: 96px; } }
+@media (min-width: 900px) { .split__map { top: calc(64px + var(--space)); } }
 @media (min-width: 900px) { .leaflet-container .leaflet-control-attribution, .leaflet-container .leaflet-popup-content { font-size: 1rem; line-height: 1.35; }
 .leaflet-control-zoom a { width: var(--control-height) !important; height: var(--control-height) !important; line-height: var(--control-height) !important; }
 
@@ -473,3 +473,13 @@ thead th { background: var(--color-surface); }
 .tabs__tab { font: inherit; font-weight: var(--font-weight-semibold); min-height: 48px; padding: 0 var(--space); background: none; border: 0; border-bottom: 4px solid transparent; color: var(--color-action); cursor: pointer; margin-bottom: -2px; }
 .tabs__tab[aria-selected="true"] { color: var(--color-text); border-bottom-color: var(--color-action); }
 .tabs__panel:focus-visible { outline: 3px solid var(--color-focus, #ffbf47); outline-offset: 4px; }
+/* CR-TL-8 p. 6: Znajdź AED – phone: map on top (50 vh), list below; ≥ 1024 px: list 40 % left, sticky map 60 % right */
+.nearest { display: flex; flex-direction: column; gap: var(--space); }
+.nearest__side { min-width: 0; }
+.nearest__map { order: -1; min-width: 0; }
+.nearest__map .map__canvas { height: 50vh !important; min-height: 280px; }
+@media (min-width: 1024px) {
+  .nearest { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
+  .nearest__map { order: 0; position: sticky; top: calc(64px + var(--space)); }
+  .nearest__map .map__canvas { height: calc(100vh - 64px - 12rem) !important; min-height: 420px; }
+}

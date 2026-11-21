@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { nearestAed } from '../api/client';
 import { PlaceSearch, type Wybor } from '../components/PlaceSearch';
 import { useMockMode } from '../lib/useMockMode';
+import { useGeolocation } from '../lib/useGeolocation';
 import type { AedView } from '../api/types';
 import { AedListItem } from '../components/AedListItem';
 import { MapView } from '../components/MapView';
@@ -14,12 +15,6 @@ type Pos = { lat: number; lon: number; label: string };
 
 // Demo point = centre of the sample data (Warsaw, Śródmieście). Shown only in demo/mock mode.
 const DEMO: Pos = { lat: 52.2397, lon: 21.0122, label: 'punkt demonstracyjny: Warszawa, Śródmieście' };
-
-const GEO_ERR: Record<number, string> = {
-  1: 'Nie mamy zgody na lokalizację. Wpisz adres lub miejscowość poniżej.',
-  2: 'Nie udało się ustalić lokalizacji. Wpisz adres lub miejscowość poniżej.',
-  3: 'Ustalanie lokalizacji trwa zbyt długo. Wpisz adres lub miejscowość poniżej.',
-};
 
 export function Nearest() {
   usePageTitle('Najbliższe AED');
@@ -51,15 +46,11 @@ export function Nearest() {
     }
   }
 
+  // CR-TL-8 p. 7: shared hook – best reading within 20 s or ≤ 30 m, accuracy shown on the map
+  const geo = useGeolocation();
   function locate() {
     setMsg(null);
-    if (!('geolocation' in navigator)) { setMsg('Ta przeglądarka nie udostępnia lokalizacji. Wpisz adres lub miejscowość.'); return; }
-    setBusy('Ustalam Twoją lokalizację…');
-    navigator.geolocation.getCurrentPosition(
-      (g) => load({ lat: g.coords.latitude, lon: g.coords.longitude, label: 'Twoja lokalizacja' }),
-      (e) => { setBusy(null); setMsg(GEO_ERR[e.code] ?? GEO_ERR[2]); },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-    );
+    geo.start((f) => { if (f) load({ lat: f.lat, lon: f.lon, label: 'Twoja lokalizacja' }); });
   }
 
   // address, street or locality → nearest AED from that point; gmina or voivodeship → the map of that area
@@ -75,45 +66,45 @@ export function Nearest() {
     if (pos) load(pos, v);
   }
 
+  const mine = pos?.label === 'Twoja lokalizacja';
+  const status = busy ?? (geo.status === 'locating' ? geo.message : [mine || geo.status === 'error' ? geo.message : '', msg ?? ''].filter(Boolean).join(' '));
   return (
-    <>
-      <section className="hero" aria-labelledby="page-title">
-        <h1 id="page-title">Znajdź najbliższe AED</h1>
-        <p className="lead">Defibrylatora AED może użyć każdy. Urządzenie prowadzi głosem krok po kroku.</p>
-        <button type="button" className="btn btn--primary btn--xl" onClick={locate} disabled={!!busy}>
-          Pokaż najbliższe AED
-        </button>
-        <p className="hint">Użyjemy Twojej lokalizacji tylko do wyszukania. Nie zapisujemy jej.</p>
-
-        <div className="place-form" role="search">
-          <PlaceSearch label="Albo wpisz adres lub miejscowość" placeholder="np. Kraków, Floriańska 3"
-            hint="Wybierz podpowiedź z listy – pokażemy najbliższe AED od tego miejsca." onSelect={onPlace} />
-        </div>
-        {mock && (
-          <p className="hint">
-            Tryb demonstracyjny: dane przykładowe obejmują Warszawę, Kraków i Gdańsk.{' '}
-            <button type="button" className="linklike" onClick={() => load(DEMO)}>Użyj punktu w centrum Warszawy</button>
-          </p>
-        )}
-        <p><Link to="/mapa">Zobacz wszystkie AED na mapie</Link></p>
-      </section>
-
-      <div role="status" aria-live="polite" className="status-line">{busy ?? msg ?? ''}</div>
-      {busy && <Loading text={busy} />}
-      {err && <ErrorBox error={err} onRetry={() => pos && load(pos)} />}
-
-      {items && pos && (
-        <section aria-labelledby="results-title" className="results">
-          <div className="results__head">
-            <h2 id="results-title">Najbliższe AED</h2>
-            <div className="switch">
-              <input id="only-now" type="checkbox" checked={onlyNow} onChange={(e) => toggleNow(e.target.checked)} />
-              <label htmlFor="only-now">Tylko dostępne teraz</label>
-            </div>
+    <div className="nearest">
+      <div className="nearest__side">
+        <section className="hero" aria-labelledby="page-title">
+          <h1 id="page-title">Znajdź najbliższe AED</h1>
+          <p className="lead">Defibrylatora AED może użyć każdy. Urządzenie prowadzi głosem krok po kroku.</p>
+          <button type="button" className="btn btn--primary btn--xl" onClick={locate} disabled={!!busy || geo.status === 'locating'}>
+            Pokaż najbliższe AED
+          </button>
+          <p className="hint">Użyjemy Twojej lokalizacji tylko do wyszukania. Nie zapisujemy jej.</p>
+          <div className="place-form" role="search">
+            <PlaceSearch label="Albo wpisz adres lub miejscowość" placeholder="np. Kraków, Floriańska 3"
+              hint="Wybierz podpowiedź z listy – pokażemy najbliższe AED od tego miejsca." onSelect={onPlace} />
           </div>
-          <p className="hint">Od: {pos.label}. Odległość w linii prostej.</p>
-          <p className="firstaid-bar"><span>Nie wiesz, jak użyć AED?</span><Link to="/pierwsza-pomoc">Pierwsza pomoc: jak użyć AED</Link></p>
-          <div className="split">
+          {mock && (
+            <p className="hint">
+              Tryb demonstracyjny: dane przykładowe obejmują Warszawę, Kraków i Gdańsk.{' '}
+              <button type="button" className="linklike" onClick={() => load(DEMO)}>Użyj punktu w centrum Warszawy</button>
+            </p>
+          )}
+          <p><Link to="/mapa">Zobacz wszystkie AED na mapie</Link></p>
+        </section>
+
+        <div role="status" aria-live="polite" className="status-line">{status}</div>
+        {busy && <Loading text={busy} />}
+        {err && <ErrorBox error={err} onRetry={() => pos && load(pos)} />}
+
+        {items && pos && (
+          <section aria-labelledby="results-title" className="results">
+            <div className="results__head">
+              <h2 id="results-title">Najbliższe AED</h2>
+              <div className="switch">
+                <input id="only-now" type="checkbox" checked={onlyNow} onChange={(e) => toggleNow(e.target.checked)} />
+                <label htmlFor="only-now">Tylko dostępne teraz</label>
+              </div>
+            </div>
+            <p className="hint">Od: {pos.label}{mine && geo.fix ? ` (dokładność ±${Math.round(geo.fix.accuracy)} m)` : ''}. Odległość w linii prostej.</p>
             <ol className="aed-list" aria-label="Lista najbliższych AED">
               {items.map((a, i) => <AedListItem key={a.id_aed} aed={a} from={pos} rank={i + 1} mode={mode} />)}
             </ol>
@@ -124,19 +115,22 @@ export function Nearest() {
                 <ul className="aed-list">{helper.map((a) => <AedListItem key={a.id_aed} aed={a} from={pos} mode={mode} />)}</ul>
               </section>
             )}
-            <div className="split__map">
-              <MapModeSwitch mode={mode} onChange={setMode} idPrefix="e1-mode" />
-              <MapView items={[...items, ...helper]} user={pos} label={`Mapa najbliższych AED, tryb: ${mode === 'dane' ? 'aktualność danych' : 'dostępność'}. Te same informacje są na liście.`} height={460} cluster={false}
-                mode={mode} coverage={cov.data} />
-              <MapLegend mode={mode} coverage={!!cov.data} />
-              {mode === 'dane' && !cov.loading && <CoverageList coverage={cov.data} collapsed />}
-            </div>
-          </div>
-          {onlyNow && items.length < 5 && (
-            <p><button type="button" className="linklike" onClick={() => toggleNow(false)}>Pokaż też AED zamknięte o tej porze i dla uprawnionych</button></p>
-          )}
-        </section>
-      )}
-    </>
+            {onlyNow && items.length < 5 && (
+              <p><button type="button" className="linklike" onClick={() => toggleNow(false)}>Pokaż też AED zamknięte o tej porze i dla uprawnionych</button></p>
+            )}
+            <p><Link to="/pierwsza-pomoc">Pierwsza pomoc: jak użyć AED</Link></p>
+          </section>
+        )}
+      </div>
+
+      <div className="nearest__map">
+        <MapModeSwitch mode={mode} onChange={setMode} idPrefix="e1-mode" />
+        <MapView items={[...(items ?? []), ...helper]} user={pos} accuracy={mine && geo.fix ? geo.fix.accuracy : null}
+          label={`Mapa najbliższych AED, tryb: ${mode === 'dane' ? 'aktualność danych' : 'dostępność'}. Te same informacje są na liście.`} height={460} cluster={false}
+          mode={mode} coverage={cov.data} />
+        <MapLegend mode={mode} coverage={!!cov.data} />
+        {mode === 'dane' && !cov.loading && <CoverageList coverage={cov.data} collapsed />}
+      </div>
+    </div>
   );
 }
