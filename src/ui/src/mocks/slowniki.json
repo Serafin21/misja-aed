@@ -1,0 +1,242 @@
+{
+ "dostep": [
+  {
+   "wartosc": "publiczny",
+   "znaczenie": "dostępny dla każdego bez pytania obsługi"
+  },
+  {
+   "wartosc": "ograniczony",
+   "znaczenie": "dostępny w godzinach pracy obiektu lub po zgłoszeniu się do obsługi (np. recepcja)"
+  },
+  {
+   "wartosc": "prywatny",
+   "znaczenie": "tylko dla uprawnionych osób (np. pracowników); przydatny dla dyspozytora 112"
+  }
+ ],
+ "status_urzadzenia": [
+  {
+   "wartosc": "sprawny",
+   "znaczenie": "urządzenie działa"
+  },
+  {
+   "wartosc": "w_serwisie",
+   "znaczenie": "czasowo wycofane"
+  },
+  {
+   "wartosc": "niesprawny",
+   "znaczenie": "nie działa"
+  },
+  {
+   "wartosc": "nieznany",
+   "znaczenie": "brak informacji"
+  }
+ ],
+ "dysponent_typ": [
+  {
+   "wartosc": "administracja_publiczna",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "szkola_placowka_oswiatowa",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "uczelnia",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "podmiot_leczniczy",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "sluzby_ratownicze",
+   "znaczenie": "PSP, OSP, policja, WOPR, GOPR"
+  },
+  {
+   "wartosc": "transport",
+   "znaczenie": "dworce, lotniska, metro"
+  },
+  {
+   "wartosc": "handel_uslugi",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "sport_rekreacja",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "kultura",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "zaklad_pracy",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "organizacja_pozarzadowa",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "inny",
+   "znaczenie": ""
+  }
+ ],
+ "zrodlo_danych": [
+  {
+   "wartosc": "dysponent",
+   "znaczenie": "dane przekazane przez dysponenta AED"
+  },
+  {
+   "wartosc": "dane_gov_pl",
+   "znaczenie": "zbiór opublikowany w dane.gov.pl"
+  },
+  {
+   "wartosc": "osm",
+   "znaczenie": "OpenStreetMap (licencja ODbL – osobna warstwa)"
+  },
+  {
+   "wartosc": "zgloszenie_obywatela",
+   "znaczenie": "zgłoszenie do weryfikacji"
+  },
+  {
+   "wartosc": "inne",
+   "znaczenie": "inne źródło opisane w pliku zrodla.csv"
+  }
+ ],
+ "licencja": [
+  {
+   "wartosc": "CC0-1.0",
+   "znaczenie": "bez ograniczeń"
+  },
+  {
+   "wartosc": "CC-BY-4.0",
+   "znaczenie": "z uznaniem autorstwa"
+  },
+  {
+   "wartosc": "ODbL-1.0",
+   "znaczenie": "OpenStreetMap: uznanie autorstwa i ta sama licencja dla baz pochodnych"
+  }
+ ],
+ "metoda_weryfikacji": [
+  {
+   "wartosc": "deklaracja_dysponenta",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "wizja_lokalna",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "zdjecie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "zgloszenie_obywatela",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "import_automatyczny",
+   "znaczenie": ""
+  }
+ ],
+ "ulica_cecha": [
+  {
+   "wartosc": "ul.",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "al.",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "pl.",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "os.",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "rondo",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "skwer",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "bulw.",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "inne",
+   "znaczenie": ""
+  }
+ ],
+ "wojewodztwo": [
+  {
+   "wartosc": "dolnośląskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "kujawsko-pomorskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "lubelskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "lubuskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "łódzkie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "małopolskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "mazowieckie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "opolskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "podkarpackie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "podlaskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "pomorskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "śląskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "świętokrzyskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "warmińsko-mazurskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "wielkopolskie",
+   "znaczenie": ""
+  },
+  {
+   "wartosc": "zachodniopomorskie",
+   "znaczenie": ""
+  }
+ ]
+}

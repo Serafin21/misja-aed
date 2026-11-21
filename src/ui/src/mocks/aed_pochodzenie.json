@@ -1,0 +1,66 @@
+[
+ {
+  "id_aed": "AED-PL-B939F7EBA4",
+  "kod_zrodla": "dysponent:gmina-przykladowo",
+  "id_w_zrodle": "Urząd Gminy Przykładowo",
+  "licencja_zrodla": "CC0-1.0",
+  "data_pobrania": "2026-11-21",
+  "rekord_nadrzedny": "true"
+ },
+ {
+  "id_aed": "AED-PL-B939F7EBA4",
+  "kod_zrodla": "osm",
+  "id_w_zrodle": "node/900000001",
+  "licencja_zrodla": "ODbL-1.0",
+  "data_pobrania": "2026-11-21",
+  "rekord_nadrzedny": "false"
+ },
+ {
+  "id_aed": "AED-PL-D6AADC75B3",
+  "kod_zrodla": "dysponent:gmina-przykladowo",
+  "id_w_zrodle": "Hala sportowa Demo",
+  "licencja_zrodla": "CC0-1.0",
+  "data_pobrania": "2026-11-21",
+  "rekord_nadrzedny": "true"
+ },
+ {
+  "id_aed": "AED-PL-CBD53ED4AA",
+  "kod_zrodla": "dysponent:gmina-przykladowo",
+  "id_w_zrodle": "Biblioteka Testowa",
+  "licencja_zrodla": "CC0-1.0",
+  "data_pobrania": "2026-11-21",
+  "rekord_nadrzedny": "true"
+ },
+ {
+  "id_aed": "AED-PL-AED495CA3B",
+  "kod_zrodla": "dysponent:uczelnia-testowa",
+  "id_w_zrodle": "0",
+  "licencja_zrodla": "CC0-1.0",
+  "data_pobrania": "2026-11-21",
+  "rekord_nadrzedny": "true"
+ },
+ {
+  "id_aed": "AED-PL-9FBD911D8A",
+  "kod_zrodla": "dysponent:uczelnia-testowa",
+  "id_w_zrodle": "1",
+  "licencja_zrodla": "CC0-1.0",
+  "data_pobrania": "2026-11-21",
+  "rekord_nadrzedny": "true"
+ },
+ {
+  "id_aed": "AED-PL-9778083B54",
+  "kod_zrodla": "osm",
+  "id_w_zrodle": "node/900000002",
+  "licencja_zrodla": "ODbL-1.0",
+  "data_pobrania": "2026-11-21",
+  "rekord_nadrzedny": "true"
+ },
+ {
+  "id_aed": "AED-PL-4AF9A8418D",
+  "kod_zrodla": "osm",
+  "id_w_zrodle": "node/900000003",
+  "licencja_zrodla": "ODbL-1.0",
+  "data_pobrania": "2026-11-21",
+  "rekord_nadrzedny": "true"
+ }
+]

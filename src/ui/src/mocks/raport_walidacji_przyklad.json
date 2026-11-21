@@ -1,0 +1,62 @@
+{
+  "plik": "zrodlo_gmina_przyklad.csv",
+  "wykryty_format": {
+    "separator": ";",
+    "kodowanie": "UTF-8",
+    "przecinek_dziesietny": true
+  },
+  "mapowanie": {
+    "Nazwa": "nazwa_obiektu",
+    "Adres": [
+      "ulica_cecha",
+      "ulica",
+      "numer_budynku",
+      "kod_pocztowy",
+      "miejscowosc"
+    ],
+    "Gdzie dokładnie": "opis_lokalizacji",
+    "Godziny": "godziny_dostepnosci",
+    "Współrzędne": [
+      "szerokosc_geograficzna",
+      "dlugosc_geograficzna"
+    ],
+    "Całą dobę": "dostepny_24h",
+    "Zamknięta szafka": "szafka_zamknieta"
+  },
+  "wiersze": 3,
+  "poprawne": 3,
+  "z_ostrzezeniami": 2,
+  "bledy": 0,
+  "problemy": [
+    {
+      "wiersz": 2,
+      "pole": "godziny_dostepnosci",
+      "poziom": "ostrzezenie",
+      "wartosc_zrodlowa": "pn-pt 8-16",
+      "propozycja": "Mo-Fr 08:00-16:00",
+      "komunikat": "Zamieniono zapis godzin na składnię opening_hours."
+    },
+    {
+      "wiersz": 4,
+      "pole": "godziny_dostepnosci",
+      "poziom": "ostrzezenie",
+      "wartosc_zrodlowa": "pn-pt 10-19, sob 10-14",
+      "propozycja": "Mo-Fr 10:00-19:00; Sa 10:00-14:00",
+      "komunikat": "Zamieniono zapis godzin na składnię opening_hours."
+    }
+  ],
+  "brakujace_pola_wymagane": [
+    "dysponent_typ",
+    "status_urzadzenia",
+    "data_weryfikacji"
+  ],
+  "duplikaty": [
+    {
+      "wiersz": 2,
+      "id_aed": "AED-PL-B939F7EBA4",
+      "zrodlo": "osm",
+      "odleglosc_m": 4.3,
+      "decyzja": "scalono – nadrzędne dane dysponenta"
+    }
+  ]
+}
