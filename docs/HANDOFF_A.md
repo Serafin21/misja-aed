@@ -1,5 +1,19 @@
 # HANDOFF – Model A
 
+## 2026-11-21 22:30 – HANDOFF #8: odświeżanie źródeł, konta instytucji, zdjęcie w zgłoszeniu, prawdziwe zbiory samorządów, XSD dane.gov.pl
+
+- **Zrobione:**
+  1. **Odświeżanie** (`src/core/refresh.py`): OSM + zbiory AED z dane.gov.pl co noc o `AED_ODSWIEZANIE` (domyślnie 03:30, `wylaczone`), przy starcie gdy w bazie jest tylko próbka OSM, na żądanie `POST /zrodla/odswiez` (moderator, w tle) + `GET /zrodla/odswiezanie` (stan: w toku, ostatnie, następne, wynik). `/zrodla` ma `ostatnie_pobranie` i `url`.
+  2. **dane.gov.pl** – import prawdziwych zbiorów samorządów: Krosno 21/21, Przemyśl 21/21, Marki 8/8 (wcześniej 0 – wszystkie odrzucone); 31 połączonych z AED z OSM, 19 nowych. Czyszczenie: wiersze w cudzysłowie (Marki), zamienione szerokość/długość, kolumna `geometry` (JSON/WKT), stała nazwa „Defibrylator” → nazwa z kolumny lokalizacji, adres bez numeru, podwójne przecinki; brak godzin/numeru = ostrzeżenie; dysponent = instytucja publikująca, `data_weryfikacji` = data zasobu. Wyszukiwanie odrzuca zbiory niezwiązane (fraza „AED” łapała ceny mieszkań „AD …”). Warszawa (39512) – na portalu tylko link do portalu miasta, bez pliku. `seed --dgp auto` i `start.sh` (`AED_SEED_DGP`).
+  3. **OSM**: zbyt długie teksty skracane z adnotacją zamiast odrzucenia → 0 odrzuconych (było 22).
+  4. **Konta instytucji** (tabela `konta`, PBKDF2-SHA256): moderator zakłada konto (`POST /konta` → hasło jednorazowe pokazywane raz), reset hasła, blokada (token przestaje działać od razu); `GET /konta/ja`, `POST /konta/ja/haslo`. Konto = jedna instytucja (`dysponent_nazwa`): zgłoszenia tylko jej AED, import zawsze jako ta instytucja. Token = `login.HMAC`. Login zwraca też `login` i `dysponent_nazwa`.
+  5. **Zgłoszenie**: `zdjecie` (data URI JPEG/PNG/WebP do 1,5 MB, sprawdzany nagłówek pliku), `godziny_dostepnosci`, `szafka_zamknieta`, `instrukcja_dostepu` (CR od B #16 pkt 1); w kolejce moderacji `zdjecie_url` (podpisany link `GET /zgloszenia/{id}/zdjecie?t=`), zdjęcie nie wychodzi publicznie; przy zatwierdzeniu godziny i szafka przechodzą do rekordu.
+  6. **CR-1 rozwiązany**: XSD portalu `urn:otwarte-dane:harvester:1.13` (https://dane.gov.pl/static/xml/otwarte_dane_latest.xsd, kopia `docs/tech/otwarte_dane_1_13.xsd`); `dane_gov_pl_import.xml` przechodzi walidację (test, `scripts/check_xml.py`), warunki ponownego wykorzystania wypełnione. Wymaga publicznego adresu `https://` w `AED_PUBLIC_URL`.
+  - `deliverables/dataset/` i `LICZBY.md` przebudowane (18 074 prawdziwych AED). 76 testów.
+- **CR do B:** ekran panelu moderatora (odświeżanie, zbiory dane.gov.pl, konta), pole zdjęcia w zgłoszeniu, zdjęcie w kolejce moderacji.
+- **Nadal otwarte (CR od B #16):** `PATCH /import/{id}/wiersze`, `POST /import/{id}/duplikaty`, `podglad` w raporcie, przykładowy wiersz w szablonie XLSX.
+- **Użycie AI:** Claude.
+
 ## 2026-11-21 20:30 – HANDOFF #7: wyszukiwarka miejsc (`GET /miejsca`) i gmina w `/aed/punkty`
 
 - **Zrobione:** `GET /api/v1/miejsca?q=&blisko=lat,lon` (`src/core/geocode.py`) – województwa i 2479 gmin z granic PRG (bez sieci, bez polskich znaków: „lodz” → Łódź, miasto przed gminą wiejską o tej samej nazwie) + miejscowości (także wsie), ulice („Kraków, Floriańska” albo „Kraków Floriańska”) i adresy („Kraków, Floriańska 3”) z **usługi geokodowania GUGiK** (`services.gugik.gov.pl/uug`, bezpłatna, oficjalne punkty adresowe; pamięć podręczna, limit 4 s; `AED_GEOKODER=brak` wyłącza). Sama nazwa ulicy + `blisko` → ulica w gminie na środku mapy. Wynik: `{typ: wojewodztwo|gmina|miejscowosc|ulica|adres, nazwa, opis, lat, lon, bbox|null, teryt (gmina), liczba_aed (gmina, województwo – po położeniu)}`; stare pola `nazwa, lat, lon` zostają. `/aed/punkty` ma `gmina_teryt` – filtr gminy w przeglądarce daje dokładną liczbę (np. Kraków: wszystkie AED w granicach miasta, a nie tylko te z „Kraków” w nazwie). 70 testów (geokoder w testach zastąpiony atrapą).

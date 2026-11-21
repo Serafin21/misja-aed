@@ -208,6 +208,15 @@ def source_id(rec: dict, row: dict, idx: int, id_column: str | None = None) -> s
     return str(idx)
 
 
+def truncate(rec: dict, probs: list, rownum) -> None:
+    """Automatic imports (OSM, dane.gov.pl): too long texts are shortened with a note instead of rejecting the AED."""
+    for f, n in schema.max_lengths().items():
+        v = rec.get(f)
+        if isinstance(v, str) and len(v) > n:
+            rec[f] = v[: n - 1].rstrip() + "…"
+            probs.append(_p(rownum, f, "informacja", v[:60] + "…", None, f"Skrócono tekst do {n} znaków."))
+
+
 def check(rec: dict, rownum) -> list[dict]:
     out = []
     for p in validate.validate_record(rec):

@@ -16,7 +16,8 @@ from pydantic import BaseModel, Field
 from src.core import coverage, db, dedup, hours, importers, linked, mapping, pipeline, publish, schema, template, validate
 from src.core.store import TZ, get_store, now_min, today
 
-from .auth import DYSPONENT_NAZWA, check_login, require
+from . import auth
+from .auth import check_login, require
 
 API = "/api/v1"
 app = FastAPI(
@@ -133,7 +134,8 @@ def login(body: Login):
     token = check_login(body.login, body.haslo)
     if not token:
         err(401, "bledne_dane_logowania", "Nieprawidłowy login lub hasło.")
-    return {"token": token, "rola": body.login}
+    u = auth.user_for(body.login.strip().lower())
+    return {"token": token, "rola": str(u), "login": u.login, "dysponent_nazwa": u.nazwa}
 
 
 # ---------- read ----------
@@ -407,6 +409,8 @@ async def import_file(plik: UploadFile = File(...), kod_zrodla: str = Form(...),
                       role: str = Depends(require("dysponent", "moderator"))):
     if licencja not in schema.dictionaries()["licencja"]:
         err(422, "walidacja", "Nieznana licencja.", {"licencja": "Dozwolone: " + ", ".join(schema.dictionaries()["licencja"])})
+    if role == "dysponent" and role.login != "dysponent":
+        dysponent_nazwa = role.nazwa  # a real provider account always publishes as its own institution
     raw = await plik.read()
     if len(raw) > 20 * 1024 * 1024:
         err(413, "plik_za_duzy", "Plik jest za duży (maks. 20 MB).")
@@ -522,32 +526,78 @@ def import_commit(import_id: str, role: str = Depends(require("dysponent", "mode
 
 
 # ---------- citizen reports & moderation ----------
+MAX_ZDJECIE_B = 1_500_000  # after the browser shrinks it (≈1600 px JPEG) a photo is 150–500 kB
+
+
 class ZgloszenieIn(BaseModel):
     lat: float = Field(..., ge=49.0, le=54.9)
     lon: float = Field(..., ge=14.1, le=24.2)
     opis: str = Field(..., min_length=3, max_length=500)
     nazwa_obiektu: Optional[str] = Field(None, max_length=200)
-    zdjecie: Optional[str] = Field(None, description="URL https:// albo data URI (opcjonalnie)")
+    zdjecie: Optional[str] = Field(None, description="data:image/jpeg|png|webp;base64,… (maks. 1,5 MB) albo URL https://")
+    # CR from B (HANDOFF #16): optional details the reporter saw on site
+    godziny_dostepnosci: Optional[str] = Field(None, max_length=200, description="np. Mo-Fr 08:00-16:00")
+    szafka_zamknieta: Optional[bool] = None
+    instrukcja_dostepu: Optional[str] = Field(None, max_length=300)
+
+
+def _photo(v: str | None) -> tuple[str, bytes] | None:
+    """Validate the photo: (mime, bytes) for a data URI, None when absent; 422 when wrong."""
+    import base64
+    if not v:
+        return None
+    if v.startswith("https://") and len(v) <= 500:
+        return ("url", v.encode())
+    m = __import__("re").match(r"^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$", v)
+    if not m:
+        err(422, "walidacja", "Zdjęcie: JPEG, PNG albo WebP.", {"zdjecie": "Nieobsługiwany format zdjęcia."})
+    raw = base64.b64decode(m.group(2))
+    if len(raw) > MAX_ZDJECIE_B:
+        err(413, "plik_za_duzy", "Zdjęcie jest za duże (maks. 1,5 MB).", {"zdjecie": "Za duże zdjęcie."})
+    sig = {b"\xff\xd8\xff": "image/jpeg", b"\x89PNG": "image/png", b"RIFF": "image/webp"}
+    if not any(raw.startswith(k) and t == m.group(1) for k, t in sig.items()):
+        err(422, "walidacja", "Plik nie jest zdjęciem.", {"zdjecie": "Plik nie jest zdjęciem."})
+    return (m.group(1), raw)
+
+
+def _photo_token(zid: str) -> str:
+    import hashlib
+    import hmac as _h
+    return _h.new(auth.SECRET.encode(), f"zdjecie:{zid}".encode(), hashlib.sha256).hexdigest()[:20]
 
 
 @app.post(f"{API}/zgloszenia", tags=["zgloszenia"], status_code=201, summary="Zgłoszenie AED przez obywatela",
           dependencies=[Depends(rate_limit)])
 def create_report(body: ZgloszenieIn):
     zid = uuid.uuid4().hex[:12]
+    photo = _photo(body.zdjecie)
     data = body.model_dump() | {"id": zid, "status": "do_weryfikacji", "czas": now_min()}
-    # no personal data stored: no reporter contact
+    data["zdjecie"] = body.zdjecie if photo else None
+    # no personal data stored: no reporter contact; the photo is shown only to moderators (signed link)
     st = get_store()
     st.conn.execute("INSERT INTO zgloszenia VALUES (?,?,?,?)", (zid, "do_weryfikacji", db.dumps(data), now_min()))
     st.conn.commit()
-    near, dist = None, None
-    probe = {"szerokosc_geograficzna": body.lat, "dlugosc_geograficzna": body.lon, "nazwa_obiektu": body.nazwa_obiektu or ""}
-    for cand in st.grid.near(body.lat, body.lon):
-        d = dedup.distance_m(body.lat, body.lon, st.records[cand]["szerokosc_geograficzna"], st.records[cand]["dlugosc_geograficzna"])
-        if d <= 30 and (dist is None or d < dist):
-            near, dist = cand, d
-    _ = probe
-    return {"id": zid, "status": "do_weryfikacji", "data": data, "meta": {"mozliwy_duplikat": near, "odleglosc_m": round(dist) if dist is not None else None,
-                                   "komunikat": "Dziękujemy! Zgłoszenie trafi do weryfikacji przed dodaniem do zbioru."}}
+    near = _nearest_aed(st, body.lat, body.lon)
+    pub = {k: v for k, v in data.items() if k != "zdjecie"} | {"ma_zdjecie": bool(photo)}
+    return {"id": zid, "status": "do_weryfikacji", "data": pub,
+            "meta": {"mozliwy_duplikat": near[0] if near else None, "odleglosc_m": near[1] if near else None,
+                     "komunikat": "Dziękujemy! Zgłoszenie trafi do weryfikacji przed dodaniem do zbioru."}}
+
+
+@app.get(f"{API}/zgloszenia/{{zid}}/zdjecie", tags=["zgloszenia"], summary="Zdjęcie ze zgłoszenia (podpisany link z kolejki moderacji)")
+def report_photo(zid: str, t: str = Query(...)):
+    import base64
+    import hmac as _h
+    if not _h.compare_digest(t, _photo_token(zid)):
+        err(403, "brak_uprawnien", "Nieprawidłowy link do zdjęcia.")
+    row = get_store().conn.execute("SELECT data FROM zgloszenia WHERE id=?", (zid,)).fetchone()
+    z = db.loads(row["data"]).get("zdjecie") if row else None
+    if not z:
+        err(404, "nie_znaleziono", "To zgłoszenie nie ma zdjęcia.")
+    if z.startswith("https://"):
+        return RedirectResponse(z)
+    mime, b64 = z[5:].split(";base64,", 1)
+    return Response(base64.b64decode(b64), media_type=mime, headers={"Cache-Control": "private, max-age=3600"})
 
 
 def _nearest_aed(st, lat: float, lon: float, max_m: float = 30) -> tuple[str, int] | None:
@@ -559,10 +609,14 @@ def _nearest_aed(st, lat: float, lon: float, max_m: float = 30) -> tuple[str, in
     return best
 
 
-def _is_own(st, id_aed: str | None) -> bool:
-    """AED operated by the logged-in provider (demo account → DEMO_DYSPONENT_NAZWA)."""
+def _same(a: str | None, b: str | None) -> bool:
+    return bool(a and b) and a.strip().lower() == b.strip().lower()
+
+
+def _is_own(st, id_aed: str | None, user) -> bool:
+    """AED operated by the logged-in provider (its account's dysponent_nazwa)."""
     rec = st.records.get(id_aed) if id_aed else None
-    return bool(rec) and (rec.get("dysponent_nazwa") or "").strip().lower() == DYSPONENT_NAZWA.strip().lower()
+    return bool(rec) and _same(rec.get("dysponent_nazwa"), getattr(user, "nazwa", None))
 
 
 @app.get(f"{API}/zgloszenia", tags=["zgloszenia"], summary="Kolejka zgłoszeń do moderacji",
@@ -577,9 +631,11 @@ def list_reports(status: Optional[str] = "do_weryfikacji", role: str = Depends(r
     for r in rows:
         near = _nearest_aed(st, r["lat"], r["lon"])
         target = r.get("id_aed") or (near[0] if near else None)
-        if role == "dysponent" and not _is_own(st, target):
+        if role == "dysponent" and not _is_own(st, target, role):
             continue
-        items.append({"type": "zgloszenie", "id": r["id"], "attributes": {k: v for k, v in r.items() if k != "id"},
+        attrs = {k: v for k, v in r.items() if k not in ("id", "zdjecie")}
+        attrs["zdjecie_url"] = f"{API}/zgloszenia/{r['id']}/zdjecie?t={_photo_token(r['id'])}" if r.get("zdjecie") else None
+        items.append({"type": "zgloszenie", "id": r["id"], "attributes": attrs,
                       "meta": {"mozliwy_duplikat": near[0] if near else None, "odleglosc_m": near[1] if near else None}})
     return {"data": items, "meta": {"count": len(items), "page": 1, "per_page": len(items)},
             "links": {"self": f"{API}/zgloszenia" + (f"?status={status}" if status else "")}}
@@ -608,19 +664,21 @@ def decide(zid: str, body: Decyzja, role: str = Depends(require("moderator", "dy
         if body.decyzja == "zatwierdz":
             # a provider may add only its own device to the dataset
             nazwa = (body.rekord or {}).get("dysponent_nazwa")
-            if nazwa and nazwa.strip().lower() != DYSPONENT_NAZWA.strip().lower():
+            if nazwa and not _same(nazwa, role.nazwa):
                 err(403, "brak_uprawnien", "Dysponent może zatwierdzić zgłoszenie tylko jako swój AED.",
-                    {"rekord.dysponent_nazwa": f"Dozwolone: {DYSPONENT_NAZWA}."})
-            body.rekord = (body.rekord or {}) | {"dysponent_nazwa": DYSPONENT_NAZWA}
+                    {"rekord.dysponent_nazwa": f"Dozwolone: {role.nazwa}."})
+            body.rekord = (body.rekord or {}) | {"dysponent_nazwa": role.nazwa}
         else:
             near = _nearest_aed(st, data["lat"], data["lon"])
             target = body.id_aed_docelowy or (near[0] if near else None)
-            if not _is_own(st, target):
+            if not _is_own(st, target, role):
                 err(403, "brak_uprawnien", "Dysponent rozpatruje tylko zgłoszenia dotyczące swoich AED.")
     result = {}
     if body.decyzja == "zatwierdz":
         r = {"nazwa_obiektu": data.get("nazwa_obiektu"), "opis_lokalizacji": data["opis"][:250],
-             "szerokosc_geograficzna": data["lat"], "dlugosc_geograficzna": data["lon"]} | (body.rekord or {})
+             "szerokosc_geograficzna": data["lat"], "dlugosc_geograficzna": data["lon"]}
+        r |= {k: data[k] for k in ("godziny_dostepnosci", "szafka_zamknieta", "instrukcja_dostepu") if data.get(k) not in (None, "")}
+        r |= body.rekord or {}
         m = {k: k for k in r}
         rec, probs = pipeline.transform(r, m, {"kod_zrodla": "zgloszenia", "zrodlo_danych": "zgloszenie_obywatela",
                                                "licencja": "CC0-1.0", "metoda_weryfikacji": "zgloszenie_obywatela"}, 1)
@@ -647,7 +705,7 @@ def decide(zid: str, body: Decyzja, role: str = Depends(require("moderator", "dy
     data["decyzje_podjal"] = role
     st.conn.execute("UPDATE zgloszenia SET status=?, data=? WHERE id=?", (data["status"], db.dumps(data), zid))
     st.conn.commit()
-    return {"data": data, "meta": result}
+    return {"data": {k: v for k, v in data.items() if k != "zdjecie"} | {"ma_zdjecie": bool(data.get("zdjecie"))}, "meta": result}
 
 
 # ---------- AED passport (QR) ----------
@@ -669,11 +727,117 @@ def confirm(id_aed: str, body: Potwierdzenie):
     return {"ok": True, "data": confirmations(id_aed), "meta": {"komunikat": "Dziękujemy za potwierdzenie!"}}
 
 
+# ---------- accounts of institutions (created by a moderator) ----------
+class KontoIn(BaseModel):
+    login: str = Field(..., description="3–41 znaków: małe litery, cyfry, . _ -")
+    dysponent_nazwa: str = Field(..., min_length=3, max_length=200, description="Instytucja – tak jak w polu dysponent_nazwa rekordów")
+    email: Optional[str] = Field(None, max_length=200)
+    rola: str = Field("dysponent", pattern="^(dysponent|moderator)$")
+
+
+def _konto_out(a: dict) -> dict:
+    return {k: a.get(k) for k in ("login", "rola", "dysponent_nazwa", "email", "aktywne", "utworzono", "utworzyl")} | \
+        {"aktywne": bool(a.get("aktywne")),
+         "liczba_aed": sum(1 for r in get_store().records.values() if _same(r.get("dysponent_nazwa"), a.get("dysponent_nazwa")))}
+
+
+@app.get(f"{API}/konta", tags=["auth"], summary="Konta instytucji (moderator)")
+def accounts_list(role: str = Depends(require("moderator"))):
+    rows = [_konto_out(dict(r)) for r in get_store().conn.execute("SELECT * FROM konta ORDER BY utworzono DESC")]
+    return {"data": rows, "meta": {"count": len(rows)}}
+
+
+@app.post(f"{API}/konta", tags=["auth"], status_code=201, summary="Załóż konto instytucji (moderator) – hasło pokazywane raz")
+def account_create(body: KontoIn, role: str = Depends(require("moderator"))):
+    login = body.login.strip().lower()
+    if not auth.LOGIN_RE.match(login) or login in auth.DEMO or login == "demo":
+        err(422, "walidacja", "Nieprawidłowy login.", {"login": "3–41 znaków: małe litery, cyfry, kropka, _ i -; inny niż konta demo."})
+    if auth.account(login):
+        err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
+    haslo = auth.new_password()
+    st = get_store()
+    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email) VALUES (?,?,?,?,1,?,?,?)",
+                    (login, body.rola, body.dysponent_nazwa.strip(), auth.hash_password(haslo), now_min(), getattr(role, "login", str(role)),
+                     body.email))
+    st.conn.commit()
+    return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo,
+            "meta": {"komunikat": "Przekaż login i hasło instytucji bezpiecznym kanałem. Hasła nie da się później odczytać – tylko zresetować."}}
+
+
+@app.post(f"{API}/konta/{{login}}/reset-hasla", tags=["auth"], summary="Nowe hasło dla konta instytucji (moderator)")
+def account_reset(login: str, role: str = Depends(require("moderator"))):
+    if not auth.account(login):
+        err(404, "nie_znaleziono", "Nie ma takiego konta.")
+    haslo = auth.new_password()
+    st = get_store()
+    st.conn.execute("UPDATE konta SET haslo=? WHERE login=?", (auth.hash_password(haslo), login))
+    st.conn.commit()
+    return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo}
+
+
+class AktywneIn(BaseModel):
+    aktywne: bool
+
+
+@app.patch(f"{API}/konta/{{login}}", tags=["auth"], summary="Zablokuj / odblokuj konto instytucji (moderator)")
+def account_toggle(login: str, body: AktywneIn, role: str = Depends(require("moderator"))):
+    if not auth.account(login):
+        err(404, "nie_znaleziono", "Nie ma takiego konta.")
+    st = get_store()
+    st.conn.execute("UPDATE konta SET aktywne=? WHERE login=?", (1 if body.aktywne else 0, login))
+    st.conn.commit()
+    return {"data": _konto_out(auth.account(login))}
+
+
+class ZmianaHasla(BaseModel):
+    stare: str
+    nowe: str = Field(..., min_length=10, max_length=200)
+
+
+@app.post(f"{API}/konta/ja/haslo", tags=["auth"], summary="Zmiana własnego hasła (konto instytucji)")
+def account_password(body: ZmianaHasla, role: str = Depends(require("dysponent", "moderator"))):
+    a = auth.account(getattr(role, "login", ""))
+    if not a:
+        err(422, "walidacja", "Konta demo nie mają zmiany hasła (hasło w .env).")
+    if not auth.verify_password(body.stare, a["haslo"]):
+        err(422, "walidacja", "Obecne hasło jest nieprawidłowe.", {"stare": "Nieprawidłowe hasło."})
+    st = get_store()
+    st.conn.execute("UPDATE konta SET haslo=? WHERE login=?", (auth.hash_password(body.nowe), a["login"]))
+    st.conn.commit()
+    return {"ok": True}
+
+
+@app.get(f"{API}/konta/ja", tags=["auth"], summary="Kim jestem (po zalogowaniu)")
+def account_me(role: str = Depends(require("dysponent", "moderator"))):
+    return {"data": {"login": getattr(role, "login", None), "rola": str(role), "dysponent_nazwa": getattr(role, "nazwa", None)}}
+
+
 # ---------- sources & connectors ----------
 @app.get(f"{API}/zrodla", tags=["zrodla"], summary="Zakres referencyjny źródeł")
 def sources():
     rows = get_store().sources_scope()
     return {"data": rows, "meta": {"count": len(rows)}}
+
+
+@app.on_event("startup")
+def _scheduler():
+    from src.core import refresh
+    refresh.start_scheduler(get_store)
+
+
+@app.post(f"{API}/zrodla/odswiez", tags=["zrodla"], status_code=202,
+          summary="Odśwież teraz: OpenStreetMap i zbiory AED z dane.gov.pl (w tle)")
+def refresh_now(role: str = Depends(require("moderator"))):
+    from src.core import refresh
+    started = refresh.run_in_background(get_store(), f"na żądanie ({role})")
+    return {"data": refresh.STATUS | {"uruchomiono": started},
+            "meta": {"komunikat": "Odświeżanie trwa w tle (ok. 30 s)." if started else "Odświeżanie już trwa."}}
+
+
+@app.get(f"{API}/zrodla/odswiezanie", tags=["zrodla"], summary="Stan odświeżania źródeł (ostatnie, następne, wynik)")
+def refresh_status():
+    from src.core import refresh
+    return {"data": refresh.STATUS}
 
 
 @app.post(f"{API}/zrodla/osm/odswiez", tags=["zrodla"], summary="Konektor OpenStreetMap (eksport AED OSM Polska)")

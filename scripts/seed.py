@@ -1,6 +1,6 @@
 """Seed the database: sample unified records (with stable ids) + OSM layer (cache or sample).
 
-Usage: python -m scripts.seed [--reset] [--osm sample|full|none]
+Usage: python -m scripts.seed [--reset] [--osm sample|full|none] [--dgp auto|none]
 """
 from __future__ import annotations
 
@@ -25,6 +25,8 @@ def main(argv=None):
     ap.add_argument("--reset", action="store_true", help="usuń bazę przed seedem")
     ap.add_argument("--osm", default="auto", choices=["auto", "sample", "full", "none"],
                     help="auto/full = sieć → cache data/cache → próbka; sample = tylko próbka")
+    ap.add_argument("--dgp", default="none", choices=["auto", "none"],
+                    help="auto = zaimportuj zbiory AED samorządów z dane.gov.pl (sieć; bez sieci pomija)")
     a = ap.parse_args(argv)
     if a.reset and db.DB_PATH.exists():
         for suffix in ("", "-wal", "-shm"):
@@ -58,6 +60,16 @@ def main(argv=None):
         mode = "sample" if a.osm == "sample" else None
         res = osm.refresh(st, mode)
         print(f"OSM ({res['zrodlo']}): {res}")
+    if a.dgp == "auto":
+        from src.core.connectors import dane_gov_pl
+        try:
+            r = dane_gov_pl.search(st, "defibrylator defibrylatory AED", do_import=True)
+            for i in r["meta"]["importy"]:
+                print(f"dane.gov.pl {i['kod_zrodla']}: {i['status']} "
+                      + (f"(dodane {i['dodane']}, scalone {i['scalone']}, zaktualizowane {i['zaktualizowane']}, odrzucone {i['odrzucone']})"
+                         if i["status"] == "zaimportowano" else i.get("powod", "")))
+        except Exception as e:  # noqa: BLE001
+            print(f"dane.gov.pl: pominięto ({e})")
     print(f"Razem w bazie: {len(st.records)} AED")
 
 

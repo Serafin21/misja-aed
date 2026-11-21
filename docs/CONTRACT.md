@@ -1,4 +1,4 @@
-# CONTRACT v1.2 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
+# CONTRACT v1.3 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
 
 > Wspólny plik: edytuje tylko Team Leader. Zamrożenie: sob 15:00 (po konsultacji na stoisku danych). Zmiany wyłącznie przez CR (tabela na końcu).
 > Źródło prawdy dla danych: `docs/schema/` (JSON Schema, słownik danych, słowniki wartości, CSVW, przykład XML importu) i `deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx`. Wszystkie te pliki powstały z jednej definicji, więc są spójne.
@@ -92,11 +92,15 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 | `POST /import/{id}/mapowanie` | dysponent | `{mapowanie}` → raport walidacji |
 | `POST /import/{id}/zatwierdz` | dysponent | włączenie poprawnych wierszy → liczby: dodane, zaktualizowane, scalone, odrzucone |
 | `POST /aed`, `PATCH /aed/{id_aed}` | dysponent, moderator | formularz pojedynczego AED; 422 z komunikatami przy polach |
-| `POST /zgloszenia` | publiczny | zgłoszenie obywatela (`lat`, `lon`, `opis`, opcjonalnie zdjęcie) |
+| `POST /zgloszenia` | publiczny | zgłoszenie obywatela (`lat`, `lon`, `opis`, opcjonalnie `nazwa_obiektu`, `godziny_dostepnosci`, `szafka_zamknieta`, `instrukcja_dostepu`, `zdjecie` – data URI JPEG/PNG/WebP do 1,5 MB) |
 | `GET /zgloszenia`, `POST /zgloszenia/{id}/decyzja` | moderator; dysponent – tylko dla swoich AED (§4 pkt 6) | weryfikacja zgłoszeń |
 | `POST /aed/{id_aed}/potwierdzenia` | publiczny | „Paszport AED” z kodu QR: `{jest_na_miejscu, szafka_dostepna, komentarz}` |
 | `GET /zrodla` | publiczny | zakres referencyjny źródeł (jak `zrodla.csv`) |
 | `POST /zrodla/osm/odswiez`, `POST /zrodla/dane-gov-pl/szukaj` | moderator | konektory |
+| `POST /zrodla/odswiez`, `GET /zrodla/odswiezanie` | moderator / publiczny | odświeżenie OSM i zbiorów AED z dane.gov.pl w tle; automatycznie co noc (`AED_ODSWIEZANIE`, domyślnie 03:30) i przy starcie, gdy w bazie jest tylko próbka OSM |
+| `GET/POST /konta`, `POST /konta/{login}/reset-hasla`, `PATCH /konta/{login}` | moderator | konta instytucji (dysponentów): login, `dysponent_nazwa`, hasło jednorazowe pokazywane raz (PBKDF2), blokowanie |
+| `GET /konta/ja`, `POST /konta/ja/haslo` | dysponent, moderator | kim jestem, zmiana własnego hasła |
+| `GET /zgloszenia/{id}/zdjecie?t=` | podpisany link z kolejki | zdjęcie ze zgłoszenia (tylko dla moderacji) |
 | `GET /eksport/{plik}` | publiczny | `aed.csv`, `aed.geojson`, `aed_osm_odbl.csv`, `aed_pochodzenie.csv`, `zrodla.csv`, `slownik_danych.csv`, `aed.csvw.json`, `dane_gov_pl_import.xml`, `metadane.jsonld` |
 | `GET /szablon.csv`, `GET /szablon.xlsx` | publiczny | pusty szablon zgodny z zakresem danych, dla dysponentów |
 | `GET /statystyki` | publiczny | liczby według województw i źródeł, rozkład kompletności, odsetek zweryfikowanych w ostatnich 12 miesiącach; liczniki `aktualne`, `nieaktualne`, `gminy_bez_danych` (§8) |
@@ -106,7 +110,7 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 ## 6. Publikacja w dane.gov.pl
 
 - Pakiet w `deliverables/dataset/` (generuje Model A): CSV poziom 3 (UTF-8, przecinek, CRLF, RFC 4180, jeden wiersz nagłówka), GeoJSON (format przestrzenny poziomu 3–5), API JSON, CSVW, zasoby towarzyszące z sekcji 3.
-- Plik XML importu do automatycznego zasilania portalu: struktura `dataset` + `resources` według instrukcji COI; przykład w `docs/schema/dane_gov_pl_import.przyklad.xml`. **XSD i przestrzeń nazw do potwierdzenia** w kodzie źródłowym portalu lub na stoisku danych (CR-1).
+- Plik XML importu do automatycznego zasilania portalu: przestrzeń nazw **`urn:otwarte-dane:harvester:1.13`**, schemat portalu https://dane.gov.pl/static/xml/otwarte_dane_latest.xsd (kopia `docs/tech/otwarte_dane_1_13.xsd`); plik `dane_gov_pl_import.xml` przechodzi walidację XSD (`python scripts/check_xml.py`, test). Portal wymaga adresów zasobów `https://` – ustaw `AED_PUBLIC_URL` na publiczny adres z HTTPS (CR-1 rozwiązany).
 - Metadane zbioru także w DCAT-AP-PL (JSON-LD): tytuł i opis pl/en, wydawca, kategoria, słowa kluczowe, licencja, częstotliwość, daty `issued`/`modified`, punkt kontaktowy.
 - Kategoria `HEAL` i warunki ponownego wykorzystania – do potwierdzenia z zespołem dane.gov.pl (CR-2).
 
@@ -129,7 +133,8 @@ Mapa ma dwa tryby. **Dostępność** – jak dotąd (§7, `dostepny_teraz`). **A
 
 | CR | Kto prosi | Zmiana | Decyzja | Wersja |
 |---|---|---|---|---|
-| CR-1 | Team Leader | Schemat XSD i przestrzeń nazw pliku XML importu | do potwierdzenia na stoisku danych | – |
+| CR-1 | Team Leader | Schemat XSD i przestrzeń nazw pliku XML importu | **rozwiązany**: `urn:otwarte-dane:harvester:1.13`, XSD portalu w `docs/tech/`; plik przechodzi walidację | 1.3 |
 | CR-2 | Team Leader | Kategoria zbioru i warunki ponownego wykorzystania | do potwierdzenia na stoisku danych | – |
 | CR-TL-1 | Team Leader | Mapa w dwóch trybach: „dostępność” i „aktualność danych”; `stan_danych` i `wiek_danych_dni` w `meta`, filtr `stan_danych`, `GET /pokrycie`, liczniki w `/statystyki` (§8) | przyjęta | 1.1 |
 | CR-TL-2 | Team Leader | Zgłoszenia rozpatruje moderator albo dysponent (tylko swoich AED) – spójnie z API (§4 pkt 6, §5); `GET /aed/punkty` (lekka warstwa mapy, gzip, ETag); granice gmin dla 16 województw bez szczelin (§8) | przyjęta | 1.2 |
+| CR-TL-3 | właściciel projektu | Odświeżanie źródeł (noc, start, przycisk), konta instytucji zakładane przez moderatora, zdjęcie i szczegóły w zgłoszeniu, import prawdziwych zbiorów AED samorządów z dane.gov.pl | przyjęta | 1.3 |

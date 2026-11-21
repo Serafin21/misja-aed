@@ -915,6 +915,55 @@
         }
       }
     },
+    "/api/v1/zgloszenia/{zid}/zdjecie": {
+      "get": {
+        "tags": [
+          "zgloszenia"
+        ],
+        "summary": "Zdjęcie ze zgłoszenia (podpisany link z kolejki moderacji)",
+        "operationId": "report_photo_api_v1_zgloszenia__zid__zdjecie_get",
+        "parameters": [
+          {
+            "name": "zid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Zid"
+            }
+          },
+          {
+            "name": "t",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "T"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/zgloszenia/{zid}/decyzja": {
       "post": {
         "tags": [
@@ -1032,6 +1081,334 @@
         }
       }
     },
+    "/api/v1/konta": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Konta instytucji (moderator)",
+        "operationId": "accounts_list_api_v1_konta_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Załóż konto instytucji (moderator) – hasło pokazywane raz",
+        "operationId": "account_create_api_v1_konta_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KontoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/konta/{login}/reset-hasla": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Nowe hasło dla konta instytucji (moderator)",
+        "operationId": "account_reset_api_v1_konta__login__reset_hasla_post",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Login"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/konta/{login}": {
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Zablokuj / odblokuj konto instytucji (moderator)",
+        "operationId": "account_toggle_api_v1_konta__login__patch",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Login"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AktywneIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/konta/ja/haslo": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Zmiana własnego hasła (konto instytucji)",
+        "operationId": "account_password_api_v1_konta_ja_haslo_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZmianaHasla"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/konta/ja": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Kim jestem (po zalogowaniu)",
+        "operationId": "account_me_api_v1_konta_ja_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/zrodla": {
       "get": {
         "tags": [
@@ -1039,6 +1416,72 @@
         ],
         "summary": "Zakres referencyjny źródeł",
         "operationId": "sources_api_v1_zrodla_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zrodla/odswiez": {
+      "post": {
+        "tags": [
+          "zrodla"
+        ],
+        "summary": "Odśwież teraz: OpenStreetMap i zbiory AED z dane.gov.pl (w tle)",
+        "operationId": "refresh_now_api_v1_zrodla_odswiez_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zrodla/odswiezanie": {
+      "get": {
+        "tags": [
+          "zrodla"
+        ],
+        "summary": "Stan odświeżania źródeł (ostatnie, następne, wynik)",
+        "operationId": "refresh_status_api_v1_zrodla_odswiezanie_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1446,6 +1889,19 @@
         "type": "object",
         "title": "AedIn"
       },
+      "AktywneIn": {
+        "properties": {
+          "aktywne": {
+            "type": "boolean",
+            "title": "Aktywne"
+          }
+        },
+        "type": "object",
+        "required": [
+          "aktywne"
+        ],
+        "title": "AktywneIn"
+      },
       "Body_import_file_api_v1_import_post": {
         "properties": {
           "plik": {
@@ -1621,6 +2077,46 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "KontoIn": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "title": "Login",
+            "description": "3–41 znaków: małe litery, cyfry, . _ -"
+          },
+          "dysponent_nazwa": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Dysponent Nazwa",
+            "description": "Instytucja – tak jak w polu dysponent_nazwa rekordów"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "rola": {
+            "type": "string",
+            "pattern": "^(dysponent|moderator)$",
+            "title": "Rola",
+            "default": "dysponent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login",
+          "dysponent_nazwa"
+        ],
+        "title": "KontoIn"
+      },
       "Login": {
         "properties": {
           "login": {
@@ -1791,7 +2287,43 @@
               }
             ],
             "title": "Zdjecie",
-            "description": "URL https:// albo data URI (opcjonalnie)"
+            "description": "data:image/jpeg|png|webp;base64,… (maks. 1,5 MB) albo URL https://"
+          },
+          "godziny_dostepnosci": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Godziny Dostepnosci",
+            "description": "np. Mo-Fr 08:00-16:00"
+          },
+          "szafka_zamknieta": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Szafka Zamknieta"
+          },
+          "instrukcja_dostepu": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrukcja Dostepu"
           }
         },
         "type": "object",
@@ -1801,6 +2333,26 @@
           "opis"
         ],
         "title": "ZgloszenieIn"
+      },
+      "ZmianaHasla": {
+        "properties": {
+          "stare": {
+            "type": "string",
+            "title": "Stare"
+          },
+          "nowe": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Nowe"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stare",
+          "nowe"
+        ],
+        "title": "ZmianaHasla"
       }
     }
   }

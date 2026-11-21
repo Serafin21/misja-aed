@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 
 [project.optional-dependencies]
 # tests only, not in the Docker image (httpx pulls certifi, MPL-2.0 – test environment only)
-test = ["pytest==9.1.1", "httpx==0.28.1"]
+test = ["pytest==9.1.1", "httpx==0.28.1", "lxml==6.1.3"]  # lxml (BSD): XSD check of the dane.gov.pl XML
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 os.environ.setdefault("AED_GEOKODER", "brak")  # tests never call the GUGiK geocoder
+os.environ.setdefault("AED_ODSWIEZANIE", "wylaczone")  # no background refresh in tests
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))

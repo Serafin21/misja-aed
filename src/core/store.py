@@ -227,6 +227,8 @@ class Store:
                 "pokrycie_pol_wymaganych_proc": req if recs else int(m.get("pokrycie_pol_wymaganych_proc", 0)),
                 "pokrycie_pol_zalecanych_proc": zal if recs else int(m.get("pokrycie_pol_zalecanych_proc", 0)),
                 "obszar": m.get("obszar", ""),
+                # API only (zrodla.csv keeps the CONTRACT columns): when the source was last imported, its page
+                "ostatnie_pobranie": m.get("data_importu"), "url": m.get("url"),
             })
         return out
 
