@@ -41,6 +41,8 @@ export interface MapViewProps {
   onView?: (v: { bounds: L.LatLngBounds; center: L.LatLng; zoom: number }) => void;
   /** search result: zoom to its area (bbox) or point; a new `key` moves the map again */
   goTo?: GoTo | null;
+  /** E2: the nearest AED to the searched place / user – drawn on top with a permanent "Najbliższe AED" label */
+  highlight?: { id: string; lat: number; lon: number; label: string } | null;
 }
 
 export interface GoTo { key: string; lat: number; lon: number; bbox?: [number, number, number, number] | null; zoom?: number; label?: string }
@@ -71,7 +73,7 @@ function markerName(a: AedView, mode: MapMode): string {
   return `${a.nazwa_obiektu}, ${a.miejscowosc} – ${state}${a.szafka_zamknieta ? ', szafka zamknięta' : ''}`;
 }
 
-export function MapView({ items, user, focusId, onPick, picked, accuracy, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false, points, wheelZoom = true, fitKey: fitKeyProp, onView, goTo }: MapViewProps) {
+export function MapView({ items, user, focusId, onPick, picked, accuracy, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false, points, wheelZoom = true, fitKey: fitKeyProp, onView, goTo, highlight }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -191,6 +193,26 @@ export function MapView({ items, user, focusId, onPick, picked, accuracy, label,
       map.current?.setView([picked.lat, picked.lon], Math.max(map.current.getZoom(), 16));
     }
   }, [user, picked, accuracy]);
+
+  // the nearest AED: a big pin with a permanent label, above the clusters; click opens its card
+  const hlLayer = useRef<L.LayerGroup | null>(null);
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    hlLayer.current?.remove();
+    hlLayer.current = null;
+    if (!highlight) return;
+    const g = L.layerGroup().addTo(m);
+    const mk = L.marker([highlight.lat, highlight.lon], {
+      icon: L.divIcon({ className: 'nearest-marker', html: '<span aria-hidden="true"><b>♥</b></span>', iconSize: [40, 40], iconAnchor: [20, 38] }),
+      title: highlight.label, keyboard: true, zIndexOffset: 2000,
+    }).addTo(g);
+    mk.bindTooltip(esc(highlight.label), { permanent: true, direction: 'top', offset: [0, -36], className: 'nearest-label' });
+    mk.on('add', () => mk.getElement()?.setAttribute('aria-label', highlight.label));
+    mk.getElement()?.setAttribute('aria-label', highlight.label);
+    mk.on('click', () => navigate(`/aed/${highlight.id}`));
+    hlLayer.current = g;
+  }, [highlight?.id, highlight?.label]);
 
   // search result: fly to the area or the point and mark it (streets, addresses, localities)
   useEffect(() => {
