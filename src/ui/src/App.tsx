@@ -1,22 +1,24 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { probeApi } from './api/client';
 import { useMockMode } from './lib/useMockMode';
-import { BRAND_NAME, BRAND_SLOGAN, LogoMark } from './components/Brand';
+import { APP_NAME, APP_TAGLINE, BRAND_NAME } from './components/Brand';
 import { ExternalLink, Icon } from './components/ui';
 import { About, AccessibilityStatement, Contact, Cookies, Licenses, Privacy } from './pages/Info';
 import { AedCard } from './pages/AedCard';
 import { MapList } from './pages/MapList';
 import { Campaign } from './pages/Campaign';
 import { Dataset } from './pages/Dataset';
-import { Moderation } from './pages/Moderation';
-import { Admin, MyAccount } from './pages/Admin';
+import { Admin } from './pages/Admin';
+import { MyAed } from './pages/MyAed';
+import { LoginPage, ROLE_HOME, useSession } from './components/Auth';
+import { logout } from './api/client';
 import { Nearest } from './pages/Nearest';
 import { Home } from './pages/Home';
 import { FirstAid } from './pages/FirstAid';
 import { Providers } from './pages/Providers';
 import { Report } from './pages/Report';
 import { Sources } from './pages/Sources';
-import { Link, matchPath, useLocation, usePageTitle } from './router';
+import { Link, matchPath, navigate, useLocation, usePageTitle } from './router';
 
 // Max. 5 menu items (TL). Data, sources and moderation are in the footer under "Dla specjalistów".
 const NAV = [
@@ -30,7 +32,7 @@ const NAV = [
 // Breadcrumb labels for pages outside the menu
 const PAGE_LABELS: Record<string, string> = {
   '/mapa': 'Mapa i lista AED', '/dane': 'Zbiór danych', '/zrodla': 'Źródła danych', '/akcja': 'Akcja „AED w danych”',
-  '/moderacja': 'Moderacja zgłoszeń', '/panel': 'Panel moderatora', '/konto': 'Moje konto',
+  '/panel': 'Panel administratora', '/moje-aed': 'Moje AED', '/logowanie': 'Logowanie'
 };
 
 // Footer subpages (not E1–E9; routes for E1–E9 unchanged)
@@ -86,9 +88,9 @@ function Routes() {
   if (path === '/dane') return <Dataset />;
   if (path === '/zrodla') return <Sources />;
   if (path === '/akcja') return <Campaign />;
-  if (path === '/moderacja') return <Moderation />;
-  if (path === '/panel') return <Admin />;
-  if (path === '/konto') return <MyAccount />;
+  if (path === '/panel' || path === '/moderacja') return <Admin />;
+  if (path === '/moje-aed' || path === '/konto') return <MyAed />;
+  if (path === '/logowanie') return <LoginPage />;
   const info = INFO_PAGES[path];
   if (info) { const Page = info.el; return <Page />; }
   return <NotFound />;
@@ -98,6 +100,8 @@ export function App() {
   const { path } = useLocation();
   const [menu, setMenu] = useState(false);
   const mock = useMockMode();
+  const session = useSession();
+  const roleHome = session ? ROLE_HOME[session.rola] : null;
   useEffect(() => { probeApi(); }, []);
   useEffect(() => { setMenu(false); window.scrollTo(0, 0); }, [path]);
   useEffect(() => {
@@ -112,16 +116,21 @@ export function App() {
       <a className="skip-link" href="#main">Przejdź do treści głównej</a>
       <header className="site-header">
         <div className="container site-header__inner">
-          <Link to="/" className="brand" aria-label={`${BRAND_NAME} – strona główna`}>
-            <span className="brand__mark"><LogoMark size={34} /></span>
-            <span>{BRAND_NAME}<span className="brand__slogan" aria-hidden="true">{BRAND_SLOGAN}</span></span>
+          <Link to="/" className="brand" aria-label={`${APP_NAME} – strona główna`}>
+            <span className="brand__mark brand__mark--app"><Icon name="pin" /></span>
+            <span>{APP_NAME}<span className="brand__slogan" aria-hidden="true">{APP_TAGLINE}</span></span>
           </Link>
           <a href="tel:112" className="btn-call"><Icon name="phone" />Dzwoń 112</a>
           <button id="menu-btn" type="button" className="menu-btn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu((m) => !m)}>
             {menu ? 'Zamknij' : 'Menu'}
           </button>
           <nav id="main-nav" aria-label="Główna" className={`main-nav${menu ? ' is-open' : ''}`}>
-            <ul>{NAV.map((n) => <li key={n.to}><Link to={n.to}>{n.label}</Link></li>)}</ul>
+            <ul>
+              {NAV.map((n) => <li key={n.to}><Link to={n.to}>{n.label}</Link></li>)}
+              {/* only after logging in (docs/MODEL_ROL.md §4) – the server checks permissions on every operation anyway */}
+              {roleHome && <li className="main-nav__role"><Link to={roleHome.to}>{roleHome.label}</Link></li>}
+              {session && <li><button type="button" className="main-nav__logout" onClick={() => { logout(); navigate('/'); }}>Wyloguj</button></li>}
+            </ul>
           </nav>
         </div>
       </header>
@@ -141,8 +150,9 @@ export function App() {
         <div className="container">
           <div className="footer-grid">
             <section aria-labelledby="f-about">
-              <h2 id="f-about">{BRAND_NAME}</h2>
-              <p>{BRAND_SLOGAN}. Otwarty zbiór danych o defibrylatorach AED dla portalu dane.gov.pl.</p>
+              <h2 id="f-about">{APP_NAME}</h2>
+              <p>Mapa wspólnej listy AED: dane publikują właściciele urządzeń na swoich kontach w dane.gov.pl i każdy z nich odpowiada za swoje dane.</p>
+              <p><Link to="/akcja">Akcja „{BRAND_NAME}” dla właścicieli AED</Link></p>
               <p>Prototyp zespołu HackNation 2026 – nie jest serwisem administracji publicznej.</p>
             </section>
             <nav aria-labelledby="f-info">
@@ -161,9 +171,7 @@ export function App() {
               <ul className="footer-links">
                 <li><Link to="/dane">Zbiór danych i API</Link></li>
                 <li><Link to="/zrodla">Źródła danych</Link></li>
-                <li><Link to="/moderacja">Moderacja zgłoszeń</Link></li>
-                <li><Link to="/panel">Panel moderatora</Link></li>
-                <li><Link to="/konto">Moje konto (instytucja)</Link></li>
+                <li><Link to="/logowanie">Logowanie dla dostawców i administratorów</Link></li>
                 <li><Link to="/licencje">Licencje i atrybucje</Link></li>
                 <li><ExternalLink href={REPO}>Kod źródłowy</ExternalLink></li>
               </ul>
@@ -173,7 +181,7 @@ export function App() {
               <address className="footer-contact">[ADRES / KONTAKT ZESPOŁU]</address>
             </section>
           </div>
-          <p className="footer-legal">© 2026 Autorzy projektu „{BRAND_NAME}”, HackNation 2026. Mapa i dane OpenStreetMap: © autorzy OpenStreetMap (ODbL). Granice gmin: Państwowy Rejestr Granic – GUGiK.</p>
+          <p className="footer-legal">© 2026 Autorzy projektu „{APP_NAME}”, HackNation 2026. Mapa i dane OpenStreetMap: © autorzy OpenStreetMap (ODbL). Granice gmin: Państwowy Rejestr Granic – GUGiK.</p>
         </div>
       </footer>
     </>

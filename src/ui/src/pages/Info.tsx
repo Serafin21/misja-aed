@@ -1,6 +1,6 @@
 // Footer pages: O projekcie, Deklaracja dostępności, Dane osobowe, Pliki cookies, Licencje i atrybucje, Kontakt.
 // Only facts about this prototype – nothing about services we do not run.
-import { BRAND_NAME, BRAND_SLOGAN, BRAND_CTA } from '../components/Brand';
+import { APP_NAME, BRAND_NAME, BRAND_SLOGAN, BRAND_CTA } from '../components/Brand';
 import { ExternalLink } from '../components/ui';
 import { Link, usePageTitle } from '../router';
 
@@ -12,12 +12,14 @@ export function About() {
   return (
     <article className="prose">
       <h1 id="page-title">O projekcie</h1>
-      <p className="lead">{BRAND_NAME} – {BRAND_SLOGAN}. {BRAND_CTA}</p>
+      <p className="lead">{APP_NAME} – mapa wspólnej listy AED. Dane o każdym defibrylatorze publikuje jego właściciel na swoim koncie w dane.gov.pl i to on odpowiada za ich jakość i aktualność.</p>
       <p>To prototyp przygotowany przez zespół uczestników hackathonu HackNation 2026 w ramach zadania Ministerstwa Cyfryzacji „Misja AED – dane na ratunek”. <strong>Nie jest serwisem administracji publicznej</strong> i nie zastępuje numeru alarmowego 112.</p>
       <h2>Co robi</h2>
       <ul>
-        <li>Zbiera informacje o defibrylatorach AED z wielu miejsc (od instytucji, które je mają, i z mapy OpenStreetMap) i zapisuje je w jeden, ten sam sposób.</li>
-        <li>Udostępnia te informacje w portalu dane.gov.pl, żeby mogła z nich korzystać każda mapa i aplikacja.</li>
+        <li>Pokazuje na jednej mapie defibrylatory ze zbiorów, które ich właściciele (urzędy, szkoły, szpitale, firmy) opublikowali w dane.gov.pl według wspólnego wzoru. Przy każdym AED widać, kto odpowiada za dane i kiedy je sprawdzono.</li>
+        <li>Pomaga właścicielom przygotować pliki do publikacji (kreator „Moje AED”) – publikują je sami, na koncie swojej instytucji.</li>
+        <li>Punkty z mapy OpenStreetMap pokazuje osobno, jako „do sprawdzenia” – nie należą do wspólnej listy.</li>
+        <li>Przekazuje zgłoszenia mieszkańców właścicielowi urządzenia. Ministerstwo nie wprowadza ani nie poprawia danych – prowadzi konta, wzór danych i akcję „{BRAND_NAME}”.</li>
         <li>Pokazuje najbliższe AED, które są dostępne teraz, i to, jak aktualne są dane o każdym z nich.</li>
         <li>Pomaga instytucjom dodać swoje AED: z pliku albo ręcznie, krok po kroku.</li>
       </ul>
@@ -38,7 +40,7 @@ export function AccessibilityStatement() {
   return (
     <article className="prose">
       <h1 id="page-title">Deklaracja dostępności</h1>
-      <p>Zespół projektu „{BRAND_NAME}” chce, aby ten serwis był dostępny dla wszystkich, zgodnie ze standardem WCAG 2.2 na poziomie AA. Prototyp nie jest serwisem podmiotu publicznego, ale opisujemy jego dostępność tak, jak wymaga tego ustawa o dostępności cyfrowej.</p>
+      <p>Zespół projektu „{APP_NAME}” chce, aby ten serwis był dostępny dla wszystkich, zgodnie ze standardem WCAG 2.2 na poziomie AA. Prototyp nie jest serwisem podmiotu publicznego, ale opisujemy jego dostępność tak, jak wymaga tego ustawa o dostępności cyfrowej.</p>
       <ul>
         <li>Data publikacji serwisu: {UPDATED}.</li>
         <li>Data ostatniej aktualizacji: {UPDATED}.</li>

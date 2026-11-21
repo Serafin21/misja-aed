@@ -1,6 +1,6 @@
 // REST client for CONTRACT §5. Falls back to in-browser mocks (data/sample/) when the API is unreachable.
 import * as mock from '../mocks/mockApi';
-import type { WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ApiError, Miejsce, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
+import type { WynikImportu, Aed, AedDetail, AedMeta, AedFilters, AedPoint, AedView, ApiError, Miejsce, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
 
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
 export const API_BASE = env.VITE_API_BASE || '/api/v1';
@@ -21,7 +21,8 @@ export class HttpError extends Error {
 class Unreachable extends Error {}
 
 // ---------- auth (CONTRACT: POST /auth/login → Bearer token) ----------
-export type Role = 'dysponent' | 'moderator';
+/** docs/MODEL_ROL.md: dostawca (dysponent) and administrator (MC). */
+export type Role = 'dysponent' | 'administrator';
 export type Session = { token: string; rola: Role; login?: string; dysponent_nazwa?: string | null } | null;
 const SESSION_KEY = 'aed.session';
 function readSession(): Session {
@@ -75,13 +76,14 @@ async function withFallback<T>(real: () => Promise<T>, fake: () => Promise<T>): 
   }
 }
 
-type ItemMeta = { stan_danych?: AedView['stan_danych']; wiek_danych_dni?: number | null };
+type ItemMeta = { stan_danych?: AedView['stan_danych']; wiek_danych_dni?: number | null } & AedMeta;
 type JsonApiItem<T> = { type: string; id: string; attributes: T; meta?: ItemMeta };
 // CR-TL-1: freshness lives in meta – copy it next to the attributes
 const flat = <T extends object>(i: JsonApiItem<T>) => ({
   ...(i.attributes as T), id_aed: i.id,
   ...(i.meta?.stan_danych ? { stan_danych: i.meta.stan_danych, wiek_danych_dni: i.meta.wiek_danych_dni ?? null } : {}),
-} as T & { id_aed: string } & ItemMeta);
+  ...(i.meta ? { meta: i.meta } : {}),
+} as T & { id_aed: string; meta?: AedMeta } & Omit<ItemMeta, keyof AedMeta>);
 
 function qs(params: Record<string, string | number | boolean | undefined>): string {
   const p = new URLSearchParams();
@@ -104,13 +106,13 @@ export function listAed(f: AedFilters) {
   );
 }
 
-export function nearestAed(lat: number, lon: number, limit = 5, onlyNow = false) {
+export function nearestAed(lat: number, lon: number, limit = 5, onlyNow = false, warstwa: 'lista' | 'pomocnicza' = 'lista') {
   return withFallback(
     async () => {
-      const r = await http<{ data: JsonApiItem<AedView>[] }>(`/aed/najblizsze${qs({ lat: lat.toFixed(6), lon: lon.toFixed(6), limit, tylko_dostepne_teraz: onlyNow })}`);
+      const r = await http<{ data: JsonApiItem<AedView>[] }>(`/aed/najblizsze${qs({ lat: lat.toFixed(6), lon: lon.toFixed(6), limit, tylko_dostepne_teraz: onlyNow, warstwa })}`);
       return r.data.map(flat);
     },
-    () => mock.mockNearest(lat, lon, limit, onlyNow),
+    () => (warstwa === 'lista' ? mock.mockNearest(lat, lon, limit, onlyNow) : Promise.resolve([])),
   );
 }
 
@@ -137,10 +139,13 @@ export function confirmAed(id: string, body: Potwierdzenie) {
 }
 
 /** Citizen report. Optional details (hours, cabinet) and a photo (data URI, shrunk in the browser) – HANDOFF A #8. */
-export interface ZgloszenieExtra { godziny_dostepnosci?: string; szafka_zamknieta?: boolean; instrukcja_dostepu?: string; zdjecie?: string }
+export type TypZgloszenia = 'brak' | 'awaria' | 'brak_dostepu' | 'bledne_polozenie' | 'inne' | 'nowe';
+export interface ZgloszenieExtra { godziny_dostepnosci?: string; szafka_zamknieta?: boolean; instrukcja_dostepu?: string; zdjecie?: string;
+  /** AED the report is about (from its card) – goes to its provider; none = device outside the list (administrator) */
+  id_aed?: string; typ?: TypZgloszenia; email?: string }
 export function reportAed(lat: number, lon: number, opis: string, extra: ZgloszenieExtra = {}) {
   return withFallback(
-    () => http<{ id: string; status: string }>(`/zgloszenia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat, lon, opis, ...extra }) }),
+    () => http<{ id: string; status: string; meta?: { trafia_do?: string; komunikat?: string } }>(`/zgloszenia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat, lon, opis, ...extra }) }),
     () => mock.mockReport(lat, lon, opis),
   );
 }
@@ -286,12 +291,13 @@ export function listReports() {
 }
 
 /** Moderator decision. "zatwierdz" needs `rekord` with the address etc. – otherwise the API answers 422 with `fields`. */
-export function decideReport(id: string, decyzja: 'zatwierdz' | 'odrzuc' | 'scal', rekord?: Record<string, unknown>) {
+/** Decision on a report – never changes AED data (K7). Provider: przyjete | odrzucone; administrator: zaproszenie | odrzucone. */
+export function decideReport(id: string, decyzja: 'przyjete' | 'odrzucone' | 'zaproszenie', uzasadnienie?: string) {
   return withFallback(
-    () => http<unknown>(`/zgloszenia/${encodeURIComponent(id)}/decyzja`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rekord ? { decyzja, rekord } : { decyzja }),
+    () => http<{ meta: { komunikat: string } }>(`/zgloszenia/${encodeURIComponent(id)}/decyzja`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(uzasadnienie ? { decyzja, uzasadnienie } : { decyzja }),
     }),
-    () => mock.mockDecide(id, decyzja, rekord),
+    () => mock.mockDecide(id, decyzja).then(() => ({ meta: { komunikat: 'Zapisano (tryb przykładowy).' } })),
   );
 }
 
@@ -299,7 +305,7 @@ export function decideReport(id: string, decyzja: 'zatwierdz' | 'odrzuc' | 'scal
 export function login(loginName: string, haslo: string): Promise<Session> {
   return withFallback(
     () => http<{ token: string; rola: Role; login: string; dysponent_nazwa: string | null }>(`/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: loginName, haslo }) }),
-    () => mock.mockLogin(loginName as Role, haslo),
+    () => mock.mockLogin(loginName, haslo),
   ).then((s) => { setSession(s); return s; });
 }
 
@@ -348,7 +354,7 @@ export function searchPlaces(q: string, blisko?: { lat: number; lon: number } | 
 export function listAedByIds(ids: string[]): Promise<AedView[]> {
   if (!ids.length) return Promise.resolve([]);
   return withFallback(async () => {
-    const r = await http<{ data: JsonApiItem<AedView>[] }>(`/aed${qs({ ids: ids.join(','), per_page: ids.length })}`);
+    const r = await http<{ data: JsonApiItem<AedView>[] }>(`/aed${qs({ ids: ids.join(','), per_page: ids.length, warstwa: 'wszystkie' })}`);
     return r.data.map(flat);
   }, () => mock.mockByIds(ids));
 }
@@ -370,3 +376,40 @@ export function getCoverage(wojewodztwo = 'kujawsko-pomorskie'): Promise<Pokryci
 }
 
 export const templateUrl = (fmt: 'csv' | 'xlsx') => `${API_BASE}/szablon.${fmt}`;
+
+
+// ---------- docs/MODEL_ROL.md: provider's wizard ("Moje AED") and administrator panel – API only ----------
+export interface RaportZbioru {
+  zbior_id: string; tytul: string; dostawca: string | null; zbior_url?: string; status: 'wlaczony' | 'odrzucony' | 'poza_lista' | 'blad';
+  rekordy: number | null; wlaczone: number; odrzucone: number; nieaktualny: boolean | null; czestotliwosc?: string; zmodyfikowany?: string;
+  problemy: string[]; problemy_rekordow: { wiersz: number; id_aed: string | null; problemy: string[] }[]; fikcyjny?: boolean;
+}
+export interface AedRoboczy { id: string; attributes: Aed; meta: { zgodny_ze_wzorcem: boolean; problemy: string[]; na_liscie: boolean } }
+export const myAed = () => http<{ data: AedRoboczy[]; meta: { dostawca: string; w_kopii_roboczej: number; na_wspolnej_liscie: number; raport_agregacji: RaportZbioru[]; agregacja_z: string | null } }>(`/moje-aed`);
+export const loadPublished = () => http<{ data: { wczytano: number } }>(`/moje-aed/z-opublikowanego`, json('POST'));
+export const deleteMyAed = (id: string) => http<{ ok: boolean }>(`/moje-aed/${encodeURIComponent(id)}`, json('DELETE'));
+export const patchMyAed = (id: string, changes: Record<string, unknown>) => http<{ data: AedRoboczy }>(`/aed/${encodeURIComponent(id)}`, json('PATCH', changes));
+export interface Powiadomienie { id: number; typ: 'zgloszenie' | 'potwierdzenie' | 'duplikat' | 'walidacja' | 'przypomnienie'; tresc: string; czas: string; przeczytane: boolean }
+export const myNotifications = () => http<{ data: Powiadomienie[] }>(`/moje-aed/powiadomienia`).then((r) => r.data);
+
+/** "Pobierz pliki do publikacji" – a ZIP the provider publishes ITSELF on its dane.gov.pl account (K11). */
+export async function downloadPackage(o: { czestotliwosc: string; licencja: string; csv_url?: string; email?: string }): Promise<{ blob: Blob; name: string }> {
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  if (session) headers.set('Authorization', `Bearer ${session.token}`);
+  const res = await fetch(`${API_BASE}/moje-aed/pakiet`, { method: 'POST', headers, body: JSON.stringify(o) });
+  if (!res.ok) {
+    const body = (res.headers.get('content-type') ?? '').includes('json') ? ((await res.json()) as { error?: ApiError }) : null;
+    throw new HttpError(res.status, body?.error ?? null);
+  }
+  const cd = res.headers.get('content-disposition') ?? '';
+  return { blob: await res.blob(), name: /filename="([^"]+)"/.exec(cd)?.[1] ?? 'pliki-do-publikacji.zip' };
+}
+
+export const runAggregation = () => http<{ data: { czas: string; rekordy: number; zbiory: RaportZbioru[] } }>(`/admin/agregacja`, json('POST')).then((r) => r.data);
+export const aggregationReport = () => http<{ data: { czas: string | null; zbiory: RaportZbioru[] } }>(`/admin/agregacja`).then((r) => r.data);
+export interface Luka { teryt: string; gmina: string; wojewodztwo: string; rodzaj?: string; do_sprawdzenia: number }
+export const listGaps = (wojewodztwo?: string) => http<{ data: Luka[]; meta: { luki: number; gminy: number | null; zaproszenia: number } }>(`/admin/luki${qs({ wojewodztwo, limit: 200 })}`);
+export const lateDatasets = () => http<{ data: RaportZbioru[] }>(`/admin/przypomnienia`).then((r) => r.data);
+export const sendReminders = () => http<{ data: { wyslano: string[] } }>(`/admin/przypomnienia`, json('POST')).then((r) => r.data);
+export interface Zdarzenie { id: number; czas: string; kto: string; rola: string | null; operacja: string; obiekt: string | null; przed: unknown; po: unknown }
+export const eventLog = () => http<{ data: Zdarzenie[] }>(`/dziennik?limit=100`).then((r) => r.data);

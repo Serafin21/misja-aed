@@ -52,7 +52,17 @@ export interface Aed {
 }
 
 /** Record as shown in UI: server may add computed fields (CR-B1). */
+/** docs/MODEL_ROL.md §7: provenance of a common-list record, or the helper-layer notice (meta of GET /aed…). */
+export interface AedMeta {
+  warstwa?: 'lista' | 'pomocnicza'; komunikat_warstwy?: string; atrybucja?: string;
+  dostawca?: string; dostawca_regon?: string | null; zbior_id?: string; zbior_tytul?: string; zbior_url?: string; zasob_url?: string;
+  data_danych?: string | null; zbior_zmodyfikowany?: string | null; czestotliwosc_aktualizacji?: string | null; zbior_nieaktualny?: boolean;
+  licencja_zbioru?: string | null; mozliwe_duplikaty?: string[]; fikcyjny_dostawca?: boolean;
+}
+
 export interface AedView extends Aed {
+  /** provenance (list) or "Do sprawdzenia" (helper layer) */
+  meta?: AedMeta;
   /** true / false / null (hours not interpretable) – CONTRACT §7 */
   dostepny_teraz?: boolean | null;
   odleglosc_m?: number;
@@ -66,6 +76,8 @@ export interface AedPoint {
   id_aed: string; lat: number; lon: number; dostepny_teraz: boolean | null; stan_danych: 'aktualne' | 'nieaktualne'; osm: boolean;
   /** HANDOFF A #6 – for filters next to the map (older API: undefined) */
   dostep?: Dostep | null; wiek_danych_dni?: number | null; mobilny?: boolean; wojewodztwo?: string | null;
+  /** docs/MODEL_ROL.md: 'lista' or helper layer 'pomocnicza' (= osm); dataset past its update date; possible duplicate */
+  warstwa?: 'lista' | 'pomocnicza'; zbior_nieaktualny?: boolean; duplikat?: boolean;
   /** TERYT of the gmina the AED lies in (HANDOFF A #7) */
   gmina_teryt?: string | null;
 }

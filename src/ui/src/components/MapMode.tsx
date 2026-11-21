@@ -61,7 +61,7 @@ export function MapLegend({ mode, coverage }: { mode: MapMode; coverage?: boolea
         <li><Pin kind="closed" />Teraz zamknięte lub niesprawne (znaczek zegara)</li>
         <li><Pin kind="private" />Tylko dla uprawnionych (znaczek kłódki)</li>
         <li><Pin kind="unknown" />Brak godzin – sprawdź na miejscu</li>
-        <li>Przerywana obwódka: AED z mapy OpenStreetMap</li>
+        <li>Szara pinezka z przerywaną obwódką: <strong>do sprawdzenia</strong> – punkt z OpenStreetMap, niepotwierdzony przez właściciela, poza wspólną listą</li>
       </ul>
     );
   }
@@ -74,7 +74,8 @@ export function MapLegend({ mode, coverage }: { mode: MapMode; coverage?: boolea
         <li><span className="swatch swatch--stare" aria-hidden="true" />Gmina z co najmniej jednym nieaktualnym AED</li>
         <li><span className="swatch swatch--swieze" aria-hidden="true" />Gmina, w której wszystkie AED mają aktualne dane</li>
       </>}
-      <li>Przerywana obwódka pinezki: AED z mapy OpenStreetMap</li>
+      <li>Szara pinezka z przerywaną obwódką: <strong>do sprawdzenia</strong> (OpenStreetMap, poza wspólną listą)</li>
+      <li>Filtr „Zbiór dostawcy po terminie”: dostawca nie zaktualizował zbioru na czas (inny sygnał niż „do weryfikacji”)</li>
     </ul>
   );
 }

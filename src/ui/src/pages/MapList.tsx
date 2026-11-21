@@ -137,7 +137,7 @@ export function MapList() {
   return (
     <>
       <h1 id="page-title">Mapa i lista AED</h1>
-      <p className="lead">Wszystkie defibrylatory w Polsce. Przybliżaj mapę kółkiem myszy albo przyciskami +/−. Lista obok pokazuje AED widoczne na mapie – najbliższe środka mapy na górze.</p>
+      <p className="lead">Wspólna lista AED: dane publikują właściciele urządzeń w dane.gov.pl. Szare punkty „do sprawdzenia” pochodzą z OpenStreetMap i nie są potwierdzone przez właściciela. Przybliżaj mapę kółkiem myszy albo przyciskami +/−. Lista obok pokazuje AED widoczne na mapie – najbliższe środka mapy na górze.</p>
 
       <div className="e2">
         <aside className="e2__filters" aria-label="Filtry">
@@ -162,7 +162,7 @@ export function MapList() {
           </div>
           {group<Dostepnosc>('Dostępność', 'dostepnosc', DOSTEPNOSC, facet?.dostepnosc)}
           {group<Aktualnosc>('Aktualność danych', 'aktualnosc', AKTUALNOSC, facet?.aktualnosc)}
-          {group<Zrodlo>('Źródło danych', 'zrodlo', ZRODLO, facet?.zrodlo)}
+          {group<Zrodlo>('Warstwa', 'zrodlo', ZRODLO, facet?.zrodlo)}
           <div className="switch">
             <input id="f-mob" type="checkbox" checked={f.mobilne} onChange={(e) => apply({ ...f, mobilne: e.target.checked })} />
             <label htmlFor="f-mob">Pokaż urządzenia w pojazdach (np. OSP)</label>

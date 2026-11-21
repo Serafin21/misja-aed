@@ -1,35 +1,170 @@
-// Panel moderatora (/panel): refresh of external sources, AED datasets on dane.gov.pl, accounts of institutions.
-// Moje konto (/konto): an institution changes its password. API: HANDOFF A #8.
+// Panel administratora (/panel) – docs/MODEL_ROL.md §4: the administrator manages the SYSTEM, not the data:
+// aggregation of providers' datasets, gaps (where to send the campaign), reports without a provider, reminders,
+// provider accounts and the event log. There is no way to add, edit or delete AED here (K2).
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  changeMyPassword, createAccount, listAccounts, refreshNow, refreshStatus, resetPassword, searchDgp, setAccountActive,
-  type ImportDgp, type Konto, type StanOdswiezania, type ZbiorDgp,
+  aggregationReport, changeMyPassword, createAccount, eventLog, lateDatasets, listAccounts, listGaps, refreshNow, refreshStatus,
+  resetPassword, runAggregation, sendReminders, setAccountActive, type Konto, type RaportZbioru, type StanOdswiezania,
 } from '../api/client';
 import { RequireLogin } from '../components/Auth';
+import { ReportsQueue } from '../components/ReportsQueue';
 import { ErrorBox, ExternalLink, Loading } from '../components/ui';
-import { date } from '../lib/format';
+import { dictValues } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
-import { Link, usePageTitle } from '../router';
+import { usePageTitle } from '../router';
 
 const n = (x: number | undefined) => (x ?? 0).toLocaleString('pl-PL');
 const when = (t: string | null | undefined) => (t ? t.replace('T', ', ') : '—');
 
 export function Admin() {
-  usePageTitle('Panel moderatora');
+  usePageTitle('Panel administratora');
   return (
     <>
-      <h1 id="page-title">Panel moderatora</h1>
-      <p className="lead">Aktualizacja danych z zewnętrznych źródeł, zbiory samorządów z dane.gov.pl i konta instytucji. Zgłoszenia mieszkańców: <Link to="/moderacja">Moderacja zgłoszeń</Link>.</p>
-      <RequireLogin role="moderator">
-        <Refresh />
-        <Dgp />
+      <h1 id="page-title">Panel administratora</h1>
+      <p className="lead">Administrator prowadzi konta dostawców, wzór danych, łączenie zbiorów i akcję promocyjną. <strong>Nie dodaje, nie poprawia i nie usuwa danych o AED</strong> – za nie odpowiadają ich właściciele.</p>
+      <RequireLogin role="administrator">
+        <nav aria-label="Sekcje panelu" className="toc">
+          <ul>
+            <li><a href="#h-agg">Wspólna lista</a></li><li><a href="#h-gaps">Luki</a></li><li><a href="#h-rep">Zgłoszenia bez dostawcy</a></li>
+            <li><a href="#h-late">Przypomnienia</a></li><li><a href="#h-acc">Konta dostawców</a></li><li><a href="#h-log">Dziennik zdarzeń</a></li>
+            <li><a href="#h-refresh">Odświeżanie</a></li>
+          </ul>
+        </nav>
+        <Aggregation />
+        <Gaps />
+        <section className="admin-section" aria-labelledby="h-rep">
+          <h2 id="h-rep">Zgłoszenia urządzeń bez dostawcy</h2>
+          <p>Mieszkańcy zgłaszają AED spoza wspólnej listy (także punkty „do sprawdzenia” z OpenStreetMap). Administrator nie publikuje ich – zaprasza właściciela do publikacji danych.</p>
+          <ReportsQueue mode="administrator" />
+        </section>
+        <Late />
         <Accounts />
+        <Log />
+        <Refresh />
       </RequireLogin>
     </>
   );
 }
 
-// ---------- 1. refresh ----------
+const STATUS: Record<RaportZbioru['status'], string> = {
+  wlaczony: 'na liście', odrzucony: 'odrzucony – niezgodny ze wzorem', poza_lista: 'poza listą (nie według wzoru)', blad: 'błąd pobrania',
+};
+
+// ---------- aggregation (P5) ----------
+function Aggregation() {
+  const st = useAsync(() => aggregationReport(), []);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<Error | null>(null);
+  async function run() {
+    setBusy(true); setErr(null);
+    try { await runAggregation(); st.reload(); } catch (e) { setErr(e as Error); } finally { setBusy(false); }
+  }
+  const z = st.data?.zbiory ?? [];
+  return (
+    <section className="admin-section" aria-labelledby="h-agg">
+      <h2 id="h-agg">Wspólna lista – łączenie zbiorów dostawców</h2>
+      <p>Lista powstaje wyłącznie ze zbiorów, które dostawcy opublikowali w dane.gov.pl ze słowem kluczowym <code>wspolna-lista-aed</code>. Rekord niezgodny ze wzorem nie trafia na mapę, a dostawca dostaje raport. Rekordów różnych dostawców nie łączymy.</p>
+      <p className="form-actions"><button type="button" className="btn btn--primary" onClick={run} disabled={busy}>{busy ? 'Łączę…' : 'Połącz zbiory teraz'}</button>
+        <span className="hint"> Ostatnio: {when(st.data?.czas)}. Automatycznie co noc.</span></p>
+      {err && <ErrorBox error={err} />}
+      {st.loading && !st.data && <Loading />}
+      {z.length > 0 && (
+        <div className="table-wrap" tabIndex={0} role="region" aria-labelledby="h-agg">
+          <table className="admin-table">
+            <thead><tr><th scope="col">Zbiór</th><th scope="col">Dostawca</th><th scope="col">Stan</th><th scope="col">Na liście / odrzucone</th><th scope="col">Uwagi</th></tr></thead>
+            <tbody>
+              {z.map((x) => (
+                <tr key={x.zbior_id}>
+                  <td>{x.zbior_url ? <ExternalLink href={x.zbior_url}>{x.tytul}</ExternalLink> : x.tytul}{x.fikcyjny && <div className="hint">dostawca fikcyjny (prototyp)</div>}</td>
+                  <td>{x.dostawca ?? '—'}</td>
+                  <td>{STATUS[x.status]}{x.nieaktualny && <div><strong>zbiór nieaktualny</strong></div>}</td>
+                  <td>{x.rekordy == null ? '—' : `${x.wlaczone} / ${x.odrzucone}`}</td>
+                  <td>
+                    {x.problemy.map((p) => <div key={p}>{p}</div>)}
+                    {x.problemy_rekordow.length > 0 && (
+                      <details><summary>{x.problemy_rekordow.length} rekordów odrzuconych</summary>
+                        <ul>{x.problemy_rekordow.map((r) => <li key={r.wiersz}>wiersz {r.wiersz}: {r.problemy.join('; ')}</li>)}</ul>
+                      </details>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ---------- gaps: where to send the campaign (§8, §10) ----------
+function Gaps() {
+  const [woj, setWoj] = useState('');
+  const st = useAsync(() => listGaps(woj || undefined), [woj]);
+  return (
+    <section className="admin-section" aria-labelledby="h-gaps">
+      <h2 id="h-gaps">Luki – gminy bez żadnego dostawcy</h2>
+      <p>Na górze gminy, w których OpenStreetMap pokazuje najwięcej punktów „do sprawdzenia” – tam akcja „AED w danych” trafia najpierw.</p>
+      <div className="field">
+        <label htmlFor="gap-woj">Województwo</label>
+        <select id="gap-woj" value={woj} onChange={(e) => setWoj(e.target.value)}>
+          <option value="">cała Polska</option>
+          {dictValues('wojewodztwo').map((w) => <option key={w.wartosc} value={w.wartosc}>{w.wartosc}</option>)}
+        </select>
+      </div>
+      {st.data && <p role="status">Luk: <strong>{n(st.data.meta.luki)}</strong>{st.data.meta.gminy ? ` z ${n(st.data.meta.gminy)} gmin` : ''} · wysłanych zaproszeń: {st.data.meta.zaproszenia}.</p>}
+      {st.data && (
+        <div className="table-wrap" tabIndex={0} role="region" aria-labelledby="h-gaps">
+          <table className="admin-table">
+            <thead><tr><th scope="col">Gmina</th><th scope="col">Województwo</th><th scope="col">Punkty do sprawdzenia (OSM)</th></tr></thead>
+            <tbody>{st.data.data.slice(0, 30).map((g) => <tr key={g.teryt}><td>{g.gmina} <span className="hint">({g.rodzaj})</span></td><td>{g.wojewodztwo}</td><td>{n(g.do_sprawdzenia)}</td></tr>)}</tbody>
+          </table>
+        </div>
+      )}
+      {st.error && <ErrorBox error={st.error} onRetry={st.reload} />}
+    </section>
+  );
+}
+
+// ---------- reminders (P9) ----------
+function Late() {
+  const st = useAsync(() => lateDatasets(), []);
+  const [msg, setMsg] = useState('');
+  return (
+    <section className="admin-section" aria-labelledby="h-late">
+      <h2 id="h-late">Przypomnienia o aktualizacji</h2>
+      {st.data && (st.data.length === 0 ? <p>Wszystkie zbiory są aktualne.</p> : (
+        <>
+          <ul>{st.data.map((z) => <li key={z.zbior_id}><strong>{z.dostawca}</strong>: „{z.tytul}” – ostatnia zmiana {z.zmodyfikowany}, częstotliwość {z.czestotliwosc}</li>)}</ul>
+          <p className="form-actions"><button type="button" className="btn btn--secondary" onClick={async () => { const r = await sendReminders(); setMsg(r.wyslano.length ? `Wysłano przypomnienia: ${r.wyslano.join(', ')}.` : 'Przypomnienia już wysłane dzisiaj.'); }}>Wyślij przypomnienia dostawcom</button></p>
+        </>
+      ))}
+      <p role="status" className="status-line">{msg}</p>
+    </section>
+  );
+}
+
+// ---------- event log (K10) ----------
+function Log() {
+  const st = useAsync(() => eventLog(), []);
+  return (
+    <section className="admin-section" aria-labelledby="h-log">
+      <h2 id="h-log">Dziennik zdarzeń</h2>
+      <p>Kto, kiedy i co zmienił. Wpisów nie da się zmienić ani usunąć.</p>
+      <p><button type="button" className="btn btn--tertiary" onClick={st.reload}>Odśwież dziennik</button></p>
+      {st.data && (
+        <div className="table-wrap" tabIndex={0} role="region" aria-labelledby="h-log">
+          <table className="admin-table">
+            <thead><tr><th scope="col">Kiedy</th><th scope="col">Kto</th><th scope="col">Operacja</th><th scope="col">Obiekt</th></tr></thead>
+            <tbody>{st.data.slice(0, 50).map((e) => <tr key={e.id}><td>{when(e.czas)}</td><td>{e.kto}{e.rola && e.rola !== e.kto ? <span className="hint"> ({e.rola})</span> : null}</td><td><code>{e.operacja}</code></td><td>{e.obiekt ?? '—'}</td></tr>)}</tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ---------- refresh: aggregation + OSM helper layer ----------
 function Refresh() {
   const [st, setSt] = useState<StanOdswiezania | null>(null);
   const [err, setErr] = useState<Error | null>(null);
@@ -51,15 +186,15 @@ function Refresh() {
   const w = st?.wynik;
   return (
     <section className="admin-section" aria-labelledby="h-refresh">
-      <h2 id="h-refresh">Aktualizacja danych</h2>
-      <p>OpenStreetMap (eksport AED dla Polski) i zbiory AED samorządów z dane.gov.pl pobierają się same <strong>{st?.harmonogram ?? '…'}</strong>. Możesz też odświeżyć je teraz.</p>
+      <h2 id="h-refresh">Odświeżanie automatyczne</h2>
+      <p>Łączenie zbiorów dostawców i warstwa pomocnicza z OpenStreetMap („do sprawdzenia”, tylko do mapy luk) odświeżają się same <strong>{st?.harmonogram ?? '…'}</strong>.</p>
       {err && <ErrorBox error={err} onRetry={load} />}
       {st && (
         <dl className="facts">
           <dt>Ostatnio</dt><dd>{when(st.ostatnie)}{st.powod ? ` (${st.powod})` : ''}</dd>
           <dt>Następne</dt><dd>{when(st.nastepne)}</dd>
-          {w?.osm && 'dodane' in w.osm && <><dt>OpenStreetMap</dt><dd>{n(w.osm.liczba_obiektow as number)} obiektów: nowe {n(w.osm.dodane as number)}, zaktualizowane {n(w.osm.zaktualizowane as number)}, odrzucone {n(w.osm.odrzucone as number)} ({String(w.osm.zrodlo)})</dd></>}
-          {Array.isArray(w?.dane_gov_pl) && <><dt>dane.gov.pl</dt><dd>{w!.dane_gov_pl!.filter((d) => d.status === 'zaimportowano').length} zbiorów zaimportowanych</dd></>}
+          {w?.osm && 'dodane' in w.osm && <><dt>Warstwa pomocnicza OSM</dt><dd>{n(w.osm.liczba_obiektow as number)} obiektów: nowe {n(w.osm.dodane as number)}, zaktualizowane {n(w.osm.zaktualizowane as number)}, odrzucone {n(w.osm.odrzucone as number)} ({String(w.osm.zrodlo)})</dd></>}
+
           {w?.rekordy_po !== undefined && <><dt>AED w zbiorze</dt><dd>{n(w.rekordy_przed)} → {n(w.rekordy_po)}</dd></>}
           {st.blad && <><dt>Błąd</dt><dd>{st.blad}</dd></>}
         </dl>
@@ -72,72 +207,7 @@ function Refresh() {
   );
 }
 
-// ---------- 2. dane.gov.pl ----------
-function Dgp() {
-  const [q, setQ] = useState('defibrylator defibrylatory AED');
-  const [busy, setBusy] = useState<'' | 'szukaj' | 'import'>('');
-  const [found, setFound] = useState<ZbiorDgp[] | null>(null);
-  const [imp, setImp] = useState<ImportDgp[] | null>(null);
-  const [skipped, setSkipped] = useState(0);
-  const [err, setErr] = useState<Error | null>(null);
-
-  async function go(importuj: boolean, e?: FormEvent) {
-    e?.preventDefault();
-    setBusy(importuj ? 'import' : 'szukaj'); setErr(null);
-    try {
-      const r = await searchDgp(q, importuj);
-      setFound(r.data); setSkipped(r.meta.pominiete_niezwiazane ?? 0); setImp(importuj ? r.meta.importy : null);
-    } catch (ex) { setErr(ex as Error); } finally { setBusy(''); }
-  }
-  const byId = new Map((imp ?? []).map((i) => [i.kod_zrodla.split(':')[1], i]));
-
-  return (
-    <section className="admin-section" aria-labelledby="h-dgp">
-      <h2 id="h-dgp">Zbiory AED na dane.gov.pl</h2>
-      <p>Samorządy publikują listy defibrylatorów na portalu dane.gov.pl. Wyszukaj je i dołącz do zbioru – dane instytucji mają pierwszeństwo przed OpenStreetMap, a te same urządzenia łączą się w jeden rekord.</p>
-      <form className="inline-form" onSubmit={(e) => go(false, e)} role="search">
-        <div className="field">
-          <label htmlFor="dgp-q">Szukaj w dane.gov.pl</label>
-          <input id="dgp-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} />
-        </div>
-        <button type="submit" className="btn btn--secondary" disabled={!!busy}>{busy === 'szukaj' ? 'Szukam…' : 'Szukaj'}</button>
-      </form>
-      {err && <ErrorBox error={err} />}
-      {found && (
-        <>
-          <p role="status">Znaleziono {found.length} zbiorów o AED{skipped ? ` (pominięto ${skipped} niezwiązanych z AED)` : ''}.</p>
-          {found.length > 0 && (
-            <table className="admin-table">
-              <thead><tr><th scope="col">Zbiór</th><th scope="col">Instytucja</th><th scope="col">Licencja</th><th scope="col">Wynik importu</th></tr></thead>
-              <tbody>
-                {found.map((d) => {
-                  const i = byId.get(d.id);
-                  return (
-                    <tr key={d.id}>
-                      <td><ExternalLink href={d.strona}>{d.tytul}</ExternalLink>{d.zmodyfikowano && <div className="hint">zmieniony {date(d.zmodyfikowano)}</div>}</td>
-                      <td>{d.instytucja ?? '—'}</td>
-                      <td>{d.licencja ?? `${d.licencja_portalu ?? '—'} (nieobsługiwana)`}</td>
-                      <td>{!i ? '—' : i.status === 'zaimportowano'
-                        ? `${i.wiersze ?? '?'} wierszy: nowe ${i.dodane}, połączone ${(i.scalone ?? 0) + (i.zaktualizowane ?? 0)}, odrzucone ${i.odrzucone}`
-                        : i.powod ?? i.status}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-          {found.length > 0 && (
-            <p className="form-actions">
-              <button type="button" className="btn btn--primary" disabled={!!busy} onClick={() => go(true)}>{busy === 'import' ? 'Importuję… (do minuty)' : 'Zaimportuj znalezione zbiory'}</button>
-            </p>
-          )}
-        </>
-      )}
-    </section>
-  );
-}
-
-// ---------- 3. accounts ----------
+// ---------- provider accounts ----------
 function Accounts() {
   const st = useAsync(() => listAccounts(), []);
   const [form, setForm] = useState({ login: '', dysponent_nazwa: '', email: '' });
@@ -164,8 +234,8 @@ function Accounts() {
 
   return (
     <section className="admin-section" aria-labelledby="h-acc">
-      <h2 id="h-acc">Konta instytucji</h2>
-      <p>Konto zakładasz po sprawdzeniu, że osoba reprezentuje instytucję (np. pismo, e-mail z domeny urzędu). Instytucja widzi i rozpatruje zgłoszenia tylko swoich AED, a jej pliki zawsze trafiają do zbioru pod jej nazwą.</p>
+      <h2 id="h-acc">Konta dostawców</h2>
+      <p>Konto zakładasz po sprawdzeniu, że osoba reprezentuje właściciela AED (np. pismo, e-mail z domeny instytucji). Dostawca przygotowuje i publikuje tylko swoje dane i rozpatruje zgłoszenia o swoich AED. Docelowo: konta portalu dane.gov.pl i logowanie przez login.gov.pl.</p>
       {secret && (
         <div className="callout callout--ok" role="alert">
           <p className="callout__title">{secret.nowe ? 'Konto założone.' : 'Nowe hasło gotowe.'} Przekaż instytucji login i hasło bezpiecznym kanałem.</p>
@@ -193,7 +263,7 @@ function Accounts() {
       </form>
       {st.loading && !st.data && <Loading />}
       {st.error && <ErrorBox error={st.error} onRetry={st.reload} />}
-      {st.data && (st.data.length === 0 ? <p>Nie ma jeszcze kont instytucji (działają konta pokazowe <code>dysponent</code> i <code>moderator</code>).</p> : (
+      {st.data && (st.data.length === 0 ? <p>Nie ma jeszcze kont dostawców (działają konta pokazowe <code>dysponent</code> i <code>administrator</code>).</p> : (
         <table className="admin-table">
           <thead><tr><th scope="col">Login</th><th scope="col">Instytucja</th><th scope="col">AED w zbiorze</th><th scope="col">Założone</th><th scope="col">Stan</th><th scope="col">Działania</th></tr></thead>
           <tbody>
@@ -217,20 +287,8 @@ function Accounts() {
   );
 }
 
-// ---------- Moje konto (institution) ----------
-export function MyAccount() {
-  usePageTitle('Moje konto');
-  return (
-    <>
-      <h1 id="page-title">Moje konto</h1>
-      <RequireLogin role="dysponent" roles={['dysponent', 'moderator']}>
-        <PasswordForm />
-      </RequireLogin>
-    </>
-  );
-}
-
-function PasswordForm() {
+// ---------- own password (used in "Moje AED") ----------
+export function PasswordForm() {
   const [f, setF] = useState({ stare: '', nowe: '', nowe2: '' });
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -244,7 +302,7 @@ function PasswordForm() {
   return (
     <form className="panel" onSubmit={save} aria-labelledby="h-pass" noValidate>
       <h2 id="h-pass">Zmień hasło</h2>
-      <p className="hint">Konta pokazowe (<code>dysponent</code>, <code>moderator</code>) mają hasło w ustawieniach serwera i nie zmienia się go tutaj.</p>
+      <p className="hint">Konta pokazowe (<code>dysponent</code>, <code>administrator</code>) mają hasło w ustawieniach serwera i nie zmienia się go tutaj.</p>
       {[['stare', 'Obecne hasło', 'current-password'], ['nowe', 'Nowe hasło (min. 10 znaków)', 'new-password'], ['nowe2', 'Powtórz nowe hasło', 'new-password']].map(([k, l, ac]) => (
         <div className="field" key={k}>
           <label htmlFor={`pw-${k}`}>{l}</label>

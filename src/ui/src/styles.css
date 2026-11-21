@@ -420,3 +420,19 @@ thead th { background: var(--color-surface); }
 .secret { font-family: ui-monospace, monospace; font-size: 1.1rem; background: var(--color-warning-tint); padding: 4px 8px; border-radius: var(--radius); user-select: all; }
 .inline-form { display: flex; flex-wrap: wrap; gap: var(--space-s); align-items: flex-end; }
 .inline-form .field { margin: 0; flex: 1 1 14rem; }
+
+/* ---------- model ról: helper layer "Do sprawdzenia" (OSM), role menu ---------- */
+.aed-pin--pomocnicza { filter: grayscale(1); opacity: .7; }
+.aed-pin--pomocnicza:hover, .aed-pin--pomocnicza:focus-visible { opacity: 1; }
+.badge--helper { background: var(--color-surface-strong); color: var(--color-text); border-color: var(--color-border-input); }
+.map-popup__helper { color: var(--color-text-secondary); }
+.main-nav__role a { font-weight: var(--font-weight-bold); }
+.main-nav__logout { font: inherit; color: var(--color-action); background: none; border: 0; padding: 0 var(--space-s); min-height: var(--control-height); cursor: pointer; text-decoration: underline; }
+.brand__mark--app { display: inline-flex; color: var(--color-error, #b3261e); }
+.brand__mark--app svg { width: 30px; height: 30px; }
+.toc ul { display: flex; flex-wrap: wrap; gap: var(--space-s) var(--space); list-style: none; padding: 0; }
+.notif-list { list-style: none; padding: 0; }
+.notif-list li { padding: var(--space-s) 0; border-bottom: 1px solid var(--color-border); }
+.callout--warn { border-left: 4px solid var(--color-warning, #b9791a); background: var(--color-warning-tint, #fff4e0); padding: var(--space-s) var(--space); border-radius: var(--radius); }
+.campaign-hero--compact { display: flex; gap: var(--space); align-items: center; margin-bottom: var(--space); }
+.steps li { margin-bottom: var(--space-s); }

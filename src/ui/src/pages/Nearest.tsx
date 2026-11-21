@@ -26,6 +26,8 @@ export function Nearest() {
   const [pos, setPos] = useState<Pos | null>(null);
   const [onlyNow, setOnlyNow] = useState(true);
   const [items, setItems] = useState<AedView[] | null>(null);
+  // helper layer (OSM, not confirmed by owners) shown separately – never mixed into the common list (MODEL_ROL §8)
+  const [helper, setHelper] = useState<AedView[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<Error | null>(null);
@@ -38,8 +40,9 @@ export function Nearest() {
     setBusy('Szukam najbliższych AED…');
     setErr(null);
     try {
-      const r = await nearestAed(p.lat, p.lon, 5, now);
+      const [r, h] = await Promise.all([nearestAed(p.lat, p.lon, 5, now), nearestAed(p.lat, p.lon, 3, now, 'pomocnicza').catch(() => [])]);
       setItems(r);
+      setHelper(h.filter((x) => !r.length || (x.odleglosc_m ?? 1e9) < (r[r.length - 1].odleglosc_m ?? 1e9) || r.length < 5));
       setMsg(r.length ? `Znaleziono ${r.length} najbliższych AED (${p.label}).` : 'Nie znaleziono AED spełniających warunki.');
     } catch (e) {
       setErr(e as Error);
@@ -115,9 +118,16 @@ export function Nearest() {
             <ol className="aed-list" aria-label="Lista najbliższych AED">
               {items.map((a, i) => <AedListItem key={a.id_aed} aed={a} from={pos} rank={i + 1} mode={mode} />)}
             </ol>
+            {helper.length > 0 && (
+              <section aria-labelledby="helper-title" className="helper-results">
+                <h3 id="helper-title">W pobliżu są też punkty do sprawdzenia</h3>
+                <p className="hint">Z mapy OpenStreetMap – nie potwierdził ich właściciel i nie należą do wspólnej listy. Urządzenia może tam nie być.</p>
+                <ul className="aed-list">{helper.map((a) => <AedListItem key={a.id_aed} aed={a} from={pos} mode={mode} />)}</ul>
+              </section>
+            )}
             <div className="split__map">
               <MapModeSwitch mode={mode} onChange={setMode} idPrefix="e1-mode" />
-              <MapView items={items} user={pos} label={`Mapa najbliższych AED, tryb: ${mode === 'dane' ? 'aktualność danych' : 'dostępność'}. Te same informacje są na liście.`} height={460} cluster={false}
+              <MapView items={[...items, ...helper]} user={pos} label={`Mapa najbliższych AED, tryb: ${mode === 'dane' ? 'aktualność danych' : 'dostępność'}. Te same informacje są na liście.`} height={460} cluster={false}
                 mode={mode} coverage={cov.data} />
               <MapLegend mode={mode} coverage={!!cov.data} />
               {mode === 'dane' && !cov.loading && <CoverageList coverage={cov.data} collapsed />}
