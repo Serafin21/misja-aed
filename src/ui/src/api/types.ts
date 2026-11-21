@@ -66,6 +66,17 @@ export interface AedPoint {
   id_aed: string; lat: number; lon: number; dostepny_teraz: boolean | null; stan_danych: 'aktualne' | 'nieaktualne'; osm: boolean;
   /** HANDOFF A #6 – for filters next to the map (older API: undefined) */
   dostep?: Dostep | null; wiek_danych_dni?: number | null; mobilny?: boolean; wojewodztwo?: string | null;
+  /** TERYT of the gmina the AED lies in (HANDOFF A #7) */
+  gmina_teryt?: string | null;
+}
+
+/** GET /miejsca – place search (HANDOFF A #7) */
+export type TypMiejsca = 'wojewodztwo' | 'gmina' | 'miejscowosc' | 'ulica' | 'adres';
+export interface Miejsce {
+  typ: TypMiejsca; nazwa: string; opis: string; lat: number; lon: number;
+  /** [minLon, minLat, maxLon, maxLat] */
+  bbox: [number, number, number, number] | null;
+  teryt?: string; wojewodztwo?: string | null; liczba_aed?: number;
 }
 
 /** GET /pokrycie – municipalities (PRG) with AED coverage, CONTRACT §8 */

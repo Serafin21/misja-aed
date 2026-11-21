@@ -1,5 +1,5 @@
 // In-browser implementation of CONTRACT §5 on data/sample/ – used until Model A's API is up.
-import type { WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo } from '../api/types';
+import type { Miejsce, WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo } from '../api/types';
 import { availableNow, haversine } from '../lib/format';
 import { ageDays, computeState } from '../lib/dataState';
 import geo from './aed_ujednolicone.json';
@@ -127,4 +127,28 @@ export const mockAll = records;
 export function mockApprove(r: RaportWalidacji): Promise<WynikImportu> {
   const scalone = r.duplikaty.length;
   return delay({ dodane: Math.max(0, r.poprawne - scalone), zaktualizowane: 0, scalone, odrzucone: r.bledy }, 300);
+}
+
+export function mockImportInfo(fileName: string) {
+  const r = raport as RaportWalidacji;
+  return delay({
+    import_id: `demo-${fileName}`, liczba_wierszy: r.wiersze, kolumny: Object.keys(r.mapowanie),
+    mapowanie_proponowane: { ...r.mapowanie, 'Uwagi wewnętrzne': '' },
+    podglad: [{ 'Uwagi wewnętrzne': 'przegląd w marcu' }],
+  }, 400);
+}
+
+export function mockCreateAed() {
+  return delay({ id_aed: `AED-PL-DEMO${Math.floor(Math.random() * 1e6)}` }, 250);
+}
+
+/** Sample mode: localities known from the sample records (no geocoder). */
+export function mockPlaces(q: string): Promise<Miejsce[]> {
+  const n = q.toLowerCase();
+  const by = new Map<string, AedView[]>();
+  for (const a of records) if (a.miejscowosc && a.miejscowosc.toLowerCase().startsWith(n)) by.set(a.miejscowosc, [...(by.get(a.miejscowosc) ?? []), a]);
+  return delay([...by.entries()].map(([m, rs]) => ({
+    typ: 'miejscowosc' as const, nazwa: m, opis: 'miejscowość (dane przykładowe)', bbox: null,
+    lat: rs.reduce((s, a) => s + a.szerokosc_geograficzna, 0) / rs.length, lon: rs.reduce((s, a) => s + a.dlugosc_geograficzna, 0) / rs.length,
+  })));
 }

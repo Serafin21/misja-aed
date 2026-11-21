@@ -1,281 +1,464 @@
-// E5 – Dla dysponentów: 1) szablon, 2) wgraj plik, 3) mapowanie, 4) raport błędów, 5) zatwierdź → odznaka.
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { approveImport, isMockMode, templateUrl, uploadAndValidate } from '../api/client';
+// E5 – Dla instytucji. Start: two big choices – "Mam listę AED w pliku" / "Wpiszę AED ręcznie".
+// File: template → drop zone with progress → only unrecognised columns → results in 3 groups → publish ready ones.
+// Manual: the same 4-step wizard as E4 + institution data, a list, one publication at the end. Draft saved on the device.
+import { useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react';
+import {
+  approveImport, confirmMapping, createAed, decideDuplicates, fixImportRows, HttpError, isMockMode, NotSupported, templateUrl, uploadFile,
+  type ImportInfo,
+} from '../api/client';
 import type { RaportWalidacji, WynikImportu } from '../api/types';
-import { BRAND_NAME, BRAND_SLOGAN, heartRects } from '../components/Brand';
 import { RequireLogin } from '../components/Auth';
-import { ErrorBox, Icon } from '../components/ui';
+import { AedWizard, draftToRecord, emptyDraft, type AedDraft } from '../components/AedWizard';
+import { BRAND_NAME, BRAND_SLOGAN, heartRects } from '../components/Brand';
 import { ErrorSummary, Req, RequiredNote, useValidation } from '../components/form';
+import { ErrorBox, Icon } from '../components/ui';
 import { dictValues, label } from '../lib/format';
 import { FIELDS, fieldLabel, templateCsv } from '../lib/fields';
+import { hoursInWords } from '../lib/hoursBuilder';
 import { usePageTitle } from '../router';
 
-const FIELD_IDS: Record<string, string> = { owner: 'up-owner', ownerType: 'up-owner-type', file: 'up-file' };
+// ---------- institution data + local draft ----------
+interface Inst { owner: string; ownerType: string; lic: string }
+interface Draft { inst: Inst; list: AedDraft[]; current: AedDraft; step: number }
+const DRAFT_KEY = 'aed.szkic.instytucja';
+const emptyInst = (): Inst => ({ owner: '', ownerType: '', lic: 'CC0-1.0' });
+function loadDraft(): Draft | null {
+  try { const raw = localStorage.getItem(DRAFT_KEY); return raw ? (JSON.parse(raw) as Draft) : null; } catch { return null; }
+}
+function saveDraft(d: Draft | null) {
+  try { if (d) localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); else localStorage.removeItem(DRAFT_KEY); } catch { /* storage blocked – keep in memory */ }
+}
+const sourceCode = (owner: string) => `dysponent:${owner.trim().toLocaleLowerCase('pl').normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
 
-const STEPS = ['Pobierz szablon', 'Wgraj plik', 'Sprawdź kolumny', 'Popraw błędy', 'Zatwierdź'];
+// Rules for sharing – plain words instead of licence names
+const RULES: Record<string, string> = {
+  'CC0-1.0': 'Każdy może korzystać z danych bez ograniczeń (zalecane)',
+  'CC-BY-4.0': 'Każdy może korzystać, jeśli poda nazwę mojej instytucji jako źródło',
+};
 
 export function Providers() {
-  usePageTitle('Dla dysponentów AED');
-  const [step, setStep] = useState(0);
+  usePageTitle('Dodaj AED swojej instytucji');
+  const saved = useRef(loadDraft());
+  const [mode, setMode] = useState<'start' | 'file' | 'manual'>(saved.current ? 'manual' : 'start');
+  const [inst, setInst] = useState<Inst>(saved.current?.inst ?? emptyInst());
+  return (
+    <>
+      <h1 id="page-title">Dodaj AED swojej instytucji</h1>
+      {mode === 'start' && (
+        <>
+          <p className="lead">Urząd, szkoła, firma, organizacja: dodaj swoje defibrylatory, żeby każdy mógł je znaleźć. Wybierz, jak chcesz to zrobić.</p>
+          <div className="choice-cards">
+            <button type="button" className="choice-card" onClick={() => setMode('file')}>
+              <strong>Mam listę AED w pliku</strong>
+              <span>Excel albo CSV. Najlepsze, gdy masz kilka lub więcej AED.</span>
+            </button>
+            <button type="button" className="choice-card" onClick={() => setMode('manual')}>
+              <strong>Wpiszę AED ręcznie</strong>
+              <span>Krok po kroku, jedno AED po drugim.</span>
+            </button>
+          </div>
+        </>
+      )}
+      {mode === 'file' && <FileFlow inst={inst} setInst={setInst} back={() => setMode('start')} />}
+      {mode === 'manual' && <ManualFlow inst={inst} setInst={setInst} saved={saved.current} back={() => setMode('start')} />}
+    </>
+  );
+}
+
+/** Institution name, type and sharing rules – asked once. */
+function InstFields({ inst, setInst, v }: { inst: Inst; setInst: (i: Inst) => void; v: ReturnType<typeof useValidation> }) {
+  const e = v.errors;
+  return (
+    <>
+      <div className="field">
+        <label htmlFor="i-owner">Nazwa instytucji<Req /></label>
+        <input id="i-owner" type="text" autoComplete="organization" required value={inst.owner} onChange={(ev) => setInst({ ...inst, owner: ev.target.value })} onBlur={() => v.check('owner')}
+          aria-invalid={!!e.owner} aria-describedby={e.owner ? 'i-owner-err' : undefined} />
+        {e.owner && <p id="i-owner-err" className="field-error">{e.owner}</p>}
+      </div>
+      <div className="field">
+        <label htmlFor="i-type">Rodzaj instytucji<Req /></label>
+        <select id="i-type" required value={inst.ownerType} onChange={(ev) => setInst({ ...inst, ownerType: ev.target.value })} onBlur={() => v.check('ownerType')}
+          aria-invalid={!!e.ownerType} aria-describedby={e.ownerType ? 'i-type-err' : undefined}>
+          <option value="">– wybierz –</option>
+          {dictValues('dysponent_typ').map((d) => <option key={d.wartosc} value={d.wartosc}>{label('dysponent_typ', d.wartosc)}</option>)}
+        </select>
+        {e.ownerType && <p id="i-type-err" className="field-error">{e.ownerType}</p>}
+      </div>
+      <fieldset>
+        <legend>Na jakich zasadach udostępniasz dane?<Req /></legend>
+        <div className="big-choices">
+          {Object.entries(RULES).map(([k, t]) => (
+            <label key={k} htmlFor={`i-lic-${k}`}><input id={`i-lic-${k}`} type="radio" name="i-lic" checked={inst.lic === k} onChange={() => setInst({ ...inst, lic: k })} /> {t}</label>
+          ))}
+        </div>
+      </fieldset>
+    </>
+  );
+}
+const instValidators = (inst: Inst) => ({
+  owner: () => (inst.owner.trim() ? '' : 'Wpisz nazwę instytucji, np. „Urząd Gminy Lisewo”.'),
+  ownerType: () => (inst.ownerType ? '' : 'Wybierz rodzaj instytucji.'),
+});
+
+// ======================= FILE =======================
+type FileStage = 'upload' | 'columns' | 'result' | 'done';
+
+function FileFlow({ inst, setInst, back }: { inst: Inst; setInst: (i: Inst) => void; back: () => void }) {
+  const [stage, setStage] = useState<FileStage>('upload');
+  const [file, setFile] = useState<File | null>(null);
+  const [info, setInfo] = useState<ImportInfo | null>(null);
   const [rep, setRep] = useState<RaportWalidacji | null>(null);
   const [result, setResult] = useState<WynikImportu | null>(null);
-  const [owner, setOwner] = useState('');
-  const headRef = useRef<HTMLHeadingElement>(null);
-
-  const go = (n: number) => { setStep(n); setTimeout(() => headRef.current?.focus(), 0); };
-
-  return (
-    <>
-      <h1 id="page-title">Dla dysponentów AED</h1>
-      <p className="lead">Masz defibrylator w urzędzie, szkole, firmie albo w wozie OSP? Udostępnij dane w 5 krokach. Szablon pobierzesz bez logowania. Do wgrania pliku w prototypie służy konto demonstracyjne dysponenta.</p>
-
-      <nav aria-label="Kroki importu" className="stepper">
-        <ol>
-          {STEPS.map((s, i) => (
-            <li key={s} className={i === step ? 'is-current' : i < step ? 'is-done' : ''} aria-current={i === step ? 'step' : undefined}>
-              <span className="stepper__n" aria-hidden="true">{i < step ? '✓' : i + 1}</span>
-              <span>{s}{i < step && <span className="visually-hidden"> (zrobione)</span>}</span>
-            </li>
-          ))}
-        </ol>
-      </nav>
-
-      <section className="panel" aria-labelledby="step-title">
-        <h2 id="step-title" ref={headRef} tabIndex={-1}>Krok {step + 1} z 5: {STEPS[step]}</h2>
-        {step === 0 && <StepTemplate onNext={() => go(1)} />}
-        {step > 0 && (
-          <RequireLogin role="dysponent" roles={['dysponent', 'moderator']}>
-            {step === 1 && <StepUpload owner={owner} setOwner={setOwner} onDone={(r) => { setRep(r); go(2); }} onBack={() => go(0)} />}
-            {step === 2 && rep && <StepMapping rep={rep} onNext={() => go(3)} onBack={() => go(1)} />}
-            {step === 3 && rep && <StepReport rep={rep} onNext={() => go(4)} onBack={() => go(1)} />}
-            {step === 4 && rep && <StepApprove rep={rep} owner={owner} result={result} setResult={setResult} onBack={() => go(3)} />}
-          </RequireLogin>
-        )}
-      </section>
-    </>
-  );
-}
-
-function StepTemplate({ onNext }: { onNext: () => void }) {
+  const head = useRef<HTMLHeadingElement>(null);
+  const go = (s: FileStage) => { setStage(s); setTimeout(() => head.current?.focus(), 0); };
   const csvHref = isMockMode() ? `data:text/csv;charset=utf-8,${encodeURIComponent(templateCsv())}` : templateUrl('csv');
-  const required = FIELDS.filter((f) => f.obowiazkowosc === 'wymagane');
+  const titles: Record<FileStage, string> = { upload: 'Wgraj plik z listą AED', columns: 'Dopasuj kolumny, których nie rozpoznaliśmy', result: 'Wynik sprawdzania', done: 'Gotowe – AED są na mapie' };
+
   return (
-    <>
-      <p>Szablon to tabela z {FIELDS.length} kolumnami wzorcowego zakresu danych. {required.length} z nich jest wymaganych. Możesz też wgrać własny plik – w kroku 3 dopasujemy kolumny.</p>
-      <p className="form-actions">
-        <a className="btn btn--secondary" href={csvHref} download="szablon_aed.csv">Pobierz szablon CSV</a>
-        <a className="btn btn--secondary" href={templateUrl('xlsx')} download>Pobierz szablon XLSX</a>
-      </p>
-      <details className="details">
-        <summary>Pola wymagane ({required.length})</summary>
-        <ul className="cols">{required.map((f) => <li key={f.nazwa_pola}><strong>{f.etykieta}</strong> <code>{f.nazwa_pola}</code></li>)}</ul>
-      </details>
-      <details className="details">
-        <summary>Zasady formatu</summary>
-        <ul>
-          <li>Wartości logiczne: <code>true</code> albo <code>false</code> (rozpoznamy też TAK/NIE).</li>
-          <li>Liczby z kropką dziesiętną, bez spacji: <code>52.243700</code>.</li>
-          <li>Daty: <code>rrrr-mm-dd</code>, np. <code>2026-11-21</code>.</li>
-          <li>Godziny dostępności: np. <code>Mo-Fr 08:00-16:00</code> albo <code>24/7</code> (rozpoznamy też „pn-pt 8-16”, „całodobowo”).</li>
-          <li>Jedna wartość w jednym polu, adres w osobnych kolumnach.</li>
-        </ul>
-      </details>
-      <p className="form-actions"><button type="button" className="btn btn--primary" onClick={onNext}>Dalej: wgraj plik</button></p>
-    </>
+    <section aria-labelledby="f-title">
+      <h2 id="f-title" ref={head} tabIndex={-1}>{titles[stage]}</h2>
+      {stage === 'upload' && (
+        <>
+          <p><a className="btn btn--primary" href={templateUrl('xlsx')} download>Pobierz wzór w Excelu</a></p>
+          <p>Możesz też wgrać własny plik – dopasujemy kolumny.</p>
+          <details className="details"><summary>Dla specjalistów: wzór CSV</summary><p><a href={csvHref} download="szablon_aed.csv">Pobierz wzór CSV</a></p></details>
+          <RequireLogin role="dysponent" roles={['dysponent', 'moderator']}>
+            <UploadForm inst={inst} setInst={setInst} file={file} setFile={setFile} back={back}
+              onUploaded={async (i) => {
+                setInfo(i);
+                const unknown = Object.values(i.mapowanie_proponowane).filter((t) => t === '').length;
+                if (unknown) go('columns');
+                else { setRep(await confirmMapping(i.import_id, i.mapowanie_proponowane, file?.name ?? '')); go('result'); }
+              }} />
+          </RequireLogin>
+        </>
+      )}
+      {stage === 'columns' && info && (
+        <Columns info={info} back={() => go('upload')} onDone={async (m) => { setRep(await confirmMapping(info.import_id, m, file?.name ?? '')); go('result'); }} />
+      )}
+      {stage === 'result' && rep && (
+        <Results rep={rep} setRep={setRep} reupload={() => go('upload')} onPublished={(r) => { setResult(r); go('done'); }} />
+      )}
+      {stage === 'done' && result && (
+        <div role="status">
+          <div className="callout callout--ok">
+            <p className="callout__title"><Icon name="check" />Dziękujemy! Opublikowaliśmy {result.dodane + result.zaktualizowane + result.scalone} AED.</p>
+            {result.odrzucone > 0 && <p>{result.odrzucone} AED czeka na poprawki. Popraw je w pliku i wgraj go ponownie.</p>}
+          </div>
+          <Badge owner={inst.owner} />
+        </div>
+      )}
+    </section>
   );
 }
 
-function StepUpload({ owner, setOwner, onDone, onBack }: { owner: string; setOwner: (s: string) => void; onDone: (r: RaportWalidacji) => void; onBack: () => void }) {
-  const [file, setFile] = useState<File | null>(null);
-  const [lic, setLic] = useState('CC0-1.0');
-  const [ownerType, setOwnerType] = useState('');
-  const [busy, setBusy] = useState(false);
+function UploadForm({ inst, setInst, file, setFile, back, onUploaded }: {
+  inst: Inst; setInst: (i: Inst) => void; file: File | null; setFile: (f: File | null) => void; back: () => void; onUploaded: (i: ImportInfo) => Promise<void>;
+}) {
+  const [over, setOver] = useState(false);
+  const [pct, setPct] = useState<number | null>(null);
   const [fail, setFail] = useState<Error | null>(null);
+  const input = useRef<HTMLInputElement>(null);
   const v = useValidation({
-    owner: () => (owner.trim() ? '' : 'Wpisz nazwę instytucji lub firmy.'),
-    ownerType: () => (ownerType ? '' : 'Wybierz rodzaj dysponenta.'),
-    file: () => (!file ? 'Wybierz plik CSV, XLSX, JSON albo GeoJSON.'
-      : !/\.(csv|xlsx|json|geojson)$/i.test(file.name) ? 'Ten format nie jest obsługiwany. Wybierz CSV, XLSX, JSON albo GeoJSON.'
-      : file.size > 20 * 1024 * 1024 ? 'Plik jest większy niż 20 MB.' : ''),
+    ...instValidators(inst),
+    file: () => (!file ? 'Wybierz plik z listą AED.'
+      : !/\.(xlsx|csv|json|geojson)$/i.test(file.name) ? `Plik „${file.name}” ma nieobsługiwany format. Zapisz go w Excelu jako .xlsx albo jako CSV i wybierz jeszcze raz.`
+      : file.size > 20 * 1024 * 1024 ? 'Plik jest większy niż 20 MB. Podziel listę na mniejsze pliki.' : ''),
   });
-  const errors = v.errors;
-  // file input: validate on choice (blur fires when the system dialog opens, before a file is picked)
   useEffect(() => { if (file) v.check('file'); }, [file]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function pick(f: File | undefined | null) { if (f) setFile(f); }
+  function onDrop(e: DragEvent) { e.preventDefault(); setOver(false); pick(e.dataTransfer.files?.[0]); }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!v.validateAll()) return;
-    setBusy(true); setFail(null);
+    setFail(null); setPct(0);
     try {
-      const code = `dysponent:${owner.trim().toLocaleLowerCase('pl').normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
-      onDone(await uploadAndValidate(file!, { kodZrodla: code, licencja: lic, dysponentNazwa: owner.trim(), dysponentTyp: ownerType }));
-    } catch (ex) { setFail(ex as Error); } finally { setBusy(false); }
+      const i = await uploadFile(file!, { kodZrodla: sourceCode(inst.owner), licencja: inst.lic, dysponentNazwa: inst.owner.trim(), dysponentTyp: inst.ownerType }, setPct);
+      await onUploaded(i);
+    } catch (ex) {
+      setPct(null);
+      const he = ex instanceof HttpError ? ex : null;
+      setFail(new Error(he?.status === 422 ? `Nie udało się odczytać pliku. ${he.message} Sprawdź, czy to lista AED zapisana w Excelu lub CSV.` : (ex as Error).message));
+    }
   }
 
   return (
-    <form onSubmit={submit} noValidate aria-labelledby="step-title">
+    <form onSubmit={submit} noValidate aria-labelledby="f-title">
       <RequiredNote />
-      <ErrorSummary errors={v.summary} fieldIds={FIELD_IDS} focusToken={v.focusToken} />
+      <ErrorSummary errors={v.summary} fieldIds={{ owner: 'i-owner', ownerType: 'i-type', file: 'up-btn' }} focusToken={v.focusToken} />
+      <InstFields inst={inst} setInst={setInst} v={v} />
       <div className="field">
-        <label htmlFor="up-owner">Nazwa dysponenta<Req /></label>
-        <input id="up-owner" type="text" autoComplete="organization" required onBlur={() => v.check('owner')} value={owner} onChange={(e) => setOwner(e.target.value)} aria-invalid={!!errors.owner} aria-describedby={errors.owner ? 'err-owner' : undefined} />
-        {errors.owner && <p id="err-owner" className="field-error">{errors.owner}</p>}
-      </div>
-      <div className="field">
-        <label htmlFor="up-owner-type">Rodzaj dysponenta<Req /></label>
-        <p id="up-owner-type-hint" className="hint">Trafi do każdego wiersza, w którym plik nie ma tej kolumny.</p>
-        <select id="up-owner-type" required onBlur={() => v.check('ownerType')} value={ownerType} onChange={(e) => setOwnerType(e.target.value)} aria-invalid={!!errors.ownerType}
-          aria-describedby={`up-owner-type-hint${errors.ownerType ? ' err-owner-type' : ''}`}>
-          <option value="">– wybierz –</option>
-          {dictValues('dysponent_typ').map((d) => <option key={d.wartosc} value={d.wartosc}>{label('dysponent_typ', d.wartosc)}</option>)}
-        </select>
-        {errors.ownerType && <p id="err-owner-type" className="field-error">{errors.ownerType}</p>}
-      </div>
-      <div className="field">
-        <label htmlFor="up-file">Plik z danymi<Req /></label>
-        <p id="up-file-hint" className="hint">CSV, XLSX, JSON lub GeoJSON, do 20 MB. Rozpoznamy separator, kodowanie i przecinek dziesiętny. Do testu: <code>data/sample/zrodlo_gmina_przyklad.csv</code>.</p>
-        <input id="up-file" type="file" required accept=".csv,.xlsx,.json,.geojson" onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-invalid={!!errors.file} aria-describedby={`up-file-hint${errors.file ? ' err-file' : ''}`} />
-        {errors.file && <p id="err-file" className="field-error">{errors.file}</p>}
-      </div>
-      <fieldset>
-        <legend>Licencja, na której udostępniasz dane<Req /></legend>
-        <div className="choices">
-          {dictValues('licencja').filter((l) => l.wartosc !== 'ODbL-1.0').map((l) => (
-            <label key={l.wartosc}><input type="radio" name="lic" checked={lic === l.wartosc} onChange={() => setLic(l.wartosc)} /> {l.wartosc} – {l.znaczenie}</label>
-          ))}
+        <span id="up-label" className="label-like"><strong>Plik z listą AED</strong><Req /></span>
+        <div className={`dropzone${over ? ' is-over' : ''}`} onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={onDrop}
+          onClick={() => input.current?.click()}>
+          <p>Przeciągnij plik tutaj albo kliknij „Wybierz plik z komputera”.</p>
+          <input ref={input} id="up-file" type="file" tabIndex={-1} required accept=".xlsx,.csv,.json,.geojson" aria-labelledby="up-label up-btn" aria-describedby="up-hint"
+            aria-invalid={!!v.errors.file} onChange={(e) => pick(e.target.files?.[0])} />
+          <button id="up-btn" type="button" className="btn btn--secondary" onClick={(e) => { e.stopPropagation(); input.current?.click(); }}>Wybierz plik z komputera</button>
+          <p id="up-hint" className="hint">Plik z Excela (.xlsx) albo CSV, największy 20 MB.</p>
+          {file && <p><strong>Wybrany plik:</strong> {file.name}</p>}
         </div>
-      </fieldset>
+        {v.errors.file && <p className="field-error">{v.errors.file}</p>}
+      </div>
+      {pct !== null && (
+        <div className="field">
+          <label htmlFor="up-progress">Wysyłanie pliku: {pct}%</label>
+          <progress id="up-progress" className="progress" max={100} value={pct} />
+          {pct === 100 && <p role="status">Sprawdzamy plik…</p>}
+        </div>
+      )}
       {fail && <ErrorBox error={fail} />}
       <p className="form-actions">
-        <button type="button" className="btn btn--secondary" onClick={onBack}>Wstecz</button>
-        <button type="submit" className="btn btn--primary" disabled={busy}>{busy ? 'Sprawdzam plik…' : 'Wgraj i sprawdź'}</button>
+        <button type="submit" className="btn btn--primary" disabled={pct !== null && !fail}>Sprawdź plik</button>
+        <button type="button" className="btn btn--secondary" onClick={back}>Wstecz</button>
       </p>
-      {busy && <p role="status">Sprawdzam plik…</p>}
     </form>
   );
 }
 
-function StepMapping({ rep, onNext, onBack }: { rep: RaportWalidacji; onNext: () => void; onBack: () => void }) {
-  const [map, setMap] = useState(rep.mapowanie);
-  const fmt = rep.wykryty_format;
-  return (
-    <>
-      <p>
-        Plik <strong>{rep.plik}</strong>: {rep.wiersze} wierszy. Wykryto: separator <code>{fmt.separator ?? '?'}</code>, kodowanie {fmt.kodowanie ?? '?'}
-        {fmt.przecinek_dziesietny ? ', przecinek dziesiętny (zamienimy na kropkę)' : ''}.
-      </p>
-      <p>Sprawdź, czy kolumny z Twojego pliku trafiają do właściwych pól. Jedna kolumna może wypełnić kilka pól, np. adres.</p>
-      <div className="table-wrap" tabIndex={0} role="region" aria-labelledby="cap-map">
-        <table>
-          <caption id="cap-map">Dopasowanie kolumn</caption>
-          <thead><tr><th scope="col">Kolumna w pliku</th><th scope="col">Pole we wzorcowym zakresie</th></tr></thead>
-          <tbody>
-            {Object.entries(map).map(([col, target], i) => (
-              <tr key={col}>
-                <th scope="row">{col}</th>
-                <td>
-                  {Array.isArray(target) ? (
-                    <span>dzielimy na: {target.map(fieldLabel).join(', ')}</span>
-                  ) : (
-                    <>
-                      <label htmlFor={`map-${i}`} className="visually-hidden">Pole dla kolumny {col}</label>
-                      <select id={`map-${i}`} value={target} onChange={(e) => setMap({ ...map, [col]: e.target.value })}>
-                        <option value="">– pomiń kolumnę –</option>
-                        {FIELDS.map((f) => <option key={f.nazwa_pola} value={f.nazwa_pola}>{f.etykieta} ({f.nazwa_pola})</option>)}
-                      </select>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="form-actions">
-        <button type="button" className="btn btn--secondary" onClick={onBack}>Wstecz</button>
-        <button type="button" className="btn btn--primary" onClick={onNext}>Dalej: raport</button>
-      </p>
-    </>
-  );
-}
-
-function StepReport({ rep, onNext, onBack }: { rep: RaportWalidacji; onNext: () => void; onBack: () => void }) {
-  return (
-    <>
-      <ul className="stats" aria-label="Podsumowanie walidacji">
-        <li className="stat stat--ok"><span className="stat__n">{rep.poprawne}</span> poprawnych wierszy</li>
-        <li className="stat stat--warn"><span className="stat__n">{rep.z_ostrzezeniami}</span> z ostrzeżeniami</li>
-        <li className="stat stat--err"><span className="stat__n">{rep.bledy}</span> z błędami</li>
-        <li className="stat"><span className="stat__n">{rep.duplikaty.length}</span> duplikatów</li>
-      </ul>
-      {rep.problemy.length > 0 && (
-        <div className="table-wrap" tabIndex={0} role="region" aria-labelledby="cap-prob">
-          <table>
-            <caption id="cap-prob">Co poprawiliśmy lub co musisz poprawić</caption>
-            <thead><tr><th scope="col">Wiersz</th><th scope="col">Pole</th><th scope="col">Rodzaj</th><th scope="col">Było</th><th scope="col">Propozycja</th><th scope="col">Wyjaśnienie</th></tr></thead>
-            <tbody>
-              {rep.problemy.map((p, i) => (
-                <tr key={i}>
-                  <td>{p.wiersz}</td><td>{fieldLabel(p.pole)}</td>
-                  <td>{p.poziom === 'blad' ? '× błąd' : '! ostrzeżenie'}</td>
-                  <td><code>{p.wartosc_zrodlowa ?? '–'}</code></td><td><code>{p.propozycja ?? '–'}</code></td><td>{p.komunikat}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {rep.brakujace_pola_wymagane.length > 0 && (
-        <div className="callout callout--warn" role="note">
-          <p className="callout__title">Brakuje kolumn z polami wymaganymi</p>
-          <p>{rep.brakujace_pola_wymagane.map(fieldLabel).join(', ')}. Uzupełnimy je wartościami domyślnymi do weryfikacji – możesz je dodać w pliku i wgrać ponownie.</p>
-        </div>
-      )}
-      {rep.duplikaty.length > 0 && (
-        <>
-          <h3>Te AED już są w zbiorze</h3>
-          <ul>
-            {rep.duplikaty.map((d) => (
-              <li key={d.wiersz + d.id_aed}>Wiersz {d.wiersz} = <code>{d.id_aed}</code> ze źródła {d.zrodlo} ({d.odleglosc_m.toLocaleString('pl-PL')} m): {d.decyzja}.</li>
-            ))}
-          </ul>
-        </>
-      )}
-      <p className="form-actions">
-        <button type="button" className="btn btn--secondary" onClick={onBack}>Wgraj poprawiony plik</button>
-        <button type="button" className="btn btn--primary" onClick={onNext}>Dalej: zatwierdź</button>
-      </p>
-    </>
-  );
-}
-
-function StepApprove({ rep, owner, result, setResult, onBack }: { rep: RaportWalidacji; owner: string; result: WynikImportu | null; setResult: (r: WynikImportu) => void; onBack: () => void }) {
+/** Only columns we did not recognise, with an example value from the file. */
+function Columns({ info, back, onDone }: { info: ImportInfo; back: () => void; onDone: (m: Record<string, string | string[]>) => Promise<void> }) {
+  const [map, setMap] = useState(info.mapowanie_proponowane);
   const [busy, setBusy] = useState(false);
   const [fail, setFail] = useState<Error | null>(null);
-  async function approve() {
-    setBusy(true); setFail(null);
-    try { setResult(await approveImport(rep)); } catch (e) { setFail(e as Error); } finally { setBusy(false); }
+  const unknown = Object.keys(info.mapowanie_proponowane).filter((c) => info.mapowanie_proponowane[c] === '');
+  const example = (c: string) => { const row = info.podglad.find((r) => r[c] !== undefined && r[c] !== null && String(r[c]).trim() !== ''); return row ? String(row[c]) : '—'; };
+  async function next(e: FormEvent) {
+    e.preventDefault(); setBusy(true); setFail(null);
+    try { await onDone(map); } catch (ex) { setFail(ex as Error); } finally { setBusy(false); }
   }
-  if (result) {
+  return (
+    <form onSubmit={next} noValidate aria-labelledby="f-title">
+      <p>Plik ma {info.liczba_wierszy} wierszy. Rozpoznaliśmy {Object.keys(map).length - unknown.length} z {Object.keys(map).length} kolumn. Wskaż, co jest w pozostałych – albo zostaw „Pomiń tę kolumnę”.</p>
+      {unknown.map((c, i) => (
+        <div className="field" key={c}>
+          <label htmlFor={`col-${i}`}>Kolumna „{c}”</label>
+          <p id={`col-${i}-hint`} className="hint">Przykład z pliku: „{example(c)}”</p>
+          <select id={`col-${i}`} aria-describedby={`col-${i}-hint`} value={String(map[c] ?? '')} onChange={(e) => setMap({ ...map, [c]: e.target.value })}>
+            <option value="">Pomiń tę kolumnę</option>
+            {FIELDS.map((f) => <option key={f.nazwa_pola} value={f.nazwa_pola}>{f.etykieta}</option>)}
+          </select>
+        </div>
+      ))}
+      {fail && <ErrorBox error={fail} />}
+      <p className="form-actions">
+        <button type="submit" className="btn btn--primary" disabled={busy}>{busy ? 'Sprawdzam…' : 'Dalej'}</button>
+        <button type="button" className="btn btn--secondary" onClick={back}>Wstecz</button>
+      </p>
+    </form>
+  );
+}
+
+const FIELD_HINTS: Record<string, string> = {
+  kod_pocztowy: 'Wpisz go w formie 00-000, np. 85-005.',
+  numer_budynku: 'Wpisz numer budynku, np. 12A.',
+  godziny_dostepnosci: 'Np. pn-pt 8-16 albo całą dobę.',
+  szerokosc_geograficzna: 'Sprawdź położenie AED – liczba z kropką, np. 52.2297.',
+  dlugosc_geograficzna: 'Sprawdź położenie AED – liczba z kropką, np. 21.0122.',
+  miejscowosc: 'Wpisz nazwę miejscowości.',
+  nazwa_obiektu: 'Wpisz nazwę budynku lub miejsca.',
+};
+const human = (wiersz: number, pole: string | null, komunikat: string) =>
+  `W wierszu ${wiersz}${pole ? ` (${fieldLabel(pole).toLocaleLowerCase('pl')})` : ''}: ${komunikat.replace(/\.$/, '')}.${pole && FIELD_HINTS[pole] ? ` ${FIELD_HINTS[pole]}` : ''}`;
+
+function Results({ rep, setRep, reupload, onPublished }: { rep: RaportWalidacji; setRep: (r: RaportWalidacji) => void; reupload: () => void; onPublished: (r: WynikImportu) => void }) {
+  const errors = rep.problemy.filter((p) => p.poziom === 'blad');
+  const errRows = [...new Set(errors.map((p) => p.wiersz))];
+  const ready = Math.max(0, rep.poprawne - rep.duplikaty.length);
+  const [fix, setFix] = useState<Record<string, string>>({});
+  const [dupDec, setDupDec] = useState<Record<number, 'to_samo' | 'inne'>>(() => Object.fromEntries(rep.duplikaty.map((d) => [d.wiersz, 'to_samo'])));
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [fail, setFail] = useState<Error | null>(null);
+  const key = (w: number, p: string | null) => `${w}|${p ?? ''}`;
+
+  async function saveFixes() {
+    setMsg(''); setFail(null);
+    const poprawki = errors.filter((p) => p.pole && fix[key(p.wiersz, p.pole)]?.trim()).map((p) => ({ wiersz: p.wiersz, pole: p.pole!, wartosc: fix[key(p.wiersz, p.pole)].trim() }));
+    if (!poprawki.length) { setMsg('Wpisz poprawną wartość przynajmniej w jednym polu.'); return; }
+    try { setRep({ ...(await fixImportRows(rep.import_id!, poprawki)), import_id: rep.import_id }); setFix({}); setMsg('Zapisaliśmy poprawki i sprawdziliśmy plik jeszcze raz.'); }
+    catch (ex) {
+      if (ex instanceof NotSupported) setMsg('Poprawianie w tabeli jeszcze nie działa na serwerze. Popraw te wiersze w pliku i wgraj go ponownie – albo opublikuj teraz gotowe AED.');
+      else setFail(ex as Error);
+    }
+  }
+  async function saveDups() {
+    setMsg(''); setFail(null);
+    try { await decideDuplicates(rep.import_id!, Object.entries(dupDec).map(([w, d]) => ({ wiersz: Number(w), decyzja: d }))); setMsg('Zapisaliśmy Twój wybór.'); }
+    catch (ex) {
+      if (ex instanceof NotSupported) setMsg('Na razie serwer łączy takie AED automatycznie (jak „To samo AED”). Wybór „To inne AED” zadziała po aktualizacji serwera.');
+      else setFail(ex as Error);
+    }
+  }
+  async function publish() {
+    setBusy(true); setFail(null);
+    try { onPublished(await approveImport(rep)); } catch (ex) { setFail(ex as Error); } finally { setBusy(false); }
+  }
+
+  return (
+    <>
+      <p>Sprawdziliśmy {rep.wiersze} wierszy z pliku „{rep.plik}”.</p>
+      <p role="status" className="status-line">{msg}</p>
+
+      <h3 className="group-title"><Icon name="check" />Gotowe ({ready})</h3>
+      <p>{ready ? 'Te AED możemy od razu dodać do mapy.' : 'Żadne AED nie jest jeszcze gotowe.'}</p>
+      {(rep as RaportWalidacji & { uzupelnienia?: { wiersz: number; pole: string | null; komunikat: string }[] }).uzupelnienia?.length ? (
+        <details className="details"><summary>Co poprawiliśmy sami</summary>
+          <ul>{(rep as RaportWalidacji & { uzupelnienia: { wiersz: number; pole: string | null; komunikat: string }[] }).uzupelnienia.slice(0, 50).map((p, i) => <li key={i}>{human(p.wiersz, p.pole, p.komunikat)}</li>)}</ul>
+        </details>
+      ) : null}
+
+      <h3 className="group-title"><Icon name="x" />Do poprawy ({errRows.length})</h3>
+      {errors.length === 0 ? <p>Nic nie trzeba poprawiać.</p> : (
+        <>
+          <div className="table-wrap" tabIndex={0} role="region" aria-labelledby="cap-fix">
+            <table className="fix-table">
+              <caption id="cap-fix">Popraw wartości w tabeli</caption>
+              <thead><tr><th scope="col">Co jest nie tak</th><th scope="col">Poprawna wartość</th></tr></thead>
+              <tbody>
+                {errors.map((p, i) => (
+                  <tr key={i}>
+                    <td>{human(p.wiersz, p.pole, p.komunikat)}{p.wartosc_zrodlowa ? <> Było: „{String(p.wartosc_zrodlowa)}”.</> : null}</td>
+                    <td>{p.pole ? (
+                      <>
+                        <label className="visually-hidden" htmlFor={`fix-${i}`}>Wiersz {p.wiersz}, {fieldLabel(p.pole)}</label>
+                        <input id={`fix-${i}`} type="text" autoComplete="off" value={fix[key(p.wiersz, p.pole)] ?? String(p.propozycja ?? '')} onChange={(e) => setFix({ ...fix, [key(p.wiersz, p.pole)]: e.target.value })} />
+                      </>
+                    ) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="form-actions"><button type="button" className="btn btn--secondary" onClick={saveFixes}>Zapisz poprawki</button></p>
+        </>
+      )}
+
+      <h3 className="group-title"><Icon name="question" />Może już jest na mapie ({rep.duplikaty.length})</h3>
+      {rep.duplikaty.length === 0 ? <p>Nie znaleźliśmy takich AED.</p> : (
+        <>
+          {rep.duplikaty.map((d) => (
+            <fieldset key={d.wiersz}>
+              <legend>Wiersz {d.wiersz}: w tym samym miejscu (około {Math.round(d.odleglosc_m)} m) jest już AED na mapie.</legend>
+              <div className="big-choices">
+                <label htmlFor={`dup-${d.wiersz}-s`}><input id={`dup-${d.wiersz}-s`} type="radio" name={`dup-${d.wiersz}`} checked={dupDec[d.wiersz] === 'to_samo'} onChange={() => setDupDec({ ...dupDec, [d.wiersz]: 'to_samo' })} /> To samo AED</label>
+                <label htmlFor={`dup-${d.wiersz}-i`}><input id={`dup-${d.wiersz}-i`} type="radio" name={`dup-${d.wiersz}`} checked={dupDec[d.wiersz] === 'inne'} onChange={() => setDupDec({ ...dupDec, [d.wiersz]: 'inne' })} /> To inne AED</label>
+              </div>
+            </fieldset>
+          ))}
+          <p className="form-actions"><button type="button" className="btn btn--secondary" onClick={saveDups}>Zapisz wybór</button></p>
+        </>
+      )}
+
+      {fail && <ErrorBox error={fail} />}
+      <p className="form-actions">
+        <button type="button" className="btn btn--primary" onClick={publish} disabled={busy || rep.poprawne === 0}>{busy ? 'Publikuję…' : 'Opublikuj gotowe teraz, resztę poprawię później'}</button>
+        <button type="button" className="btn btn--secondary" onClick={reupload}>Wgraj poprawiony plik</button>
+      </p>
+    </>
+  );
+}
+
+// ======================= MANUAL =======================
+function ManualFlow({ inst, setInst, saved, back }: { inst: Inst; setInst: (i: Inst) => void; saved: Draft | null; back: () => void }) {
+  const [list, setList] = useState<AedDraft[]>(saved?.list ?? []);
+  const [current, setCurrent] = useState<AedDraft>(saved?.current ?? emptyDraft());
+  const [step, setStep] = useState(saved?.step ?? 0); // 0 = institution data, 1–4 wizard, 5 = list
+  const [editing, setEditing] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [results, setResults] = useState<{ ok: number; errors: string[] } | null>(null);
+  const v = useValidation(instValidators(inst));
+  const head = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => { if (!results) saveDraft({ inst, list, current, step }); }, [inst, list, current, step, results]);
+  useEffect(() => { if (step === 0 || step === 5) head.current?.focus(); }, [step]);
+
+  function addToList() {
+    if (editing !== null) { setList(list.map((x, i) => (i === editing ? current : x))); setEditing(null); }
+    else setList([...list, current]);
+    setCurrent(emptyDraft()); setStep(5);
+  }
+  async function publishAll() {
+    setBusy(true);
+    const errors: string[] = []; let ok = 0; const left: AedDraft[] = [];
+    for (const [i, d] of list.entries()) {
+      try {
+        await createAed({ ...draftToRecord(d), dysponent_nazwa: inst.owner.trim(), dysponent_typ: inst.ownerType, licencja: inst.lic, kod_zrodla: sourceCode(inst.owner) });
+        ok++;
+      } catch (ex) {
+        left.push(d);
+        const f = ex instanceof HttpError ? ex.fields : {};
+        errors.push(`AED nr ${i + 1} („${d.nazwa}”): ${Object.keys(f).length ? Object.entries(f).map(([k, m]) => `${fieldLabel(k)} – ${m}`).join('; ') : (ex as Error).message}`);
+      }
+    }
+    setList(left); setBusy(false); setResults({ ok, errors });
+    if (!left.length) saveDraft(null);
+  }
+
+  if (results && list.length === 0) {
     return (
       <div role="status">
-        <div className="callout callout--ok">
-          <p className="callout__title"><Icon name="check" />Dziękujemy! Dane zostały włączone do zbioru.</p>
-          <p>Dodane: {result.dodane} · zaktualizowane: {result.zaktualizowane} · scalone z istniejącymi: {result.scalone} · odrzucone: {result.odrzucone}.</p>
-        </div>
-        <Badge owner={owner} />
+        <div className="callout callout--ok"><p className="callout__title"><Icon name="check" />Dziękujemy! Dodaliśmy {results.ok} AED do mapy.</p></div>
+        <Badge owner={inst.owner} />
       </div>
     );
   }
+
   return (
-    <>
-      <p>Po zatwierdzeniu {rep.poprawne} wierszy trafi do otwartego zbioru AED publikowanego w dane.gov.pl. Wiersze z błędami ({rep.bledy}) pominiemy.</p>
-      {fail && <ErrorBox error={fail} />}
-      <p className="form-actions">
-        <button type="button" className="btn btn--secondary" onClick={onBack}>Wstecz</button>
-        <button type="button" className="btn btn--primary" onClick={approve} disabled={busy}>{busy ? 'Zapisuję…' : 'Zatwierdź i opublikuj'}</button>
-      </p>
-    </>
+    <RequireLogin role="dysponent" roles={['dysponent', 'moderator']}>
+      <p className="draft-note">Możesz wrócić później – to, co wpiszesz, zapisuje się na tym urządzeniu.</p>
+      {step === 0 && (
+        <form noValidate onSubmit={(e) => { e.preventDefault(); if (v.validateAll()) setStep(list.length ? 5 : 1); }} aria-labelledby="m-title">
+          <h2 id="m-title" ref={head} tabIndex={-1}>Twoja instytucja</h2>
+          <RequiredNote />
+          <ErrorSummary errors={v.summary} fieldIds={{ owner: 'i-owner', ownerType: 'i-type' }} focusToken={v.focusToken} />
+          <InstFields inst={inst} setInst={setInst} v={v} />
+          <p className="form-actions">
+            <button type="submit" className="btn btn--primary">Dalej</button>
+            <button type="button" className="btn btn--secondary" onClick={back}>Wstecz</button>
+          </p>
+        </form>
+      )}
+      {step >= 1 && step <= 4 && (
+        <>
+          <p><strong>{editing !== null ? `Zmieniasz AED nr ${editing + 1}` : `AED nr ${list.length + 1}`}</strong> – {inst.owner}</p>
+          <AedWizard variant="institution" backFromFirst={() => setStep(list.length ? 5 : 0)} draft={current} setDraft={setCurrent} step={step} setStep={setStep} onSubmit={addToList} submitLabel={editing !== null ? 'Zapisz zmiany' : 'Dodaj do listy'} />
+        </>
+      )}
+      {step === 5 && (
+        <section aria-labelledby="m-list">
+          <h2 id="m-list" ref={head} tabIndex={-1}>Twoje AED do opublikowania ({list.length})</h2>
+          {results && results.errors.length > 0 && (
+            <div className="callout callout--error" role="alert">
+              <p className="callout__title">Dodaliśmy {results.ok} AED. Tych nie udało się dodać – popraw je:</p>
+              <ul>{results.errors.map((e) => <li key={e}>{e}</li>)}</ul>
+            </div>
+          )}
+          {list.length === 0 ? <p>Lista jest pusta.</p> : (
+            <ul className="aed-list">
+              {list.map((d, i) => (
+                <li key={i} className="aed-item">
+                  <h3 className="aed-item__title">{i + 1}. {d.nazwa}</h3>
+                  <p>{[d.ulica, d.numer].filter(Boolean).join(' ')}, {d.kod} {d.miejscowosc} · {hoursInWords(d.hours)}</p>
+                  <p className="aed-item__actions">
+                    <button type="button" className="btn btn--tertiary" onClick={() => { setCurrent(d); setEditing(i); setStep(4); }}>Zmień<span className="visually-hidden"> AED nr {i + 1}</span></button>
+                    <button type="button" className="btn btn--tertiary" onClick={() => setList(list.filter((_, j) => j !== i))}>Usuń z listy<span className="visually-hidden"> AED nr {i + 1}</span></button>
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="form-actions">
+            <button type="button" className="btn btn--primary" onClick={publishAll} disabled={busy || !list.length}>{busy ? 'Publikuję…' : `Opublikuj wszystkie (${list.length})`}</button>
+            <button type="button" className="btn btn--secondary" onClick={() => { setCurrent(emptyDraft()); setEditing(null); setStep(1); }}>Dodaj kolejne AED</button>
+            <button type="button" className="btn btn--tertiary" onClick={() => setStep(0)}>Zmień dane instytucji</button>
+          </p>
+        </section>
+      )}
+    </RequireLogin>
   );
 }
 

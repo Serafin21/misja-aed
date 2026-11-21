@@ -1,6 +1,6 @@
 // REST client for CONTRACT §5. Falls back to in-browser mocks (data/sample/) when the API is unreachable.
 import * as mock from '../mocks/mockApi';
-import type { WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ApiError, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
+import type { WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ApiError, Miejsce, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
 
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
 export const API_BASE = env.VITE_API_BASE || '/api/v1';
@@ -182,6 +182,85 @@ export function uploadAndValidate(file: File, m: ImportMeta): Promise<RaportWali
   );
 }
 
+// ---------- E5 for institutions: file upload with progress, column matching, single AED form ----------
+export interface ImportInfo {
+  import_id: string; liczba_wierszy: number; kolumny: string[];
+  mapowanie_proponowane: Record<string, string | string[]>; podglad: Record<string, unknown>[];
+}
+
+/** Server does not support this yet (CR to Model A) – the UI explains what to do instead. */
+export class NotSupported extends Error {}
+
+/** Upload with a real progress bar (XMLHttpRequest – fetch has no upload progress). */
+export function uploadFile(file: File, m: ImportMeta, onProgress: (pct: number) => void): Promise<ImportInfo> {
+  const real = () => new Promise<ImportInfo>((resolve, reject) => {
+    const fd = new FormData();
+    fd.append('plik', file);
+    fd.append('kod_zrodla', m.kodZrodla);
+    fd.append('licencja', m.licencja);
+    fd.append('dysponent_nazwa', m.dysponentNazwa);
+    fd.append('dysponent_typ', m.dysponentTyp);
+    fd.append('nazwa_zrodla', m.dysponentNazwa);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE}/import`);
+    xhr.setRequestHeader('Accept', 'application/json');
+    if (session) xhr.setRequestHeader('Authorization', `Bearer ${session.token}`);
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    xhr.onerror = () => reject(new Unreachable());
+    xhr.onload = () => {
+      const isJson = (xhr.getResponseHeader('content-type') ?? '').includes('json');
+      if (!isJson) { reject(new Unreachable()); return; }
+      const body = JSON.parse(xhr.responseText);
+      if (xhr.status >= 200 && xhr.status < 300) { onProgress(100); resolve(body as ImportInfo); }
+      else {
+        if (xhr.status === 401 && session) setSession(null);
+        reject(new HttpError(xhr.status, body?.error ?? null));
+      }
+    };
+    xhr.send(fd);
+  });
+  return withFallback(real, async () => { onProgress(100); return mock.mockImportInfo(file.name); });
+}
+
+export function confirmMapping(importId: string, mapowanie: Record<string, string | string[]>, fileName: string): Promise<RaportWalidacji> {
+  return withFallback(
+    async () => ({ ...(await http<RaportWalidacji>(`/import/${importId}/mapowanie`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mapowanie }) })), import_id: importId }),
+    () => mock.mockValidation(fileName),
+  );
+}
+
+async function optional<T>(call: () => Promise<T>): Promise<T> {
+  try { return await call(); }
+  catch (e) { if (e instanceof HttpError && (e.status === 404 || e.status === 405)) throw new NotSupported(); throw e; }
+}
+
+/** CR to A: PATCH /import/{id}/wiersze – fix values in the uploaded rows without uploading the file again. */
+export function fixImportRows(importId: string, poprawki: { wiersz: number; pole: string; wartosc: string }[]): Promise<RaportWalidacji> {
+  return withFallback(
+    () => optional(() => http<RaportWalidacji>(`/import/${importId}/wiersze`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ poprawki }) })),
+    () => Promise.reject(new NotSupported()),
+  );
+}
+
+/** CR to A: POST /import/{id}/duplikaty – the institution decides "to samo AED" / "inne AED". */
+export function decideDuplicates(importId: string, decyzje: { wiersz: number; decyzja: 'to_samo' | 'inne' }[]): Promise<unknown> {
+  return withFallback(
+    () => optional(() => http<unknown>(`/import/${importId}/duplikaty`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decyzje }) })),
+    () => Promise.reject(new NotSupported()),
+  );
+}
+
+/** Single AED typed in by an institution (POST /aed, login required). */
+export function createAed(record: Record<string, unknown>): Promise<{ id_aed: string }> {
+  return withFallback(
+    async () => {
+      const r = await http<{ data: { id: string } }>(`/aed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record) });
+      return { id_aed: r.data.id };
+    },
+    () => mock.mockCreateAed(),
+  );
+}
+
 export const exportUrl = (file: string) => `${API_BASE}/eksport/${file}`;
 
 /** Called once at start-up so the UI knows early whether it shows sample data. */
@@ -228,6 +307,14 @@ export function listPoints(): Promise<AedPoint[]> {
     const r = await http<PointsFC>(`/aed/punkty`);
     return r.features.map((f) => ({ id_aed: f.id, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], ...f.properties }));
   }, () => mock.mockPoints());
+}
+
+/** Place search for the map and "Znajdź AED": voivodeships, gminy, localities, streets, addresses (GET /miejsca). */
+export function searchPlaces(q: string, blisko?: { lat: number; lon: number } | null): Promise<Miejsce[]> {
+  return withFallback(async () => {
+    const r = await http<{ data: Miejsce[] }>(`/miejsca${qs({ q, blisko: blisko ? `${blisko.lat.toFixed(5)},${blisko.lon.toFixed(5)}` : undefined })}`);
+    return r.data;
+  }, () => mock.mockPlaces(q));
 }
 
 /** Full records for the given ids, in the same order (list next to the map: what is visible on the map). */

@@ -4,9 +4,9 @@
 :root {
   /* Typography */
   --font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --font-size-base: 16px;          /* desktop */
-  --font-size-base-mobile: 14px;   /* < 700 px */
-  --font-size-button: 16px;
+  --font-size-base: 18px;          /* min. 18 px everywhere (TL: prosta strona) */
+  --font-size-base-mobile: 18px;   /* also on phones */
+  --font-size-button: 18px;
   --font-weight-regular: 400;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
@@ -17,6 +17,7 @@
   --color-bg: #FFFFFF;
   --color-surface: #F5F5F5;        /* flat panels, filters, footer */
   --color-surface-strong: #F2F2F2; /* prototype notice bar */
+  --color-call: #A7162D;           /* „Dzwoń 112” – emergency, same value as error */
   --color-border: #D2D2D2;         /* decorative 1 px borders */
   --color-border-input: #767676;   /* form controls – 4.5:1 on white (WCAG 1.4.11) */
   --color-on-action: #FFFFFF;
@@ -61,6 +62,7 @@
   --space-l: 32px;
   --radius: 4px;
   --border-width: 1px;
-  --control-height: 44px;
+  --control-height: 48px;          /* fields and buttons */
+  --gap-clickable: 8px;            /* min. gap between clickable elements */
   --maxw: 1180px;
 }

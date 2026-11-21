@@ -16,15 +16,16 @@ export function About() {
       <p>To prototyp przygotowany przez zespół uczestników hackathonu HackNation 2026 w ramach zadania Ministerstwa Cyfryzacji „Misja AED – dane na ratunek”. <strong>Nie jest serwisem administracji publicznej</strong> i nie zastępuje numeru alarmowego 112.</p>
       <h2>Co robi</h2>
       <ul>
-        <li>Zbiera dane o defibrylatorach AED z wielu źródeł (pliki dysponentów, OpenStreetMap) i ujednolica je według wzorcowego zakresu danych.</li>
-        <li>Publikuje zbiór w formatach dla portalu dane.gov.pl: CSV, GeoJSON, JSON-LD, API, metadane i plik XML do automatycznego zasilania.</li>
+        <li>Zbiera informacje o defibrylatorach AED z wielu miejsc (od instytucji, które je mają, i z mapy OpenStreetMap) i zapisuje je w jeden, ten sam sposób.</li>
+        <li>Udostępnia te informacje w portalu dane.gov.pl, żeby mogła z nich korzystać każda mapa i aplikacja.</li>
         <li>Pokazuje najbliższe AED, które są dostępne teraz, i to, jak aktualne są dane o każdym z nich.</li>
-        <li>Pomaga dysponentom wgrać swoje dane w kilku krokach, z raportem błędów.</li>
+        <li>Pomaga instytucjom dodać swoje AED: z pliku albo ręcznie, krok po kroku.</li>
       </ul>
       <h2>Więcej</h2>
       <ul>
-        <li><Link to="/dane">Dane i API</Link> – pliki do pobrania i opis pól.</li>
-        <li><Link to="/zrodla">Źródła danych</Link> – zakres referencyjny każdego źródła.</li>
+        <li><Link to="/pierwsza-pomoc">Pierwsza pomoc: jak użyć AED</Link></li>
+        <li><Link to="/akcja">Akcja „AED w danych”</Link> – zachęcamy instytucje, żeby dodały swoje AED.</li>
+        <li>Dla specjalistów: <Link to="/dane">zbiór danych</Link> i <Link to="/zrodla">źródła danych</Link>.</li>
         <li><ExternalLink href={REPO}>Kod źródłowy i dokumentacja w serwisie GitHub</ExternalLink></li>
         <li><ExternalLink href={`${REPO}/blob/main/docs/AI_USAGE.md`}>Zakres wykorzystania sztucznej inteligencji</ExternalLink></li>
       </ul>
@@ -83,7 +84,7 @@ export function Privacy() {
         <li>Oprogramowanie serwera zapisuje standardowe dzienniki techniczne: adres IP, czas i adres zapytania (przy wyszukiwaniu najbliższych AED – także współrzędne). W prototypie nie analizujemy ich.</li>
         <li>Aby ograniczyć nadużycia, serwer pamięta adres IP przez minutę przy wysyłaniu zgłoszeń i potwierdzeń (tylko w pamięci, bez zapisu w bazie).</li>
         <li>Fragmenty mapy pobierane są z serwera OpenStreetMap, który otrzymuje Twój adres IP. Zasady: <ExternalLink href="https://osmfoundation.org/wiki/Privacy_Policy">polityka prywatności OpenStreetMap Foundation</ExternalLink>.</li>
-        <li>Konta dysponenta i moderatora w prototypie to wspólne konta demonstracyjne – nie są przypisane do osób.</li>
+        <li>Konta instytucji i moderatora w prototypie to wspólne konta demonstracyjne – nie są przypisane do osób.</li>
       </ul>
       <p>Więcej o tym, co przeglądarka przechowuje: <Link to="/cookies">Pliki cookies i pamięć przeglądarki</Link>.</p>
     </article>
@@ -95,13 +96,14 @@ export function Cookies() {
   return (
     <article className="prose">
       <h1 id="page-title">Pliki cookies i pamięć przeglądarki</h1>
-      <p className="lead">Serwis nie używa plików cookies ani narzędzi analitycznych.</p>
+      <p className="lead">Serwis nie używa plików cookies ani narzędzi analitycznych. Przeglądarka przechowuje tylko to, co jest w tabeli.</p>
       <div className="table-wrap" tabIndex={0} role="region" aria-labelledby="cap-store">
         <table>
           <caption id="cap-store">Co przeglądarka przechowuje</caption>
           <thead><tr><th scope="col">Nazwa</th><th scope="col">Rodzaj</th><th scope="col">Po co</th><th scope="col">Jak długo</th></tr></thead>
           <tbody>
-            <tr><td><code>aed.session</code></td><td>pamięć sesji przeglądarki (sessionStorage)</td><td>przechowuje token logowania na konto demonstracyjne dysponenta albo moderatora – tylko po zalogowaniu</td><td>do wylogowania albo zamknięcia karty</td></tr>
+            <tr><td><code>aed.session</code></td><td>pamięć sesji przeglądarki (sessionStorage)</td><td>przechowuje token logowania na konto demonstracyjne instytucji albo moderatora – tylko po zalogowaniu</td><td>do wylogowania albo zamknięcia karty</td></tr>
+            <tr><td><code>aed.szkic.instytucja</code></td><td>pamięć przeglądarki na tym urządzeniu (localStorage)</td><td>szkic AED wpisywanych ręcznie przez instytucję („Możesz wrócić później”)</td><td>do opublikowania AED albo wyczyszczenia danych przeglądarki</td></tr>
           </tbody>
         </table>
       </div>

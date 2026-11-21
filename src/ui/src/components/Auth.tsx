@@ -9,7 +9,7 @@ export function useSession(): Session {
   return s;
 }
 
-const ROLE_LABEL: Record<Role, string> = { dysponent: 'dysponent AED', moderator: 'moderator' };
+const ROLE_LABEL: Record<Role, string> = { dysponent: 'instytucja (właściciel AED)', moderator: 'moderator' };
 
 /** Renders children only for a logged-in user with one of `roles`; otherwise a login form for `role`. */
 export function RequireLogin({ role, roles = [role], children }: { role: Role; roles?: Role[]; children: ReactNode }) {
@@ -50,8 +50,7 @@ function LoginForm({ role, wrongRole }: { role: Role; wrongRole: Role | null }) 
       <ErrorSummary errors={v.summary} fieldIds={{ haslo: 'login-pass' }} focusToken={v.focusToken} />
       {wrongRole && <p>Jesteś zalogowany jako {ROLE_LABEL[wrongRole]}. Ta część wymaga konta: {ROLE_LABEL[role]}.</p>}
       <p className="hint">
-        Prototyp ma dwa konta demonstracyjne. Hasła ustawia plik <code>.env</code> (domyślnie z <code>.env.example</code>:{' '}
-        <code>{role}-demo</code>).
+        To prototyp, więc używamy konta próbnego. Hasło: <code>{role}-demo</code>.
       </p>
       <div className="field">
         <label htmlFor="login-name">Login</label>

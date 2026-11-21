@@ -10,24 +10,32 @@ import { Campaign } from './pages/Campaign';
 import { Dataset } from './pages/Dataset';
 import { Moderation } from './pages/Moderation';
 import { Nearest } from './pages/Nearest';
+import { Home } from './pages/Home';
+import { FirstAid } from './pages/FirstAid';
 import { Providers } from './pages/Providers';
 import { Report } from './pages/Report';
 import { Sources } from './pages/Sources';
 import { Link, matchPath, useLocation, usePageTitle } from './router';
 
+// Max. 5 menu items (TL). Data, sources and moderation are in the footer under "Dla specjalistów".
 const NAV = [
-  { to: '/', label: 'Najbliższe AED' },
-  { to: '/mapa', label: 'Mapa i lista' },
+  { to: '/znajdz', label: 'Znajdź AED' },
   { to: '/zglos', label: 'Zgłoś AED' },
-  { to: '/dysponenci', label: 'Dla dysponentów' },
-  { to: '/dane', label: 'Zbiór danych' },
-  { to: '/zrodla', label: 'Źródła' },
-  { to: '/akcja', label: 'Akcja' },
+  { to: '/dysponenci', label: 'Dla instytucji' },
+  { to: '/pierwsza-pomoc', label: 'Pierwsza pomoc' },
+  { to: '/o-projekcie', label: 'O projekcie' },
 ];
+
+// Breadcrumb labels for pages outside the menu
+const PAGE_LABELS: Record<string, string> = {
+  '/mapa': 'Mapa i lista AED', '/dane': 'Zbiór danych', '/zrodla': 'Źródła danych', '/akcja': 'Akcja „AED w danych”',
+  '/moderacja': 'Moderacja zgłoszeń',
+};
 
 // Footer subpages (not E1–E9; routes for E1–E9 unchanged)
 const INFO_PAGES: Record<string, { title: string; el: () => ReactElement }> = {
   '/o-projekcie': { title: 'O projekcie', el: About },
+  '/pierwsza-pomoc': { title: 'Pierwsza pomoc', el: FirstAid },
   '/deklaracja-dostepnosci': { title: 'Deklaracja dostępności', el: AccessibilityStatement },
   '/dane-osobowe': { title: 'Dane osobowe', el: Privacy },
   '/cookies': { title: 'Pliki cookies i pamięć przeglądarki', el: Cookies },
@@ -42,10 +50,11 @@ function Breadcrumbs({ path }: { path: string }) {
   if (path === '/') return null;
   const nav = NAV.find((n) => n.to === path);
   const trail: { label: string; to?: string }[] = [];
-  if (matchPath('/aed/:id', path)) trail.push({ label: 'Mapa i lista', to: '/mapa' }, { label: 'Karta AED' });
+  if (matchPath('/aed/:id', path)) trail.push({ label: 'Znajdź AED', to: '/znajdz' }, { label: 'AED' });
+  else if (path === '/mapa') trail.push({ label: 'Znajdź AED', to: '/znajdz' }, { label: PAGE_LABELS[path] });
   else if (nav) trail.push({ label: nav.label });
   else if (INFO_PAGES[path]) trail.push({ label: INFO_PAGES[path].title });
-  else if (path === '/moderacja') trail.push({ label: 'Moderacja zgłoszeń' });
+  else if (PAGE_LABELS[path]) trail.push({ label: PAGE_LABELS[path] });
   else return null;
   return (
     <nav aria-label="Ścieżka okruszków" className="breadcrumbs">
@@ -66,7 +75,8 @@ function NotFound() {
 
 function Routes() {
   const { path } = useLocation();
-  if (path === '/') return <Nearest />;
+  if (path === '/') return <Home />;
+  if (path === '/znajdz') return <Nearest />;
   if (path === '/mapa') return <MapList />;
   const card = matchPath('/aed/:id', path);
   if (card) return <AedCard id={card.id} />;
@@ -103,7 +113,7 @@ export function App() {
             <span className="brand__mark"><LogoMark size={34} /></span>
             <span>{BRAND_NAME}<span className="brand__slogan" aria-hidden="true">{BRAND_SLOGAN}</span></span>
           </Link>
-          <a href="tel:112" className="header-112"><Icon name="phone" /><span className="visually-hidden">Zadzwoń pod numer alarmowy </span>112</a>
+          <a href="tel:112" className="btn-call"><Icon name="phone" />Dzwoń 112</a>
           <button id="menu-btn" type="button" className="menu-btn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu((m) => !m)}>
             {menu ? 'Zamknij' : 'Menu'}
           </button>
@@ -132,24 +142,25 @@ export function App() {
               <p>{BRAND_SLOGAN}. Otwarty zbiór danych o defibrylatorach AED dla portalu dane.gov.pl.</p>
               <p>Prototyp zespołu HackNation 2026 – nie jest serwisem administracji publicznej.</p>
             </section>
-            <nav aria-labelledby="f-service">
-              <h2 id="f-service">Serwis</h2>
-              <ul className="footer-links">
-                <li><Link to="/o-projekcie">O projekcie</Link></li>
-                <li><Link to="/dane">Dane i API</Link></li>
-                <li><Link to="/zrodla">Źródła danych</Link></li>
-                <li><Link to="/licencje">Licencje i atrybucje</Link></li>
-                <li><ExternalLink href={REPO}>Kod źródłowy</ExternalLink></li>
-              </ul>
-            </nav>
             <nav aria-labelledby="f-info">
               <h2 id="f-info">Informacje</h2>
               <ul className="footer-links">
+                <li><Link to="/o-projekcie">O projekcie</Link></li>
+                <li><Link to="/akcja">Akcja „AED w danych”</Link></li>
                 <li><Link to="/deklaracja-dostepnosci">Deklaracja dostępności</Link></li>
                 <li><Link to="/dane-osobowe">Dane osobowe</Link></li>
                 <li><Link to="/cookies">Pliki cookies i pamięć przeglądarki</Link></li>
                 <li><Link to="/kontakt">Kontakt</Link></li>
-                <li><Link to="/moderacja">Panel moderatora</Link></li>
+              </ul>
+            </nav>
+            <nav aria-labelledby="f-pro">
+              <h2 id="f-pro">Dla specjalistów</h2>
+              <ul className="footer-links">
+                <li><Link to="/dane">Zbiór danych i API</Link></li>
+                <li><Link to="/zrodla">Źródła danych</Link></li>
+                <li><Link to="/moderacja">Moderacja zgłoszeń</Link></li>
+                <li><Link to="/licencje">Licencje i atrybucje</Link></li>
+                <li><ExternalLink href={REPO}>Kod źródłowy</ExternalLink></li>
               </ul>
             </nav>
             <section aria-labelledby="f-contact">
