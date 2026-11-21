@@ -197,11 +197,8 @@ export function MapList() {
           <PlaceSearch key={searchKey} label="Gdzie jesteś?" placeholder="miasto, ulica i numer, gmina" textOption
             hint="Np. Kraków, Floriańska 3 · Wieliczka · mazowieckie"
             near={mapView && mapView.zoom >= 11 ? { lat: mapView.center.lat, lon: mapView.center.lng } : null}
-            initial={f.q || f.gminaNazwa} onSelect={onPlace} />
-        </div>
-        <div className="e2__locate">
-          <button type="button" className="btn btn--primary btn--locate" onClick={locate}><Icon name="locate" />Najbliższe AED ode mnie</button>
-          <p role="status" className="hint">{geoMsg}</p>
+            initial={f.q || f.gminaNazwa} onSelect={onPlace} onLocate={locate} />
+          <p role="status" className="hint e2__geo">{geoMsg}</p>
         </div>
       </div>
       {(f.gmina || f.q || ref) && (

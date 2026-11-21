@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { searchPlaces } from '../api/client';
 import type { Miejsce, TypMiejsca } from '../api/types';
+import { Icon } from './ui';
 
 export type Wybor = Miejsce | { typ: 'tekst'; nazwa: string };
 
@@ -21,9 +22,12 @@ interface Props {
   textOption?: boolean;
   initial?: string;
   onSelect: (w: Wybor) => void;
+  /** location button inside the field, on the right (like ride-hailing apps) */
+  onLocate?: () => void;
+  locateBusy?: boolean;
 }
 
-export function PlaceSearch({ label, placeholder, hint, near, textOption = false, initial = '', onSelect }: Props) {
+export function PlaceSearch({ label, placeholder, hint, near, textOption = false, initial = '', onSelect, onLocate, locateBusy = false }: Props) {
   const id = useId();
   const [q, setQ] = useState(initial);
   const [items, setItems] = useState<Miejsce[]>([]);
@@ -93,7 +97,7 @@ export function PlaceSearch({ label, placeholder, hint, near, textOption = false
     <div className="place-search">
       <label htmlFor={`${id}-in`}>{label}</label>
       {hint && <p id={`${id}-hint`} className="hint">{hint}</p>}
-      <div className="place-search__box">
+      <div className={`place-search__box${onLocate ? ' place-search__box--locate' : ''}`}>
         <input
           id={`${id}-in`} type="text" role="combobox" autoComplete="off" spellCheck={false}
           aria-expanded={show} aria-controls={listId} aria-autocomplete="list"
@@ -106,6 +110,12 @@ export function PlaceSearch({ label, placeholder, hint, near, textOption = false
           onKeyDown={onKey}
         />
         {q && <button type="button" className="place-search__clear" aria-label="Wyczyść wyszukiwanie" onClick={() => { setQ(''); setItems([]); }}>×</button>}
+        {onLocate && (
+          <button type="button" className="place-search__locate" onClick={onLocate} disabled={locateBusy}
+            aria-label="Najbliższe AED ode mnie – użyj mojej lokalizacji" title="Najbliższe AED ode mnie">
+            <Icon name="locate" />
+          </button>
+        )}
       </div>
       {show && (
         <ul id={listId} role="listbox" className="place-search__list" aria-label="Podpowiedzi">
