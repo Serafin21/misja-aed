@@ -372,3 +372,9 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Zrobione (uwagi właściciela projektu): **administrator ma w menu tylko „Zgłoszenia AED” i „Panel administratora”** (bez Znajdź AED, Pierwsza pomoc, O projekcie). Panel → „Instytucje i konta”: zakładki z licznikami **Wszystkie / Aktywne / Czekają na zatwierdzenie / Zablokowane / Administratorzy**, w tabeli także wbudowane konto `admin` (tylko do odczytu – hasło w `.env`), zakładanie konta **instytucji albo administratora** (rodzaj konta). `/zglos` po zalogowaniu przenosi do „Zgłoszenia AED”. Tytuł karty przeglądarki „Mapa AED”.
 - Sprawdzone: przegląd 17 podstron jako gość, instytucja i administrator (bez błędów strony); nowe konto administratora loguje się i ma to samo menu.
 - CR do A: błąd 500 przy równoczesnych zapytaniach – naprawiony w HANDOFF A #13.
+
+## HANDOFF #33
+
+- Czas: nd 00:50
+- Zrobione: zakładanie konta w panelu – login bez ograniczeń „małe litery/kropki” (dowolny, np. „UM Krosno” albo e-mail; serwer zamienia na małe litery), **pole „Hasło (nieobowiązkowe)”** – administrator wpisuje hasło albo zostawia puste i dostaje wygenerowane. Po założeniu wyraźna ramka „Login / Hasło” (przewija się do niej) z przyciskiem „Kopiuj login i hasło”. Wniosek o konto – ta sama, luźniejsza reguła loginu.
+- Sprawdzone: konto „UM Krosno” z hasłem wpisanym przez administratora loguje się i od razu widzi 21 AED Krosna.
