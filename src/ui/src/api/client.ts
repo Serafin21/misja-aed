@@ -299,7 +299,7 @@ export function login(loginName: Role, haslo: string): Promise<Session> {
   ).then((s) => { setSession(s); return s; });
 }
 
-type PointsFC = { features: { id: string; geometry: { coordinates: [number, number] }; properties: { dostepny_teraz: boolean | null; stan_danych: AedPoint['stan_danych']; osm: boolean } }[] };
+type PointsFC = { features: { id: string; geometry: { coordinates: [number, number] }; properties: Omit<AedPoint, 'id_aed' | 'lat' | 'lon'> }[] };
 
 /** Whole-Poland map layer (gzip + ETag on the server; the browser cache sends If-None-Match by itself). */
 export function listPoints(): Promise<AedPoint[]> {
@@ -307,6 +307,23 @@ export function listPoints(): Promise<AedPoint[]> {
     const r = await http<PointsFC>(`/aed/punkty`);
     return r.features.map((f) => ({ id_aed: f.id, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], ...f.properties }));
   }, () => mock.mockPoints());
+}
+
+/** Full records for the given ids, in the same order (list next to the map: what is visible on the map). */
+export function listAedByIds(ids: string[]): Promise<AedView[]> {
+  if (!ids.length) return Promise.resolve([]);
+  return withFallback(async () => {
+    const r = await http<{ data: JsonApiItem<AedView>[] }>(`/aed${qs({ ids: ids.join(','), per_page: ids.length })}`);
+    return r.data.map(flat);
+  }, () => mock.mockByIds(ids));
+}
+
+/** ids matching a text search (name, street, town, provider) or a gmina – intersected with the map points. */
+export function searchAedIds(q: string, gmina: string): Promise<Set<string>> {
+  return withFallback(async () => {
+    const r = await http<{ data: { id: string }[] }>(`/aed${qs({ q, gmina, per_page: 1000 })}`);
+    return new Set(r.data.map((d) => d.id));
+  }, async () => new Set((await mock.mockListAed({ q, gmina, per_page: 1000 })).items.map((a) => a.id_aed)));
 }
 
 /** Municipality coverage layer (data-freshness map mode). null = no boundaries for this voivodeship / sample mode. */

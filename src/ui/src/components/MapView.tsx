@@ -31,6 +31,12 @@ export interface MapViewProps {
   coverage?: Pokrycie | null;
   /** fit the view to the municipality layer when it appears (E2); E1 keeps the nearest AEDs in view */
   fitCoverage?: boolean;
+  /** zoom with the mouse wheel / touchpad (default on) */
+  wheelZoom?: boolean;
+  /** point layer: refit the view only when this key changes (E2: area filter); default – when the points change */
+  fitKey?: string;
+  /** called after every move/zoom (and once at start) – E2 list shows what is visible */
+  onView?: (v: { bounds: L.LatLngBounds; center: L.LatLng; zoom: number }) => void;
 }
 
 const POLAND: L.LatLngBoundsExpression = [[49.0, 14.1], [54.9, 24.2]];
@@ -59,7 +65,7 @@ function markerName(a: AedView, mode: MapMode): string {
   return `${a.nazwa_obiektu}, ${a.miejscowosc} – ${state}${a.szafka_zamknieta ? ', szafka zamknięta' : ''}`;
 }
 
-export function MapView({ items, user, focusId, onPick, picked, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false, points }: MapViewProps) {
+export function MapView({ items, user, focusId, onPick, picked, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false, points, wheelZoom = true, fitKey: fitKeyProp, onView }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -69,10 +75,16 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
   const fitKey = useRef<string>('');
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
+  const viewRef = useRef(onView);
+  viewRef.current = onView;
+  // CR-TL-2 point layer: one cluster group and one marker per AED and mode, reused when filters change
+  const ptsGroup = useRef<L.LayerGroup | null>(null);
+  const ptsCache = useRef<Map<string, L.Marker>>(new Map());
+  const lastPts = useRef<{ points: AedPoint[] | null; mode: MapMode; fit?: string }>({ points: null, mode });
 
   useEffect(() => {
     if (!el.current || map.current) return;
-    const m = L.map(el.current, { keyboard: true, zoomControl: false, scrollWheelZoom: false, maxBounds: [[47, 12], [56.5, 26.5]] });
+    const m = L.map(el.current, { keyboard: true, zoomControl: false, scrollWheelZoom: wheelZoom, wheelPxPerZoomLevel: 90, maxBounds: [[47, 12], [56.5, 26.5]] });
     L.control.zoom({ zoomInTitle: 'Przybliż mapę', zoomOutTitle: 'Oddal mapę' }).addTo(m);
     m.fitBounds(POLAND);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -80,35 +92,58 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
       attribution: '© <a href="https://www.openstreetmap.org/copyright">autorzy OpenStreetMap</a>',
     }).addTo(m);
     m.on('click', (e: L.LeafletMouseEvent) => pickRef.current?.({ lat: +e.latlng.lat.toFixed(6), lon: +e.latlng.lng.toFixed(6) }));
-    m.on('focus', () => m.scrollWheelZoom.enable());
-    m.on('blur', () => m.scrollWheelZoom.disable());
+    if (!wheelZoom) {
+      m.on('focus', () => m.scrollWheelZoom.enable());
+      m.on('blur', () => m.scrollWheelZoom.disable());
+    }
+    const emit = () => viewRef.current?.({ bounds: m.getBounds(), center: m.getCenter(), zoom: m.getZoom() });
+    m.on('moveend', emit);
     extra.current = L.layerGroup().addTo(m);
     map.current = m;
-    return () => { m.remove(); map.current = null; layer.current = null; covLayer.current = null; covAttr.current = null; };
+    emit();
+    // the container changes width (e.g. "Tylko mapa"): without this Leaflet leaves grey, untiled areas
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => m.invalidateSize({ pan: false })) : null;
+    ro?.observe(el.current);
+    return () => { ro?.disconnect(); m.remove(); map.current = null; layer.current = null; covLayer.current = null; covAttr.current = null; ptsGroup.current = null; ptsCache.current.clear(); lastPts.current = { points: null, mode: 'dostepnosc' }; fitKey.current = ''; };
   }, []);
 
   useEffect(() => {
     const m = map.current;
     if (!m) return;
+    if (points && lastPts.current.points === points && lastPts.current.mode === mode && lastPts.current.fit === fitKeyProp) return;
+    lastPts.current = { points: points ?? null, mode, fit: fitKeyProp };
     layer.current?.remove();
+    layer.current = null;
     const anyL = L as unknown as { markerClusterGroup?: (o: object) => L.LayerGroup };
-    const group: L.LayerGroup = cluster && anyL.markerClusterGroup
-      ? anyL.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40, chunkedLoading: true })
-      : L.layerGroup();
+    // no chunkedLoading: its timers keep adding markers after the map is removed or the filters change (wrong pins, errors);
+    // a bulk addLayers of 18k cached markers takes a fraction of a second
+    const newGroup = (): L.LayerGroup => (cluster && anyL.markerClusterGroup
+      ? anyL.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40 })
+      : L.layerGroup());
     const pts: L.LatLngExpression[] = [];
     if (points) {
-      // 18k points: build markers in one go (chunkedLoading keeps the page responsive); details on demand
-      const markers = points.map((p) => pointMarker(p, mode));
-      (group as unknown as { addLayers?: (l: L.Layer[]) => void }).addLayers?.(markers) ?? markers.forEach((mk) => group.addLayer(mk));
-      group.addTo(m);
-      layer.current = group;
-      const key = `pts:${points.length}:${points[0]?.id_aed ?? ''}:${points[points.length - 1]?.id_aed ?? ''}`;
-      if (key !== fitKey.current) {
+      // 18k points: markers are built once per mode and reused when the filters change; details on demand
+      if (!ptsGroup.current) ptsGroup.current = newGroup().addTo(m);
+      const g = ptsGroup.current;
+      g.clearLayers();
+      const cache = ptsCache.current;
+      const markers = points.map((p) => {
+        const k = `${mode}:${p.id_aed}:${p.dostepny_teraz}:${p.stan_danych}`;
+        let mk = cache.get(k);
+        if (!mk) { mk = pointMarker(p, mode); cache.set(k, mk); }
+        return mk;
+      });
+      (g as unknown as { addLayers?: (l: L.Layer[]) => void }).addLayers?.(markers) ?? markers.forEach((mk) => g.addLayer(mk));
+      const key = fitKeyProp !== undefined ? `pts:${fitKeyProp}` : `pts:${points.length}:${points[0]?.id_aed ?? ''}:${points[points.length - 1]?.id_aed ?? ''}`;
+      if (key !== fitKey.current && points.length) {
         fitKey.current = key;
-        if (points.length) m.fitBounds(L.latLngBounds(points.map((p) => [p.lat, p.lon] as L.LatLngTuple)), { padding: [16, 16], maxZoom: 15 });
+        m.fitBounds(L.latLngBounds(points.map((p) => [p.lat, p.lon] as L.LatLngTuple)), { padding: [16, 16], maxZoom: 15 });
       }
       return;
     }
+    ptsGroup.current?.remove();
+    ptsGroup.current = null;
+    const group = newGroup();
     for (const a of items) {
       const ll: L.LatLngExpression = [a.szerokosc_geograficzna, a.dlugosc_geograficzna];
       pts.push(ll);
@@ -130,7 +165,7 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     if (focus) m.setView([focus.szerokosc_geograficzna, focus.dlugosc_geograficzna], 17);
     else if (pts.length === 1) m.setView(pts[0], 16);
     else if (pts.length > 1) m.fitBounds(L.latLngBounds(pts), { padding: [32, 32], maxZoom: 17 });
-  }, [items, user, focusId, cluster, mode, points]);
+  }, [items, user, focusId, cluster, mode, points, fitKeyProp]);
 
   useEffect(() => {
     const g = extra.current;
