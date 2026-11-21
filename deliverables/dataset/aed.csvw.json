@@ -1,0 +1,350 @@
+{
+  "@context": [
+    "http://www.w3.org/ns/csvw",
+    {
+      "@language": "pl"
+    }
+  ],
+  "url": "aed.csv",
+  "dc:title": "Defibrylatory AED w Polsce",
+  "tableSchema": {
+    "columns": [
+      {
+        "name": "id_aed",
+        "titles": "id_aed",
+        "dc:description": "Stały, ogólnopolski identyfikator nadawany przy pierwszym włączeniu do zbioru; nie zmienia się przy aktualizacjach.",
+        "datatype": "string",
+        "required": true,
+        "propertyUrl": "http://schema.org/identifier"
+      },
+      {
+        "name": "id_dysponenta_aed",
+        "titles": "id_dysponenta_aed",
+        "dc:description": "Numer inwentarzowy lub wewnętrzny kod urządzenia u dysponenta.",
+        "datatype": "string",
+        "required": false
+      },
+      {
+        "name": "nazwa_obiektu",
+        "titles": "nazwa_obiektu",
+        "dc:description": "Nazwa budynku lub miejsca, w którym jest AED.",
+        "datatype": "string",
+        "required": true,
+        "propertyUrl": "http://schema.org/name"
+      },
+      {
+        "name": "opis_lokalizacji",
+        "titles": "opis_lokalizacji",
+        "dc:description": "Gdzie dokładnie szukać urządzenia na miejscu.",
+        "datatype": "string",
+        "required": true,
+        "propertyUrl": "http://schema.org/description"
+      },
+      {
+        "name": "pietro",
+        "titles": "pietro",
+        "dc:description": "0 = parter, liczby ujemne = poziomy podziemne.",
+        "datatype": "integer",
+        "required": false
+      },
+      {
+        "name": "wewnatrz_budynku",
+        "titles": "wewnatrz_budynku",
+        "dc:description": "true – w budynku, false – na zewnątrz (np. kapsuła na elewacji).",
+        "datatype": "boolean",
+        "required": true
+      },
+      {
+        "name": "wojewodztwo",
+        "titles": "wojewodztwo",
+        "dc:description": "Nazwa województwa małymi literami.",
+        "datatype": "string",
+        "required": true,
+        "propertyUrl": "http://schema.org/addressRegion"
+      },
+      {
+        "name": "powiat",
+        "titles": "powiat",
+        "dc:description": "Nazwa powiatu.",
+        "datatype": "string",
+        "required": false
+      },
+      {
+        "name": "gmina",
+        "titles": "gmina",
+        "dc:description": "Nazwa gminy.",
+        "datatype": "string",
+        "required": true
+      },
+      {
+        "name": "miejscowosc",
+        "titles": "miejscowosc",
+        "dc:description": "Nazwa miejscowości (dosłownie jak w źródle).",
+        "datatype": "string",
+        "required": true,
+        "propertyUrl": "http://schema.org/addressLocality"
+      },
+      {
+        "name": "ulica_cecha",
+        "titles": "ulica_cecha",
+        "dc:description": "Rodzaj ulicy zgodnie z TERYT.",
+        "datatype": "string",
+        "required": false
+      },
+      {
+        "name": "ulica",
+        "titles": "ulica",
+        "dc:description": "Nazwa ulicy bez cechy; puste, gdy miejscowość nie ma ulic.",
+        "datatype": "string",
+        "required": false,
+        "propertyUrl": "http://schema.org/streetAddress"
+      },
+      {
+        "name": "numer_budynku",
+        "titles": "numer_budynku",
+        "dc:description": "Numer porządkowy budynku.",
+        "datatype": "string",
+        "required": true
+      },
+      {
+        "name": "numer_lokalu",
+        "titles": "numer_lokalu",
+        "dc:description": "Numer lokalu, jeśli dotyczy.",
+        "datatype": "string",
+        "required": false
+      },
+      {
+        "name": "kod_pocztowy",
+        "titles": "kod_pocztowy",
+        "dc:description": "Kod pocztowy w formacie NN-NNN.",
+        "datatype": "string",
+        "required": true,
+        "propertyUrl": "http://schema.org/postalCode"
+      },
+      {
+        "name": "teryt_terc",
+        "titles": "teryt_terc",
+        "dc:description": "Kod terytorialny (województwo, powiat, gmina) – 6 cyfr, jak w adresie uniwersalnym.",
+        "datatype": "string",
+        "required": false
+      },
+      {
+        "name": "teryt_simc",
+        "titles": "teryt_simc",
+        "dc:description": "Identyfikator miejscowości z rejestru TERYT – 7 cyfr.",
+        "datatype": "string",
+        "required": false
+      },
+      {
+        "name": "szerokosc_geograficzna",
+        "titles": "szerokosc_geograficzna",
+        "dc:description": "WGS 84 (EPSG:4326), stopnie dziesiętne, kropka, 6 miejsc po przecinku.",
+        "datatype": "decimal",
+        "required": true,
+        "propertyUrl": "http://schema.org/latitude"
+      },
+      {
+        "name": "dlugosc_geograficzna",
+        "titles": "dlugosc_geograficzna",
+        "dc:description": "WGS 84 (EPSG:4326), stopnie dziesiętne, kropka, 6 miejsc po przecinku.",
+        "datatype": "decimal",
+        "required": true,
+        "propertyUrl": "http://schema.org/longitude"
+      },
+      {
+        "name": "dostep",
+        "titles": "dostep",
+        "dc:description": "Kto może skorzystać z urządzenia.",
+        "datatype": "string",
+        "required": true
+      },
+      {
+        "name": "godziny_dostepnosci",
+        "titles": "godziny_dostepnosci",
+        "dc:description": "Składnia opening_hours (OpenStreetMap): \"24/7\" albo np. \"Mo-Fr 07:00-20:00; Sa 08:00-14:00\".",
+        "datatype": "string",
+        "required": true,
+        "propertyUrl": "http://schema.org/openingHours"
+      },
+      {
+        "name": "dostepny_24h",
+        "titles": "dostepny_24h",
+        "dc:description": "true, gdy urządzenie jest dostępne 24/7.",
+        "datatype": "boolean",
+        "required": true
+      },
+      {
+        "name": "szafka_zamknieta",
+        "titles": "szafka_zamknieta",
+        "dc:description": "true, gdy szafka wymaga klucza lub kodu.",
+        "datatype": "boolean",
+        "required": true
+      },
+      {
+        "name": "instrukcja_dostepu",
+        "titles": "instrukcja_dostepu",
+        "dc:description": "Jak dostać się do urządzenia, gdy szafka jest zamknięta lub obiekt ma ograniczony dostęp.",
+        "datatype": "string",
+        "required": false
+      },
+      {
+        "name": "mobilny",
+        "titles": "mobilny",
+        "dc:description": "true dla AED w pojeździe (np. OSP); lokalizacja oznacza miejsce stacjonowania.",
+        "datatype": "boolean",
+        "required": true
+      },
+      {
+        "name": "status_urzadzenia",
+        "titles": "status_urzadzenia",
+        "dc:description": "Stan techniczny według dysponenta.",
+        "datatype": "string",
+        "required": true
+      },
+      {
+        "name": "tryb_pediatryczny",
+        "titles": "tryb_pediatryczny",
+        "dc:description": "true, gdy dostępne są elektrody lub tryb dla dzieci.",
+        "datatype": "boolean",
+        "required": false
+      },
+      {
+        "name": "producent",
+        "titles": "producent",
+        "dc:description": "Producent urządzenia.",
+        "datatype": "string",
+        "required": false
+      },
+      {
+        "name": "model",
+        "titles": "model",
+        "dc:description": "Model urządzenia.",
+        "datatype": "string",
+        "required": false
+      },
+      {
+        "name": "data_waznosci_elektrod",
+        "titles": "data_waznosci_elektrod",
+        "dc:description": "Data w formacie rrrr-mm-dd.",
+        "datatype": "date",
+        "required": false
+      },
+      {
+        "name": "data_ostatniego_przegladu",
+        "titles": "data_ostatniego_przegladu",
+        "dc:description": "Data w formacie rrrr-mm-dd.",
+        "datatype": "date",
+        "required": false
+      },
+      {
+        "name": "dysponent_nazwa",
+        "titles": "dysponent_nazwa",
+        "dc:description": "Podmiot odpowiedzialny za urządzenie.",
+        "datatype": "string",
+        "required": true,
+        "propertyUrl": "http://schema.org/provider"
+      },
+      {
+        "name": "dysponent_typ",
+        "titles": "dysponent_typ",
+        "dc:description": "Rodzaj podmiotu.",
+        "datatype": "string",
+        "required": true
+      },
+      {
+        "name": "dysponent_regon",
+        "titles": "dysponent_regon",
+        "dc:description": "9 lub 14 cyfr, bez spacji i łączników.",
+        "datatype": "string",
+        "required": false
+      },
+      {
+        "name": "kontakt_telefon",
+        "titles": "kontakt_telefon",
+        "dc:description": "9 cyfr bez spacji albo z prefiksem +48.",
+        "datatype": "string",
+        "required": false,
+        "propertyUrl": "http://schema.org/telephone"
+      },
+      {
+        "name": "kontakt_email",
+        "titles": "kontakt_email",
+        "dc:description": "Adres do aktualizacji danych.",
+        "datatype": "string",
+        "required": false,
+        "propertyUrl": "http://schema.org/email"
+      },
+      {
+        "name": "zrodlo_danych",
+        "titles": "zrodlo_danych",
+        "dc:description": "Źródło nadrzędne rekordu; pełne pochodzenie w zasobie aed_pochodzenie.csv.",
+        "datatype": "string",
+        "required": true
+      },
+      {
+        "name": "licencja",
+        "titles": "licencja",
+        "dc:description": "Warunki ponownego wykorzystania danych rekordu.",
+        "datatype": "string",
+        "required": true,
+        "propertyUrl": "http://schema.org/license"
+      },
+      {
+        "name": "data_weryfikacji",
+        "titles": "data_weryfikacji",
+        "dc:description": "Ostatnie potwierdzenie, że urządzenie jest na miejscu i dostępne.",
+        "datatype": "date",
+        "required": true
+      },
+      {
+        "name": "metoda_weryfikacji",
+        "titles": "metoda_weryfikacji",
+        "dc:description": "Jak potwierdzono dane.",
+        "datatype": "string",
+        "required": true
+      },
+      {
+        "name": "data_aktualizacji",
+        "titles": "data_aktualizacji",
+        "dc:description": "Data i czas ostatniej zmiany rekordu.",
+        "datatype": "dateTime",
+        "required": true,
+        "propertyUrl": "http://schema.org/dateModified"
+      },
+      {
+        "name": "kompletnosc",
+        "titles": "kompletnosc",
+        "dc:description": "Odsetek wypełnionych pól obowiązkowych i zalecanych (0–100), liczony automatycznie.",
+        "datatype": "integer",
+        "required": false
+      },
+      {
+        "name": "zdjecie_url",
+        "titles": "zdjecie_url",
+        "dc:description": "Adres URL zdjęcia pokazującego miejsce zawieszenia.",
+        "datatype": "anyURI",
+        "required": false,
+        "propertyUrl": "http://schema.org/image"
+      },
+      {
+        "name": "uwagi",
+        "titles": "uwagi",
+        "dc:description": "Dodatkowe informacje.",
+        "datatype": "string",
+        "required": false
+      }
+    ],
+    "primaryKey": "id_aed"
+  },
+  "dialect": {
+    "encoding": "utf-8",
+    "delimiter": ",",
+    "header": true,
+    "lineTerminators": [
+      "\r\n"
+    ]
+  },
+  "dc:license": {
+    "@id": "http://creativecommons.org/publicdomain/zero/1.0/"
+  }
+}

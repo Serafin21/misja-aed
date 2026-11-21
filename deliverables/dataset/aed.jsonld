@@ -1,0 +1,292 @@
+{
+ "@context": {
+  "schema": "http://schema.org/",
+  "aed": "http://localhost:8000/api/v1/slownik#",
+  "xsd": "http://www.w3.org/2001/XMLSchema#",
+  "id_aed": "schema:identifier",
+  "id_dysponenta_aed": "aed:id_dysponenta_aed",
+  "nazwa_obiektu": "schema:name",
+  "opis_lokalizacji": "schema:description",
+  "pietro": "aed:pietro",
+  "wewnatrz_budynku": {
+   "@id": "aed:wewnatrz_budynku",
+   "@type": "xsd:boolean"
+  },
+  "wojewodztwo": "schema:addressRegion",
+  "powiat": "aed:powiat",
+  "gmina": "aed:gmina",
+  "miejscowosc": "schema:addressLocality",
+  "ulica_cecha": "aed:ulica_cecha",
+  "ulica": "schema:streetAddress",
+  "numer_budynku": "aed:numer_budynku",
+  "numer_lokalu": "aed:numer_lokalu",
+  "kod_pocztowy": "schema:postalCode",
+  "teryt_terc": "aed:teryt_terc",
+  "teryt_simc": "aed:teryt_simc",
+  "szerokosc_geograficzna": "schema:latitude",
+  "dlugosc_geograficzna": "schema:longitude",
+  "dostep": "aed:dostep",
+  "godziny_dostepnosci": "schema:openingHours",
+  "dostepny_24h": {
+   "@id": "aed:dostepny_24h",
+   "@type": "xsd:boolean"
+  },
+  "szafka_zamknieta": {
+   "@id": "aed:szafka_zamknieta",
+   "@type": "xsd:boolean"
+  },
+  "instrukcja_dostepu": "aed:instrukcja_dostepu",
+  "mobilny": {
+   "@id": "aed:mobilny",
+   "@type": "xsd:boolean"
+  },
+  "status_urzadzenia": "aed:status_urzadzenia",
+  "tryb_pediatryczny": {
+   "@id": "aed:tryb_pediatryczny",
+   "@type": "xsd:boolean"
+  },
+  "producent": "aed:producent",
+  "model": "aed:model",
+  "data_waznosci_elektrod": {
+   "@id": "aed:data_waznosci_elektrod",
+   "@type": "xsd:date"
+  },
+  "data_ostatniego_przegladu": {
+   "@id": "aed:data_ostatniego_przegladu",
+   "@type": "xsd:date"
+  },
+  "dysponent_nazwa": "schema:provider",
+  "dysponent_typ": "aed:dysponent_typ",
+  "dysponent_regon": "aed:dysponent_regon",
+  "kontakt_telefon": "schema:telephone",
+  "kontakt_email": "schema:email",
+  "zrodlo_danych": "aed:zrodlo_danych",
+  "licencja": {
+   "@id": "schema:license",
+   "@type": "@id"
+  },
+  "data_weryfikacji": {
+   "@id": "aed:data_weryfikacji",
+   "@type": "xsd:date"
+  },
+  "metoda_weryfikacji": "aed:metoda_weryfikacji",
+  "data_aktualizacji": {
+   "@id": "schema:dateModified",
+   "@type": "xsd:dateTime"
+  },
+  "kompletnosc": "aed:kompletnosc",
+  "zdjecie_url": {
+   "@id": "schema:image",
+   "@type": "@id"
+  },
+  "uwagi": "aed:uwagi"
+ },
+ "@graph": [
+  {
+   "@id": "http://localhost:8000/api/v1/aed/AED-PL-9FBD911D8A",
+   "@type": [
+    "schema:Place",
+    "aed:Defibrylator"
+   ],
+   "id_aed": "AED-PL-9FBD911D8A",
+   "nazwa_obiektu": "Biblioteka Główna – Uczelnia Testowa",
+   "opis_lokalizacji": "wejście główne, ściana po lewej",
+   "wewnatrz_budynku": true,
+   "wojewodztwo": "małopolskie",
+   "powiat": "Kraków",
+   "gmina": "Kraków",
+   "miejscowosc": "Kraków",
+   "ulica_cecha": "ul.",
+   "ulica": "Testowa",
+   "numer_budynku": "1",
+   "kod_pocztowy": "30-059",
+   "szerokosc_geograficzna": 50.0645,
+   "dlugosc_geograficzna": 19.9215,
+   "dostep": "publiczny",
+   "godziny_dostepnosci": "Mo-Su 08:00-22:00",
+   "dostepny_24h": false,
+   "szafka_zamknieta": false,
+   "mobilny": false,
+   "status_urzadzenia": "sprawny",
+   "tryb_pediatryczny": false,
+   "dysponent_nazwa": "Uczelnia Testowa",
+   "dysponent_typ": "uczelnia",
+   "zrodlo_danych": "dysponent",
+   "licencja": "http://creativecommons.org/publicdomain/zero/1.0/",
+   "data_weryfikacji": "2026-11-20",
+   "metoda_weryfikacji": "deklaracja_dysponenta",
+   "data_aktualizacji": "2026-11-21T14:05",
+   "kompletnosc": 72,
+   "schema:geo": {
+    "@type": "schema:GeoCoordinates",
+    "schema:latitude": 50.0645,
+    "schema:longitude": 19.9215
+   }
+  },
+  {
+   "@id": "http://localhost:8000/api/v1/aed/AED-PL-AED495CA3B",
+   "@type": [
+    "schema:Place",
+    "aed:Defibrylator"
+   ],
+   "id_aed": "AED-PL-AED495CA3B",
+   "nazwa_obiektu": "Wydział Energetyki – Uczelnia Testowa",
+   "opis_lokalizacji": "I piętro, przy dziekanacie",
+   "pietro": 1,
+   "wewnatrz_budynku": true,
+   "wojewodztwo": "małopolskie",
+   "powiat": "Kraków",
+   "gmina": "Kraków",
+   "miejscowosc": "Kraków",
+   "ulica_cecha": "ul.",
+   "ulica": "Testowa",
+   "numer_budynku": "30",
+   "kod_pocztowy": "30-059",
+   "szerokosc_geograficzna": 50.066,
+   "dlugosc_geograficzna": 19.918,
+   "dostep": "ograniczony",
+   "godziny_dostepnosci": "Mo-Fr 07:00-21:00",
+   "dostepny_24h": false,
+   "szafka_zamknieta": false,
+   "mobilny": false,
+   "status_urzadzenia": "sprawny",
+   "tryb_pediatryczny": true,
+   "dysponent_nazwa": "Uczelnia Testowa",
+   "dysponent_typ": "uczelnia",
+   "zrodlo_danych": "dysponent",
+   "licencja": "http://creativecommons.org/publicdomain/zero/1.0/",
+   "data_weryfikacji": "2026-11-20",
+   "metoda_weryfikacji": "deklaracja_dysponenta",
+   "data_aktualizacji": "2026-11-21T14:05",
+   "kompletnosc": 74,
+   "schema:geo": {
+    "@type": "schema:GeoCoordinates",
+    "schema:latitude": 50.066,
+    "schema:longitude": 19.918
+   }
+  },
+  {
+   "@id": "http://localhost:8000/api/v1/aed/AED-PL-B939F7EBA4",
+   "@type": [
+    "schema:Place",
+    "aed:Defibrylator"
+   ],
+   "id_aed": "AED-PL-B939F7EBA4",
+   "nazwa_obiektu": "Urząd Gminy Przykładowo",
+   "opis_lokalizacji": "hol główny, przy informacji",
+   "pietro": 0,
+   "wewnatrz_budynku": true,
+   "wojewodztwo": "mazowieckie",
+   "powiat": "Warszawa",
+   "gmina": "Warszawa",
+   "miejscowosc": "Warszawa",
+   "ulica_cecha": "ul.",
+   "ulica": "Królewska",
+   "numer_budynku": "27",
+   "kod_pocztowy": "00-060",
+   "szerokosc_geograficzna": 52.2437,
+   "dlugosc_geograficzna": 21.0139,
+   "dostep": "ograniczony",
+   "godziny_dostepnosci": "Mo-Fr 08:00-16:00",
+   "dostepny_24h": false,
+   "szafka_zamknieta": false,
+   "mobilny": false,
+   "status_urzadzenia": "sprawny",
+   "dysponent_nazwa": "Urząd Gminy Przykładowo",
+   "dysponent_typ": "administracja_publiczna",
+   "zrodlo_danych": "dysponent",
+   "licencja": "http://creativecommons.org/publicdomain/zero/1.0/",
+   "data_weryfikacji": "2026-11-21",
+   "metoda_weryfikacji": "deklaracja_dysponenta",
+   "data_aktualizacji": "2026-11-21T14:05",
+   "kompletnosc": 72,
+   "schema:geo": {
+    "@type": "schema:GeoCoordinates",
+    "schema:latitude": 52.2437,
+    "schema:longitude": 21.0139
+   }
+  },
+  {
+   "@id": "http://localhost:8000/api/v1/aed/AED-PL-CBD53ED4AA",
+   "@type": [
+    "schema:Place",
+    "aed:Defibrylator"
+   ],
+   "id_aed": "AED-PL-CBD53ED4AA",
+   "nazwa_obiektu": "Biblioteka Testowa",
+   "opis_lokalizacji": "parter, wypożyczalnia",
+   "pietro": 0,
+   "wewnatrz_budynku": true,
+   "wojewodztwo": "mazowieckie",
+   "powiat": "Warszawa",
+   "gmina": "Warszawa",
+   "miejscowosc": "Warszawa",
+   "ulica_cecha": "ul.",
+   "ulica": "Książkowa",
+   "numer_budynku": "12",
+   "kod_pocztowy": "00-001",
+   "szerokosc_geograficzna": 52.251,
+   "dlugosc_geograficzna": 21.0005,
+   "dostep": "ograniczony",
+   "godziny_dostepnosci": "Mo-Fr 10:00-19:00; Sa 10:00-14:00",
+   "dostepny_24h": false,
+   "szafka_zamknieta": true,
+   "instrukcja_dostepu": "Szafka na kod – kod u pracownika wypożyczalni",
+   "mobilny": false,
+   "status_urzadzenia": "sprawny",
+   "dysponent_nazwa": "Urząd Gminy Przykładowo",
+   "dysponent_typ": "administracja_publiczna",
+   "zrodlo_danych": "dysponent",
+   "licencja": "http://creativecommons.org/publicdomain/zero/1.0/",
+   "data_weryfikacji": "2026-11-21",
+   "metoda_weryfikacji": "deklaracja_dysponenta",
+   "data_aktualizacji": "2026-11-21T14:05",
+   "kompletnosc": 74,
+   "schema:geo": {
+    "@type": "schema:GeoCoordinates",
+    "schema:latitude": 52.251,
+    "schema:longitude": 21.0005
+   }
+  },
+  {
+   "@id": "http://localhost:8000/api/v1/aed/AED-PL-D6AADC75B3",
+   "@type": [
+    "schema:Place",
+    "aed:Defibrylator"
+   ],
+   "id_aed": "AED-PL-D6AADC75B3",
+   "nazwa_obiektu": "Hala sportowa Demo",
+   "opis_lokalizacji": "kapsuła na elewacji przy wejściu",
+   "wewnatrz_budynku": false,
+   "wojewodztwo": "mazowieckie",
+   "powiat": "Warszawa",
+   "gmina": "Warszawa",
+   "miejscowosc": "Warszawa",
+   "ulica_cecha": "al.",
+   "ulica": "Przykładowa",
+   "numer_budynku": "5A",
+   "kod_pocztowy": "00-950",
+   "szerokosc_geograficzna": 52.2298,
+   "dlugosc_geograficzna": 21.0118,
+   "dostep": "publiczny",
+   "godziny_dostepnosci": "24/7",
+   "dostepny_24h": true,
+   "szafka_zamknieta": false,
+   "mobilny": false,
+   "status_urzadzenia": "sprawny",
+   "dysponent_nazwa": "Urząd Gminy Przykładowo",
+   "dysponent_typ": "administracja_publiczna",
+   "zrodlo_danych": "dysponent",
+   "licencja": "http://creativecommons.org/publicdomain/zero/1.0/",
+   "data_weryfikacji": "2026-11-21",
+   "metoda_weryfikacji": "deklaracja_dysponenta",
+   "data_aktualizacji": "2026-11-21T14:05",
+   "kompletnosc": 69,
+   "schema:geo": {
+    "@type": "schema:GeoCoordinates",
+    "schema:latitude": 52.2298,
+    "schema:longitude": 21.0118
+   }
+  }
+ ]
+}

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Plik XML do automatycznego zasilania dane.gov.pl – struktura wg instrukcji COI „Instrukcja przygotowania
+     pliku XML” (v1.0.6, 2025-11-21): dataset (extIdent ≤36, title/description pl+en ≤300/≤1000, url, categories,
+     conditions, resources, tags, updateFrequency, flagi) i resource (+ availability, dataDate, specialSigns,
+     containsProtectedData). URI przestrzeni nazw „p”, XSD i składnia <tags>: do potwierdzenia (CR-1).
+     Wygenerowano: 2026-11-21T13:31 -->
+<p:datasets xmlns:p="urn:do-weryfikacji:dane.gov.pl:import">
+  <dataset status="published">
+    <extIdent>aed-polska</extIdent>
+    <title><polish>Defibrylatory AED w Polsce – zbiór zintegrowany</polish><english>AED defibrillators in Poland – integrated dataset</english></title>
+    <description><polish>Ogólnopolski, otwarty zbiór lokalizacji i dostępności automatycznych defibrylatorów zewnętrznych (AED), integrujący dane od dysponentów według wzorcowego zakresu danych. Każdy rekord ma stały identyfikator, datę weryfikacji, godziny dostępności i informację o zamkniętej szafce. Pochodzenie rekordów i zakres referencyjny źródeł są opublikowane jako osobne zasoby. Dane OpenStreetMap (ODbL) są w osobnym zasobie.</polish><english>Nationwide open dataset of automated external defibrillator (AED) locations and availability, integrating data from AED owners according to a reference data scope. Each record has a stable identifier, verification date, availability hours and locked-cabinet information. Record provenance and the reference scope of sources are published as separate resources. OpenStreetMap data (ODbL) is a separate resource.</english></description>
+    <url>http://localhost:8000/</url>
+    <categories><category>HEAL</category></categories>
+    <conditions><!-- warunki ponownego wykorzystania: do decyzji dostawcy (CR-2) --></conditions>
+    <resources>
+      <resource status="published">
+        <extIdent>aed-csv</extIdent>
+        <url>http://localhost:8000/api/v1/eksport/aed.csv</url>
+        <title><polish>Defibrylatory AED – CSV</polish><english>AED defibrillators – CSV</english></title>
+        <description><polish>Rekordy według wzorcowego zakresu danych (UTF-8, przecinek, CRLF, RFC 4180). Licencje CC0-1.0 i CC-BY-4.0.</polish><english>Records in the reference data scope (UTF-8, comma, CRLF, RFC 4180). Licences CC0-1.0 and CC-BY-4.0.</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <specialSigns><specialSign>X</specialSign></specialSigns>
+        <hasDynamicData>true</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+      <resource status="published">
+        <extIdent>aed-geojson</extIdent>
+        <url>http://localhost:8000/api/v1/eksport/aed.geojson</url>
+        <title><polish>Defibrylatory AED – GeoJSON</polish><english>AED defibrillators – GeoJSON</english></title>
+        <description><polish>Te same rekordy jako punkty WGS 84 (EPSG:4326).</polish><english>The same records as WGS 84 (EPSG:4326) points.</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <specialSigns><specialSign>X</specialSign></specialSigns>
+        <hasDynamicData>true</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+      <resource status="published">
+        <extIdent>aed-jsonld</extIdent>
+        <url>http://localhost:8000/api/v1/eksport/aed.jsonld</url>
+        <title><polish>Defibrylatory AED – JSON-LD (schema.org)</polish><english>AED defibrillators – JSON-LD (schema.org)</english></title>
+        <description><polish>Te same rekordy co aed.csv jako dane powiązane (JSON-LD, słownik schema.org) – poziom 4 otwartości.</polish><english>The same records as aed.csv as linked data (JSON-LD, schema.org vocabulary) – openness level 4.</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <specialSigns><specialSign>X</specialSign></specialSigns>
+        <hasDynamicData>true</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+      <resource status="published">
+        <extIdent>aed-osm-odbl-csv</extIdent>
+        <url>http://localhost:8000/api/v1/eksport/aed_osm_odbl.csv</url>
+        <title><polish>Defibrylatory AED z OpenStreetMap – CSV (ODbL)</polish><english>AED defibrillators from OpenStreetMap – CSV (ODbL)</english></title>
+        <description><polish>Rekordy pochodzące wyłącznie z OpenStreetMap, niepokryte danymi dysponentów. © autorzy OpenStreetMap, licencja ODbL 1.0 (https://www.openstreetmap.org/copyright).</polish><english>Records originating only from OpenStreetMap, not covered by owner data. © autorzy OpenStreetMap, licencja ODbL 1.0 (https://www.openstreetmap.org/copyright).</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <specialSigns><specialSign>X</specialSign></specialSigns>
+        <hasDynamicData>true</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+      <resource status="published">
+        <extIdent>aed-osm-odbl-geojson</extIdent>
+        <url>http://localhost:8000/api/v1/eksport/aed_osm_odbl.geojson</url>
+        <title><polish>Defibrylatory AED z OpenStreetMap – GeoJSON (ODbL)</polish><english>AED defibrillators from OpenStreetMap – GeoJSON (ODbL)</english></title>
+        <description><polish>Warstwa OSM jako punkty WGS 84. © autorzy OpenStreetMap, licencja ODbL 1.0 (https://www.openstreetmap.org/copyright).</polish><english>OSM layer as WGS 84 points. © autorzy OpenStreetMap, licencja ODbL 1.0 (https://www.openstreetmap.org/copyright).</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <specialSigns><specialSign>X</specialSign></specialSigns>
+        <hasDynamicData>true</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+      <resource status="published">
+        <extIdent>aed-pochodzenie</extIdent>
+        <url>http://localhost:8000/api/v1/eksport/aed_pochodzenie.csv</url>
+        <title><polish>Pochodzenie rekordów AED</polish><english>AED record provenance</english></title>
+        <description><polish>Jeden wiersz na parę rekord–źródło: kod źródła, identyfikator w źródle, licencja, data pobrania, rekord nadrzędny.</polish><english>One row per record–source pair: source code, id in source, licence, retrieval date, master record.</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <specialSigns><specialSign>X</specialSign></specialSigns>
+        <hasDynamicData>true</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+      <resource status="published">
+        <extIdent>aed-zrodla</extIdent>
+        <url>http://localhost:8000/api/v1/eksport/zrodla.csv</url>
+        <title><polish>Zakres referencyjny źródeł danych AED</polish><english>Reference scope of AED data sources</english></title>
+        <description><polish>Dla każdego źródła: liczba rekordów, rekordy włączone, pokrycie pól wymaganych i zalecanych, licencja, obszar.</polish><english>For each source: record count, included records, coverage of required and recommended fields, licence, area.</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <specialSigns><specialSign>X</specialSign></specialSigns>
+        <hasDynamicData>true</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+      <resource status="published">
+        <extIdent>aed-slownik</extIdent>
+        <url>http://localhost:8000/api/v1/eksport/slownik_danych.csv</url>
+        <title><polish>Słownik danych – wzorcowy zakres danych AED</polish><english>Data dictionary – AED reference data scope</english></title>
+        <description><polish>Opis 44 pól: typ, format, przykład, obowiązkowość, słownik, tag OSM, schema.org.</polish><english>Description of 44 fields: type, format, example, obligation, code list, OSM tag, schema.org.</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <specialSigns><specialSign>X</specialSign></specialSigns>
+        <hasDynamicData>false</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+      <resource status="published">
+        <extIdent>aed-csvw</extIdent>
+        <url>http://localhost:8000/api/v1/eksport/aed.csvw.json</url>
+        <title><polish>Metadane CSVW dla aed.csv</polish><english>CSVW metadata for aed.csv</english></title>
+        <description><polish>Opis tabeli w standardzie W3C CSV on the Web.</polish><english>Table description in the W3C CSV on the Web standard.</english></description>
+        <availability>local</availability>
+        <dataDate>2026-11-21</dataDate>
+        <specialSigns><specialSign>X</specialSign></specialSigns>
+        <hasDynamicData>false</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+      </resource>
+    </resources>
+    <tags><tag lang="pl">AED</tag><tag lang="pl">defibrylator</tag><tag lang="pl">pierwsza pomoc</tag><tag lang="pl">ratownictwo</tag><tag lang="pl">zdrowie</tag><tag lang="pl">bezpieczeństwo</tag><tag lang="en">AED</tag><tag lang="en">defibrillator</tag><tag lang="en">first aid</tag><tag lang="en">emergency</tag><tag lang="en">health</tag><tag lang="en">safety</tag></tags>
+    <updateFrequency>daily</updateFrequency>
+    <hasDynamicData>true</hasDynamicData>
+    <hasHighValueData>false</hasHighValueData>
+    <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+    <hasResearchData>false</hasResearchData>
+  </dataset>
+</p:datasets>

@@ -1,0 +1,1658 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Misja AED – API zbioru defibrylatorów",
+    "description": "Otwarty, ogólnopolski zbiór danych o AED: odczyt, import od dysponentów, zgłoszenia, publikacja dla dane.gov.pl.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logowanie na konto demo (dysponent, moderator)",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/aed": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Lista AED ze stronicowaniem i filtrami",
+        "operationId": "list_aed_api_v1_aed_get",
+        "parameters": [
+          {
+            "name": "bbox",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "minLon,minLat,maxLon,maxLat (WGS 84)",
+              "title": "Bbox"
+            },
+            "description": "minLon,minLat,maxLon,maxLat (WGS 84)"
+          },
+          {
+            "name": "wojewodztwo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Wojewodztwo"
+            }
+          },
+          {
+            "name": "gmina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Gmina"
+            }
+          },
+          {
+            "name": "dostep",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "publiczny | ograniczony | prywatny",
+              "title": "Dostep"
+            },
+            "description": "publiczny | ograniczony | prywatny"
+          },
+          {
+            "name": "dostepne_teraz",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dostepne Teraz"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "wyszukiwanie w nazwie, adresie i opisie",
+              "title": "Q"
+            },
+            "description": "wyszukiwanie w nazwie, adresie i opisie"
+          },
+          {
+            "name": "warstwa",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "otwarta | osm (domyślnie obie)",
+              "title": "Warstwa"
+            },
+            "description": "otwarta | osm (domyślnie obie)"
+          },
+          {
+            "name": "zrodlo_danych",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zrodlo Danych"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 50,
+              "title": "Per Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Formularz pojedynczego AED",
+        "operationId": "create_aed_api_v1_aed_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AedIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/aed/najblizsze": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Najbliższe AED (posortowane po odległości)",
+        "operationId": "nearest_api_v1_aed_najblizsze_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 90,
+              "minimum": -90,
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 180,
+              "minimum": -180,
+              "title": "Lon"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 5,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "tylko_dostepne_teraz",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Tylko Dostepne Teraz"
+            }
+          },
+          {
+            "name": "promien_m",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200000,
+              "minimum": 100,
+              "default": 20000,
+              "title": "Promien M"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/aed.jsonld": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Zbiór AED jako JSON-LD (schema.org) – poziom 4 otwartości",
+        "operationId": "aed_jsonld_api_v1_aed_jsonld_get",
+        "parameters": [
+          {
+            "name": "warstwa",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "otwarta",
+              "title": "Warstwa"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kontekst.jsonld": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Kontekst JSON-LD (mapowanie pól na schema.org)",
+        "operationId": "jsonld_context_api_v1_kontekst_jsonld_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/aed/{id_aed}": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Rekord AED z pochodzeniem i potwierdzeniami",
+        "operationId": "get_aed_api_v1_aed__id_aed__get",
+        "parameters": [
+          {
+            "name": "id_aed",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Aed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Aktualizacja rekordu AED",
+        "operationId": "patch_aed_api_v1_aed__id_aed__patch",
+        "parameters": [
+          {
+            "name": "id_aed",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Aed"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AedIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/import": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Wgranie pliku dysponenta (CSV, XLSX, JSON, GeoJSON)",
+        "operationId": "import_file_api_v1_import_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_file_api_v1_import_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/import/{import_id}/mapowanie": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Zatwierdzenie mapowania → raport walidacji",
+        "operationId": "import_mapping_api_v1_import__import_id__mapowanie_post",
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Import Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/import/{import_id}/zatwierdz": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Włączenie poprawnych wierszy do zbioru",
+        "operationId": "import_commit_api_v1_import__import_id__zatwierdz_post",
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Import Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zgloszenia": {
+      "post": {
+        "tags": [
+          "zgloszenia"
+        ],
+        "summary": "Zgłoszenie AED przez obywatela",
+        "operationId": "create_report_api_v1_zgloszenia_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZgloszenieIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "zgloszenia"
+        ],
+        "summary": "Kolejka zgłoszeń do moderacji",
+        "operationId": "list_reports_api_v1_zgloszenia_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "do_weryfikacji",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zgloszenia/{zid}/decyzja": {
+      "post": {
+        "tags": [
+          "zgloszenia"
+        ],
+        "summary": "Decyzja moderatora",
+        "operationId": "decide_api_v1_zgloszenia__zid__decyzja_post",
+        "parameters": [
+          {
+            "name": "zid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Zid"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decyzja"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/aed/{id_aed}/potwierdzenia": {
+      "post": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Paszport AED – potwierdzenie z kodu QR",
+        "operationId": "confirm_api_v1_aed__id_aed__potwierdzenia_post",
+        "parameters": [
+          {
+            "name": "id_aed",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Aed"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Potwierdzenie"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zrodla": {
+      "get": {
+        "tags": [
+          "zrodla"
+        ],
+        "summary": "Zakres referencyjny źródeł",
+        "operationId": "sources_api_v1_zrodla_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zrodla/osm/odswiez": {
+      "post": {
+        "tags": [
+          "zrodla"
+        ],
+        "summary": "Konektor OpenStreetMap (eksport AED OSM Polska)",
+        "operationId": "osm_refresh_api_v1_zrodla_osm_odswiez_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zrodla/dane-gov-pl/szukaj": {
+      "post": {
+        "tags": [
+          "zrodla"
+        ],
+        "summary": "Wyszukiwanie zbiorów AED w dane.gov.pl",
+        "operationId": "dgp_search_api_v1_zrodla_dane_gov_pl_szukaj_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Szukaj"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eksport/{plik}": {
+      "get": {
+        "tags": [
+          "publikacja"
+        ],
+        "summary": "Zasoby do publikacji w dane.gov.pl",
+        "operationId": "export_api_v1_eksport__plik__get",
+        "parameters": [
+          {
+            "name": "plik",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plik"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/eksport": {
+      "get": {
+        "tags": [
+          "publikacja"
+        ],
+        "summary": "Lista zasobów eksportu (CR-B9)",
+        "operationId": "export_list_api_v1_eksport_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/szablon.csv": {
+      "get": {
+        "tags": [
+          "publikacja"
+        ],
+        "summary": "Pusty szablon CSV dla dysponentów",
+        "operationId": "template_csv_api_v1_szablon_csv_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/szablon.xlsx": {
+      "get": {
+        "tags": [
+          "publikacja"
+        ],
+        "summary": "Szablon XLSX z listami wyboru dla dysponentów",
+        "operationId": "template_xlsx_api_v1_szablon_xlsx_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statystyki": {
+      "get": {
+        "tags": [
+          "publikacja"
+        ],
+        "summary": "Statystyki zbioru",
+        "operationId": "stats_api_v1_statystyki_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/slowniki": {
+      "get": {
+        "tags": [
+          "publikacja"
+        ],
+        "summary": "Słowniki wartości i słownik danych (dla formularzy)",
+        "operationId": "dictionaries_api_v1_slowniki_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/miejsca": {
+      "get": {
+        "tags": [
+          "aed"
+        ],
+        "summary": "Wyszukiwanie miejscowości (środek rekordów AED) – CR-B2",
+        "description": "No geocoding: localities known from the dataset, centre = mean of their AED coordinates.",
+        "operationId": "places_api_v1_miejsca_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AedIn": {
+        "properties": {
+          "kod_zrodla": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kod Zrodla",
+            "description": "np. dysponent:urzad-gminy-x; domyślnie formularz"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "AedIn"
+      },
+      "Body_import_file_api_v1_import_post": {
+        "properties": {
+          "plik": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Plik"
+          },
+          "kod_zrodla": {
+            "type": "string",
+            "title": "Kod Zrodla"
+          },
+          "licencja": {
+            "type": "string",
+            "title": "Licencja",
+            "default": "CC0-1.0"
+          },
+          "nazwa_zrodla": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nazwa Zrodla"
+          },
+          "dysponent_nazwa": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dysponent Nazwa"
+          },
+          "dysponent_typ": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dysponent Typ"
+          },
+          "status_urzadzenia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Urzadzenia"
+          },
+          "data_weryfikacji": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Weryfikacji"
+          },
+          "metoda_weryfikacji": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metoda Weryfikacji"
+          },
+          "czestotliwosc_aktualizacji": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Czestotliwosc Aktualizacji"
+          },
+          "obszar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Obszar"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plik",
+          "kod_zrodla"
+        ],
+        "title": "Body_import_file_api_v1_import_post"
+      },
+      "Decyzja": {
+        "properties": {
+          "decyzja": {
+            "type": "string",
+            "pattern": "^(zatwierdz|odrzuc|scal)$",
+            "title": "Decyzja"
+          },
+          "id_aed_docelowy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id Aed Docelowy",
+            "description": "dla „scal”: istniejący AED; domyślnie najbliższy w promieniu 30 m"
+          },
+          "uzasadnienie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uzasadnienie"
+          },
+          "rekord": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rekord",
+            "description": "Pola rekordu uzupełnione przez moderatora (adres, dostęp…)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decyzja"
+        ],
+        "title": "Decyzja"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Login": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "haslo": {
+            "type": "string",
+            "title": "Haslo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login",
+          "haslo"
+        ],
+        "title": "Login"
+      },
+      "MappingIn": {
+        "properties": {
+          "mapowanie": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mapowanie"
+          }
+        },
+        "type": "object",
+        "title": "MappingIn"
+      },
+      "Potwierdzenie": {
+        "properties": {
+          "jest_na_miejscu": {
+            "type": "boolean",
+            "title": "Jest Na Miejscu"
+          },
+          "szafka_dostepna": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Szafka Dostepna"
+          },
+          "komentarz": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Komentarz"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jest_na_miejscu"
+        ],
+        "title": "Potwierdzenie"
+      },
+      "Szukaj": {
+        "properties": {
+          "q": {
+            "type": "string",
+            "title": "Q",
+            "default": "defibrylator AED"
+          },
+          "importuj": {
+            "type": "boolean",
+            "title": "Importuj",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "Szukaj"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ZgloszenieIn": {
+        "properties": {
+          "lat": {
+            "type": "number",
+            "maximum": 54.9,
+            "minimum": 49.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 24.2,
+            "minimum": 14.1,
+            "title": "Lon"
+          },
+          "opis": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Opis"
+          },
+          "nazwa_obiektu": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nazwa Obiektu"
+          },
+          "zdjecie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zdjecie",
+            "description": "URL https:// albo data URI (opcjonalnie)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lat",
+          "lon",
+          "opis"
+        ],
+        "title": "ZgloszenieIn"
+      }
+    }
+  }
+}
