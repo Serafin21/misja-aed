@@ -31,7 +31,7 @@ const NAV = [
 
 // Breadcrumb labels for pages outside the menu
 const PAGE_LABELS: Record<string, string> = {
-  '/mapa': 'Mapa i lista AED', '/dane': 'Zbiór danych', '/zrodla': 'Źródła danych', '/akcja': 'Akcja „AED w danych”',
+  '/mapa': 'Mapa i lista AED', '/dane': 'Eksport listy', '/zrodla': 'Dostawcy', '/akcja': 'Akcja „AED w danych”',
   '/panel': 'Panel administratora', '/moje-aed': 'Moje AED', '/logowanie': 'Logowanie'
 };
 
@@ -169,8 +169,8 @@ export function App() {
             <nav aria-labelledby="f-pro">
               <h2 id="f-pro">Dla specjalistów</h2>
               <ul className="footer-links">
-                <li><Link to="/dane">Zbiór danych i API</Link></li>
-                <li><Link to="/zrodla">Źródła danych</Link></li>
+                <li><Link to="/dane">Eksport listy</Link></li>
+                <li><Link to="/zrodla">Dostawcy</Link></li>
                 <li><Link to="/logowanie">Logowanie dla dostawców i administratorów</Link></li>
                 <li><Link to="/licencje">Licencje i atrybucje</Link></li>
                 <li><ExternalLink href={REPO}>Kod źródłowy</ExternalLink></li>

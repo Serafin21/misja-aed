@@ -1,7 +1,7 @@
 // E3 – Karta AED. Access info (locked cabinet + instructions) first; then how to get there, hours, verification, source.
 import { useState, type FormEvent } from 'react';
 import { confirmAed, getAed, HttpError } from '../api/client';
-import type { AedDetail } from '../api/types';
+import { PODSTAWA_LABEL, type AedDetail } from '../api/types';
 import { MapView } from '../components/MapView';
 import { QrSticker } from '../components/QrSticker';
 import { AvailabilityBadge, DataBadge, Emergency, ErrorBox, ExternalLink, Icon, Loading, LockedCabinet } from '../components/ui';
@@ -43,7 +43,15 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
           <DataBadge aed={a} />
           {a.mobilny && <span className="badge badge--info"><Icon name="car" />Urządzenie w pojeździe – miejsce może się zmieniać</span>}
           {a.tryb_pediatryczny && <span className="badge badge--info">Tryb dla dzieci</span>}
+          {!helper && m.zgodnosc === 'przejsciowy' && <span className="badge badge--transitional">Zbiór przejściowy</span>}
         </div>
+        {!helper && m.dostawca && (
+          <p className="source-line">
+            Dostawca: <strong>{m.dostawca}</strong>{m.dostawca_podstawa && PODSTAWA_LABEL[m.dostawca_podstawa] ? ` (${PODSTAWA_LABEL[m.dostawca_podstawa]})` : ''}
+            {m.zbior_url && <> · <ExternalLink href={m.zbior_url}>zbiór w dane.gov.pl</ExternalLink></>}
+            {m.data_danych && <> · dane z {date(m.data_danych)}</>}
+          </p>
+        )}
       </header>
 
       {helper && (
@@ -126,10 +134,11 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
         <h2 id="h-src">Skąd są te dane i kto za nie odpowiada</h2>
         {helper ? <p>Punkt z mapy OpenStreetMap (© współtwórcy OpenStreetMap, ODbL). Nikt nie odpowiada za te dane – dlatego nie należą do wspólnej listy.</p> : (
           <dl className="facts">
-            <dt>Dostawca danych</dt><dd><strong>{m.dostawca}</strong>{m.fikcyjny_dostawca ? ' (dostawca fikcyjny – prototyp)' : ''} – odpowiada za jakość, aktualność i poprawność tych danych</dd>
+            <dt>Dostawca danych</dt><dd><strong>{m.dostawca}</strong>{m.dostawca_podstawa && PODSTAWA_LABEL[m.dostawca_podstawa] ? ` (${PODSTAWA_LABEL[m.dostawca_podstawa]})` : ''}{m.fikcyjny_dostawca ? ' (dostawca fikcyjny – prototyp)' : ''} – odpowiada za jakość, aktualność i poprawność tych danych</dd>
             <dt>Zbiór w dane.gov.pl</dt><dd>{m.zbior_url ? <ExternalLink href={m.zbior_url}>{m.zbior_tytul ?? 'zbiór dostawcy'}</ExternalLink> : '—'}{m.zasob_url && <> · <ExternalLink href={m.zasob_url}>plik z danymi</ExternalLink></>}</dd>
             <dt>Dane na dzień</dt><dd>{m.data_danych ? date(m.data_danych) : '—'}</dd>
-            <dt>Zasady korzystania</dt><dd>{m.licencja_zbioru ?? a.licencja}</dd>
+            <dt>Zasady korzystania</dt><dd>Źródło: {m.dostawca}, {m.licencja_zbioru ?? a.licencja}</dd>
+            {m.zgodnosc === 'przejsciowy' && <><dt>Zbiór przejściowy</dt><dd>Zbiór opublikowany przed wzorcem danych AED. Pokazujemy dane dostawcy bez zmian – część pól może być pusta.</dd></>}
           </dl>
         )}
         <details className="details">

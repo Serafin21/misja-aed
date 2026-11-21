@@ -58,6 +58,29 @@ export interface AedMeta {
   dostawca?: string; dostawca_regon?: string | null; zbior_id?: string; zbior_tytul?: string; zbior_url?: string; zasob_url?: string;
   data_danych?: string | null; zbior_zmodyfikowany?: string | null; czestotliwosc_aktualizacji?: string | null; zbior_nieaktualny?: boolean;
   licencja_zbioru?: string | null; mozliwe_duplikaty?: string[]; fikcyjny_dostawca?: boolean;
+  /** CR-TL-5: 'przejsciowy' = dataset published before the template; provider data shown unchanged */
+  zgodnosc?: 'wzorzec' | 'przejsciowy';
+  /** CR-TL-6: on what basis the provider publishes this record */
+  dostawca_podstawa?: PodstawaPublikacji;
+}
+
+/** CR-TL-6: owner, manager with a contract, or an organisation that verified the AED on site */
+export type PodstawaPublikacji = 'wlasciciel' | 'zarzadca' | 'weryfikujacy';
+export const PODSTAWA_LABEL: Record<PodstawaPublikacji, string> = {
+  wlasciciel: 'właściciel', zarzadca: 'zarządca z umową', weryfikujacy: 'weryfikuje na miejscu',
+};
+
+/** GET /zbiory (CR-TL-5) – provider datasets and their status on the common list */
+export type StatusZbioru = 'wzorzec' | 'przejsciowy' | 'poza_lista';
+export interface ZbiorDostawcy {
+  zbior_id: string; tytul: string; dostawca: string; zbior_url: string | null; status: StatusZbioru;
+  nieaktualny: boolean; rekordy: number; data_danych: string | null; licencja: string | null; problemy: string[];
+}
+export interface Zbiory {
+  data: ZbiorDostawcy[];
+  meta: { agregacja?: string | null; warstwa_pomocnicza?: { zrodlo: string; licencja: string; obiekty: number } };
+  /** set by the client when the API has no /zbiory yet and the contract placeholder is shown */
+  atrapa?: boolean;
 }
 
 export interface AedView extends Aed {
@@ -77,7 +100,7 @@ export interface AedPoint {
   /** HANDOFF A #6 – for filters next to the map (older API: undefined) */
   dostep?: Dostep | null; wiek_danych_dni?: number | null; mobilny?: boolean; wojewodztwo?: string | null;
   /** docs/MODEL_ROL.md: 'lista' or helper layer 'pomocnicza' (= osm); dataset past its update date; possible duplicate */
-  warstwa?: 'lista' | 'pomocnicza'; zbior_nieaktualny?: boolean; duplikat?: boolean;
+  warstwa?: 'lista' | 'pomocnicza'; zbior_nieaktualny?: boolean; duplikat?: boolean; zgodnosc?: 'wzorzec' | 'przejsciowy';
   /** TERYT of the gmina the AED lies in (HANDOFF A #7) */
   gmina_teryt?: string | null;
 }

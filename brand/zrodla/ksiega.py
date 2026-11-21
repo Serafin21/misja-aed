@@ -105,9 +105,9 @@ def p2():
     b += t(M, 142, Z.NAME, 26, 700) + t(M, 168, Z.SLOGAN, 16, 600, Z.GREEN) + t(M, 188, Z.SUBTITLE, 11.5, 500)
     b += t(M, 215, "Koncepcja", 13, 700, Z.GREEN)
     concept = [
-        "Znak to serce zbudowane z 21 zaokrąglonych kwadratów ułożonych jak komórki arkusza danych.",
+        "Znak to serce zbudowane z 16 zaokrąglonych kwadratów ułożonych jak komórki arkusza danych.",
         "Każda komórka to jeden wiersz w zbiorze, czyli jeden defibrylator, który ktoś może znaleźć w nagłej sytuacji.",
-        "Jedna komórka jest bursztynowa – to „Twoje AED”: brakujący wiersz, który dysponent dopisuje do zbioru.",
+        "Jedna komórka jest bursztynowa – to „Twoje AED”: brakujący wiersz, który właściciel AED sam publikuje na dane.gov.pl.",
         "Hasło „Dane prosto z serca” łączy oba sensy: AED ratuje serce, a dysponent dzieli się danymi bez wahania, bo wie, że mogą uratować życie.",
         "Na mapie ten sam język przejmuje znacznik: pinezka z sercem i bursztynową błyskawicą.",
     ]
@@ -117,7 +117,7 @@ def p2():
         b += txt
     mark, _, _ = embed(Z.mark_only("kolor", pad=0)[0], 600, 120, w=170)
     b += card(560, 90, 250, 250) + mark
-    b += t(685, 320, "21 komórek = 21 wierszy danych", 9.5, 500, Z.SAGE, "middle")
+    b += t(685, 320, "16 komórek = 16 wierszy danych", 9.5, 500, Z.SAGE, "middle")
     b += card(560, 360, 250, 160, Z.WHITE, "#D5DDD6")
     b += t(575, 388, "Ton komunikacji", 11, 700)
     for i, s in enumerate(["hasło zawsze z nazwą lub podtytułem", "prosto i konkretnie, bez żargonu", "„Ty” zamiast urzędowego „Państwo”", "liczby tylko ze źródłem", "zawsze z numerem 112 przy mapie"]):
@@ -144,7 +144,7 @@ def p3():
     # rules
     rx = 470
     rules = [
-        ("Siatka 5 × 5", "Znak powstaje na siatce 5 × 5 o kroku x. W siatce jest 21 komórek: wiersze 2, 5, 5, 3 i 1."),
+        ("Siatka 5 × 5", "Znak powstaje na siatce 5 × 5 o kroku x. Znak zajmuje 16 komórek tej siatki: w kolejnych wierszach 2, 5, 5, 3 i 1."),
         ("Komórka", "Kwadrat o boku 0,8 x, odstęp 0,2 x, promień zaokrąglenia 0,14 x. Wszystkie komórki są jednakowe."),
         ("Komórka „Twoje AED”", "Bursztynowa komórka stoi zawsze w środku trzeciego wiersza – w sercu znaku."),
         ("Logotyp", "Nazwa: wysokość wersalików = 1 x, odstęp od znaku 0,7 x. Hasło: wysokość wersalików 0,4 x, odstęp od nazwy 0,95 x. Napisy są wyśrodkowane pod znakiem."),

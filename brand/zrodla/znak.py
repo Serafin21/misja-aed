@@ -173,7 +173,7 @@ def logo_vertical(scheme: str = "kolor", slogan: bool = True, pad: float = X) ->
     if slogan:
         body += f'<path fill="{sch["slogan"]}" d="{text_path(SLOGAN, "semibold", SLOGAN_SIZE, pad + (inner - sw) / 2, y_slog)}"/>'
     t = f"{NAME} – {SLOGAN}" if slogan else NAME
-    return svg_doc(w, h, body, t, sch["bg"], "Logotyp akcji: serce z 21 zaokrąglonych kwadratów, jeden bursztynowy."), w, h
+    return svg_doc(w, h, body, t, sch["bg"], "Logotyp akcji: serce z 16 zaokrąglonych kwadratów, jeden bursztynowy."), w, h
 
 
 def logo_horizontal(scheme: str = "kolor", slogan: bool = True, pad: float = X) -> tuple[str, float, float]:

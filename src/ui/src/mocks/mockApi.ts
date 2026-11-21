@@ -1,5 +1,5 @@
 // In-browser implementation of CONTRACT §5 on data/sample/ – used until Model A's API is up.
-import type { Miejsce, WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo } from '../api/types';
+import type { Miejsce, WynikImportu, Aed, AedDetail, AedFilters, AedPoint, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo, Zbiory } from '../api/types';
 import { availableNow, haversine } from '../lib/format';
 import { ageDays, computeState } from '../lib/dataState';
 import geo from './aed_ujednolicone.json';
@@ -66,8 +66,12 @@ export function mockNearest(lat: number, lon: number, limit: number, onlyNow: bo
 export function mockGetAed(id: string): Promise<AedDetail | null> {
   const a = records.find((r) => r.id_aed === id);
   if (!a) return delay(null);
+  // CR-TL-6 placeholder until Model A sends meta.dostawca_podstawa: sample records are fictional providers' own AED
+  const meta = a.licencja === 'ODbL-1.0' ? undefined
+    : { warstwa: 'lista' as const, dostawca: a.dysponent_nazwa, dostawca_podstawa: 'wlasciciel' as const, fikcyjny_dostawca: true, licencja_zbioru: a.licencja };
+  const view = withAvailability(a);
   return delay({
-    aed: withAvailability(a),
+    aed: meta && !view.meta ? { ...view, meta } : view,
     pochodzenie: (pochodzenie as Pochodzenie[]).filter((p) => p.id_aed === id),
     potwierdzenia: confirmations.get(id) ?? { liczba: 0, ostatnie: null },
   });
@@ -151,4 +155,25 @@ export function mockPlaces(q: string): Promise<Miejsce[]> {
     typ: 'miejscowosc' as const, nazwa: m, opis: 'miejscowość (dane przykładowe)', bbox: null,
     lat: rs.reduce((s, a) => s + a.szerokosc_geograficzna, 0) / rs.length, lon: rs.reduce((s, a) => s + a.dlugosc_geograficzna, 0) / rs.length,
   })));
+}
+
+/**
+ * Placeholder for GET /zbiory (CR-TL-5 contract) until Model A ships it. The three providers are the fictional ones
+ * from data/dostawcy/ (titles, record counts, licences, data dates as there); the last two rows only illustrate the
+ * other statuses and are fictional as well.
+ */
+export function mockZbiory(): Promise<Zbiory> {
+  const dgp = (id: string, slug: string) => `https://dane.gov.pl/pl/dataset/${id},${slug}`;
+  const z: Zbiory = {
+    atrapa: true,
+    data: [
+      { zbior_id: '990001', tytul: 'Defibrylatory AED – Urząd Gminy Przykładowo', dostawca: 'Urząd Gminy Przykładowo', zbior_url: dgp('990001', 'defibrylatory-aed-urzad-gminy-przykladowo'), status: 'wzorzec', nieaktualny: false, rekordy: 3, data_danych: '2026-11-02', licencja: 'CC0 1.0', problemy: [] },
+      { zbior_id: '990003', tytul: 'Defibrylatory AED – MPK Przykładowo sp. z o.o.', dostawca: 'MPK Przykładowo sp. z o.o.', zbior_url: dgp('990003', 'defibrylatory-aed-mpk-przykladowo-sp-z-o-o'), status: 'wzorzec', nieaktualny: false, rekordy: 3, data_danych: '2026-11-15', licencja: 'CC0 1.0', problemy: [] },
+      { zbior_id: '990002', tytul: 'Defibrylatory AED – Uczelnia Testowa', dostawca: 'Uczelnia Testowa', zbior_url: dgp('990002', 'defibrylatory-aed-uczelnia-testowa'), status: 'wzorzec', nieaktualny: true, rekordy: 2, data_danych: '2025-06-30', licencja: 'CC BY 4.0', problemy: ['Zbiór po terminie aktualizacji (co kwartał + 30 dni).'] },
+      { zbior_id: '990004', tytul: 'Wykaz defibrylatorów – Gmina Przykładowa Druga', dostawca: 'Gmina Przykładowa Druga', zbior_url: null, status: 'przejsciowy', nieaktualny: false, rekordy: 4, data_danych: '2026-03-10', licencja: 'CC BY 4.0', problemy: ['Opublikowany przed wzorcem: brak pól data_weryfikacji i godziny_dostepnosci.'] },
+      { zbior_id: '990005', tytul: 'Lokalizacje AED – Miasto Przykładowe', dostawca: 'Miasto Przykładowe', zbior_url: null, status: 'poza_lista', nieaktualny: false, rekordy: 12, data_danych: '2024-09-01', licencja: 'CC BY 4.0', problemy: ['Plik PDF zamiast CSV – nie da się odczytać maszynowo.'] },
+    ],
+    meta: { agregacja: null, warstwa_pomocnicza: { zrodlo: 'OpenStreetMap', licencja: 'ODbL-1.0', obiekty: 0 } },
+  };
+  return delay(z);
 }
