@@ -260,3 +260,19 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: –
 - Użycie AI (jedna linia): interfejs modelu ról z Claude.
 - Następny krok: logowanie przez login.gov.pl (docelowo), test czytnikiem ekranu nowych ekranów.
+
+## HANDOFF #23
+
+- Czas: sob 21:45
+- Zrobione (CR-TL-5, model: `docs/MODEL_ROL.md`):
+  - **P0-1 teksty:** `SUBMISSION.md` (opis, podejście, co zrobione, materiały – model dostawców; nazwa zespołu dalej TODO dla TL; zdanie o Krośnie/Przemyślu/Markach **pominięte**, bo `/api/v1/zbiory` ze statusem `przejsciowy` jeszcze nie istnieje, a raport A pokazuje je jako `poza_lista`), `README.md` (tytuł „Mapa AED – wspólna lista AED w dane.gov.pl”, tabela ról z §4, konta `dysponent`/`administrator`, ścieżki dla jury, diagram, „Co jest symulacją”, akcja jako osobna sekcja), `pitch/opis_projektu.md`, `pitch/prezentacja.md` v2 (10 slajdów: problem → role → kreator → lista → zgłoszenia → akcja → administrator → zgodność → ograniczenia; miejsca na zrzuty 01–06; liczby z ⟲ do sprawdzenia po regeneracji LICZBY.md), `pitch/scenariusz_demo.md` v2 (5 części wg CR).
+  - **P0-2 strony:** `/zrodla` → „Dostawcy i zbiory” z `GET /api/v1/zbiory` (tabela dostawca / zbiór / status / AED / data / warunki, objaśnienie statusów, sekcja „Warstwa pomocnicza: OpenStreetMap”); do czasu wdrożenia przez A **atrapa** z kontraktu (`mockZbiory`: 3 fikcyjnych dostawców z `data/dostawcy/` + 2 fikcyjne wiersze ilustrujące „przejściowy” i „poza listą”) z komunikatem „Przykład (fikcyjni dostawcy)”. `/dane` → „Eksport wspólnej listy” (kompilacja, nie zbiór; warunki per rekord; bez OSM, XML i DCAT). Stopka: „Eksport listy”, „Dostawcy”. Karta AED: linia „Dostawca danych: X · zbiór w dane.gov.pl · dane z …” pod tytułem, „Źródło: {dostawca}, {licencja}”, etykieta i objaśnienie „Zbiór przejściowy” (`meta.zgodnosc === "przejsciowy"`); lista: etykieta i „Źródło: …”; legenda: pozycja „Zbiór przejściowy”. Poprawka: na liście nie powtarza się „wewnątrz budynku · wewnątrz budynku”.
+  - **P1-4:** „21 kwadratów/komórek” → **16** w `brand/zrodla/ksiega.py` i `znak.py` (opis SVG); koncepcja: „brakujący wiersz, który właściciel AED sam publikuje na dane.gov.pl”. Wygenerowane ponownie: `brand/ksiega_znaku.pdf` i SVG/PDF logotypów (PNG/JPG bez zmian – zmienił się tylko opis tekstowy). Strony 2–3 księgi obejrzane po wygenerowaniu.
+  - `docs/AI_USAGE.md`: wiersz „Kod frontendu”.
+- Jak uruchomić / zobaczyć: `npm run dev` → `/zrodla`, `/dane`, karta AED.
+- Sprawdzone: składnia TypeScript zmienionych plików (transpilacja). **Pełny typecheck i build NIE uruchomione** – ta sesja nie ma dostępu do rejestru npm. Do zrobienia u człowieka B: `cd src\ui && npm run build`.
+- CR do A: (1) `GET /api/v1/zbiory` wg kształtu z CR-TL-5 (front go już czyta; 404 → atrapa); (2) `meta.zgodnosc` w rekordach listy i `zgodnosc` w `/aed/punkty`; (3) regeneracja `docs/tech/LICZBY.md` dla modelu listy (pitch ma ⟲ przy liczbach).
+- Nie zrobione z CR-TL-5: P1-3 zrzuty (po scaleniu A i `seed --lista auto`, w przeglądarce), P2-5 testy dostępności nowych ekranów.
+- Znane błędy: –
+- Użycie AI (jedna linia): teksty pod model ról, strony Dostawcy/Eksport i poprawka księgi znaku z Claude (Model B); treść modelu – TL.
+- Następny krok: build u człowieka B, potem zrzuty 01–06 i test a11y.
