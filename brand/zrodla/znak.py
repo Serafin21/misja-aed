@@ -230,6 +230,24 @@ def pin(kind: str = "ok") -> str:
             '<path d="M21.2 14.2l-4.4 7.2h3.2l-1.2 5.4 4.4-7.4H20z" fill="%s"/>%s') % (fill, outline, hrt, bolt, badge)
 
 
+def data_pin(kind: str = "aktualne") -> str:
+    """Map pin, mode "aktualność danych" (CR-TL-1): pixel heart in the pin – same geometry as src/ui dataPinSvg."""
+    fresh = kind == "aktualne"
+    fill, stroke, cellc = (GREEN, WHITE, WHITE) if fresh else (WHITE, AMBER_DARK, AMBER_DARK)
+    pitch, cell = 3.7, 2.96
+    x0, y0 = 20 - (4 * pitch + cell) / 2, 11.2
+    cells = "".join(f'<rect x="{x0 + i * pitch:.2f}" y="{y0 + j * pitch:.2f}" width="{cell}" height="{cell}" rx=".5" fill="{cellc}"/>'
+                    for j, row in enumerate(HEART) for i, ch in enumerate(row) if ch != ".")
+    badge = "" if fresh else ('<circle cx="33" cy="8" r="6.5" fill="#fff" stroke="#0F3B2B" stroke-width="1.6"/>'
+                              '<path d="M33 4.8V8l2.2 1.4" stroke="#0F3B2B" stroke-width="1.6" fill="none" stroke-linecap="round"/>')
+    return (f'<path d="M20 50S4 32.5 4 19.5a16 16 0 0 1 32 0C36 32.5 20 50 20 50z" fill="{fill}" stroke="{stroke}" stroke-width="2.6"/>'
+            + cells + badge)
+
+
+def data_pin_svg(kind: str) -> str:
+    return svg_doc(40, 52, data_pin(kind), "AED – dane aktualne" if kind == "aktualne" else "AED – dane nieaktualne")
+
+
 PIN_LABELS = {"ok": "AED dostępne teraz", "closed": "AED z ograniczeniami lub teraz zamknięte", "unknown": "AED – brak godzin lub dane niezweryfikowane"}
 
 

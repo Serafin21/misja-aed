@@ -43,7 +43,7 @@ export interface Aed {
   kontakt_email: string | null;
   zrodlo_danych: string;
   licencja: string;
-  data_weryfikacji: string;
+  data_weryfikacji: string | null;
   metoda_weryfikacji: string;
   data_aktualizacji: string;
   kompletnosc: number | null;
@@ -56,6 +56,18 @@ export interface AedView extends Aed {
   /** true / false / null (hours not interpretable) – CONTRACT §7 */
   dostepny_teraz?: boolean | null;
   odleglosc_m?: number;
+  /** CR-TL-1 (CONTRACT §8): from meta – verification ≤ 365 days = aktualne */
+  stan_danych?: 'aktualne' | 'nieaktualne';
+  wiek_danych_dni?: number | null;
+}
+
+/** GET /pokrycie – municipalities (PRG) with AED coverage, CONTRACT §8 */
+export type StanGminy = 'brak_danych' | 'nieaktualne' | 'aktualne';
+export interface GminaProps { teryt: string; gmina: string; wojewodztwo: string; rodzaj?: string; liczba_aed: number; aktualne: number; nieaktualne: number; stan: StanGminy }
+export interface Pokrycie {
+  type: 'FeatureCollection';
+  features: { type: 'Feature'; properties: GminaProps; geometry: { type: 'Polygon' | 'MultiPolygon'; coordinates: unknown } }[];
+  meta?: { wojewodztwo?: string; liczba_gmin?: number; gminy_wg_stanu?: Record<StanGminy, number>; prog_aktualnosci_dni?: number; atrybucja?: string };
 }
 
 export interface Pochodzenie {

@@ -49,6 +49,9 @@ def main():
         name = {"ok": "dostepne", "closed": "ograniczone", "unknown": "brak_danych"}[k]
         export(znak.pin_svg(k), VAR / f"znacznik_{name}", png_w=280, pdf=False)
 
+    for k in ("aktualne", "nieaktualne"):
+        export(znak.data_pin_svg(k), VAR / f"znacznik_dane_{k}", png_w=280, pdf=False)
+
     (BRAND / "haslo.txt").write_text(f"Nazwa akcji: {znak.NAME}\nHasło: {znak.SLOGAN}\n", encoding="utf-8")
     print("OK:", BRAND)
 

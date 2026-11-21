@@ -332,6 +332,31 @@ def p9():
     return page(9, "Znaczniki na mapie", b)
 
 
+def p9b():
+    b = para(M, 100, 740, "Drugi tryb mapy odpowiada na pytanie „jak dobrze znamy to AED?”. Znacznik ma ten sam kształt pinezki, a w środku serce z komórek z logo głównego – każda komórka to wiersz danych. Tryb wybiera się przełącznikiem nad mapą; legenda zmienia się razem z nim.", 10.5)[0]
+    states = [("aktualne", "Dane aktualne", "weryfikacja w ostatnich 12 miesiącach: zielona pinezka, białe komórki"),
+              ("nieaktualne", "Dane nieaktualne", "starsze niż 12 miesięcy albo bez daty: biała pinezka, obrys i komórki w bursztynie ciemnym, zegar")]
+    y = 160
+    for k, name, desc in states:
+        e, _, _ = embed(Z.data_pin_svg(k), M, y, w=44)
+        b += e + t(M + 62, y + 20, name, 12, 700) + para(M + 62, y + 38, 300, desc, 10, 400, Z.SAGE)[0]
+        y += 82
+    b += ('<defs><pattern id="h" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+          '<rect width="10" height="10" fill="#F2EFE6"/><rect width="5" height="10" fill="#D9DDDA"/></pattern></defs>')
+    b += f'<rect x="{M}" y="{y}" width="44" height="30" rx="4" fill="url(#h)" stroke="{Z.SAGE}" stroke-width="1.5" stroke-dasharray="5 4"/>'
+    b += t(M + 62, y + 12, "Gmina bez danych", 12, 700) + para(M + 62, y + 30, 300, "żadnego AED w zbiorze: kreskowanie #D9DDDA / #F2EFE6, przerywana granica #6B7570", 10, 400, Z.SAGE)[0]
+    b += para(M, y + 78, 360, "Kolor nie jest jedynym nośnikiem informacji: stan rozróżnia też wypełnienie pinezki (pełna / obrysowana), znaczek zegara i kreskowanie. Pod mapą jest lista gmin bez danych jako alternatywa tekstowa, a nazwa każdej pinezki zawiera stan danych i datę weryfikacji.", 10)[0]
+    b += para(M, y + 158, 360, "Komórki w pinezce „nieaktualne” są w bursztynie ciemnym (#B9791A, 3,6:1 na bieli) zamiast jasnego bursztynu (2,2:1), żeby spełnić WCAG 1.4.11.", 9.5, 400, Z.SAGE)[0]
+    # mini map
+    mx, my, mw, mh = 450, 150, 344, 300
+    b += f'<rect x="{mx}" y="{my}" width="{mw}" height="{mh}" rx="10" fill="#F2EFE6"/>'
+    b += f'<path d="M{mx + 180} {my}h{mw - 180}v{mh}h-{mw - 160}l20-120-60-60z" fill="url(#h)" stroke="{Z.SAGE}" stroke-width="1.5" stroke-dasharray="5 4"/>'
+    for k, px, py in (("aktualne", 40, 60), ("nieaktualne", 110, 150), ("aktualne", 60, 210), ("nieaktualne", 20, 140)):
+        b += embed(Z.data_pin_svg(k), mx + px, my + py, w=30)[0]
+    b += t(mx + 220, my + 160, "gmina bez danych", 10, 700, Z.DEEP)
+    return page(10, "Znaczniki: tryb „aktualność danych”", b)
+
+
 def p10():
     b = ""
     e1, _, _ = embed(Z.app_icon()[0], M, 100, w=110)
@@ -348,18 +373,18 @@ def p10():
     files = ["logo.svg – plik główny (format otwarty), logo.pdf – wektor do druku",
              "logo.png – 2400 px, przezroczyste tło; logo.jpg – białe tło",
              "warianty/ – wersje pionowe i poziome: kolor, odwrócona, achromatyczna, czarna, biała; sam znak",
-             "warianty/ikona_aplikacji*.png, warianty/znacznik_*.svg – ikony i znaczniki mapy",
+             "warianty/ikona_aplikacji*.png, warianty/znacznik_*.svg – ikony i znaczniki mapy (oba tryby)",
              "haslo.txt – nazwa akcji i hasło; zrodla/ – skrypty, które generują wszystkie pliki"]
     y = 362
     for f in files:
         b += t(M, y, "• " + f, 10.5)
         y += 20
     b += para(M, y + 14, 740, "Logotyp, hasło i system znaku przygotował zespół na HackNation 2026. Zgodnie z regulaminem zadania autorskie prawa majątkowe do zwycięskiego rozwiązania przechodzą na Ministra Cyfryzacji.", 9.5, 400, Z.SAGE)[0]
-    return page(10, "Zastosowania i pliki", b)
+    return page(11, "Zastosowania i pliki", b)
 
 
 def main():
-    pages = [p1(), p2(), p3(), p4(), p5(), p6(), p7(), p8(), p9(), p10()]
+    pages = [p1(), p2(), p3(), p4(), p5(), p6(), p7(), p8(), p9(), p9b(), p10()]
     with tempfile.TemporaryDirectory() as d:
         pdfs = []
         for i, svg in enumerate(pages, 1):

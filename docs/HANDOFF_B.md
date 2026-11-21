@@ -103,3 +103,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Znane błędy: UI po zmianach nadal niesprawdzone w przeglądarce.
 - Użycie AI (jedna linia): pliki wektorowe logo, warianty i księga znaku wygenerowane z Claude (Model B) na podstawie projektu zespołu.
 - Następny krok: TL przegląda księgę; prezentacja PDF.
+
+## HANDOFF #9
+
+- Czas: sob 16:10
+- Zrobione: CR-TL-1 w UI. E1 i E2: nad mapą przełącznik „Dostępność” / „Aktualność danych” (natywne radio, strzałki, stan w URL `?tryb=dane`), legenda zmienia się z trybem. Tryb danych: pinezki z sercem z komórek (`dataPinSvg`: aktualne – zielona, białe komórki; nieaktualne – biała z obrysem i komórkami #B9791A + zegar; przerywany obrys OSM), nazwa markera = obiekt + stan danych + data weryfikacji; warstwa gmin z `GET /pokrycie` (brak_danych – kreskowanie #D9DDDA/#F2EFE6, przerywana ramka #6B7570; pozostałe – lekki odcień), atrybucja PRG w mapie, pod mapą lista gmin bez danych (E1 zwinięta). Lista i karta AED: etykieta „Dane z MM.RRRR” / „Dane nieaktualne” (ikona + tekst, pełna data dla czytnika). E7/E8: liczniki `aktualne`, `nieaktualne`, `gminy_bez_danych`. E8: nagłówek = hasło, `BRAND_CTA`, przycisk „Dodaj swoje AED”, legenda obu trybów. Mocki: `stan_danych` i `wiek_danych_dni` liczone z `data_weryfikacji` (próg 365 dni, Europe/Warsaw, jak `src/core/coverage.py`). Księga znaku: nowa strona 10 (znaczniki trybu danych), pliki `warianty/znacznik_dane_*`.
+- Jak uruchomić / zobaczyć: `npm run dev` → http://localhost:5173/mapa?tryb=dane (warstwa gmin tylko z API: kujawsko-pomorskie).
+- Założenia: komórki „nieaktualne” w bursztynie ciemnym (#B9791A, 3,6:1) zamiast #E2A23B (2,2:1 – za mało dla grafiki, WCAG 1.4.11). Wzór TL był w PDF „3 koncepcje logo” s. 1, nie w księdze s. 7. W trybie demo brak warstwy gmin (komunikat).
+- CR: brak. Uwaga dla A/TL: E2 pobiera `per_page=500`, a zbiór ma 18 057 rekordów – na mapie Polski widać tylko część; w trybie danych warto filtrować województwo.
+- Znane błędy: niesprawdzone w przeglądarce ani typecheckiem z pakietami (środowisko B bez npm).
+- Użycie AI (jedna linia): tryby mapy, warstwa gmin, etykiety i strona księgi z Claude (Model B).
+- Następny krok: typecheck + build u człowieka, przegląd w przeglądarce (klawiatura, 320 px, legenda).

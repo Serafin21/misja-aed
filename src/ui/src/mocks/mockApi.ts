@@ -1,6 +1,7 @@
 // In-browser implementation of CONTRACT §5 on data/sample/ – used until Model A's API is up.
 import type { WynikImportu, Aed, AedDetail, AedFilters, AedView, ListMeta, Pochodzenie, RaportWalidacji, Zrodlo } from '../api/types';
 import { availableNow, haversine } from '../lib/format';
+import { ageDays, computeState } from '../lib/dataState';
 import geo from './aed_ujednolicone.json';
 import pochodzenie from './aed_pochodzenie.json';
 import raport from './raport_walidacji_przyklad.json';
@@ -18,6 +19,9 @@ const norm = (s: string) => s.toLocaleLowerCase('pl').normalize('NFD').replace(/
 function withAvailability(a: Aed): AedView {
   const v: AedView = { ...a };
   v.dostepny_teraz = availableNow(v);
+  // CR-TL-1: in sample mode freshness is computed here (365-day threshold), like the API does
+  v.stan_danych = computeState(v.data_weryfikacji);
+  v.wiek_danych_dni = ageDays(v.data_weryfikacji);
   return v;
 }
 

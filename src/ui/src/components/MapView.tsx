@@ -4,10 +4,12 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
-import type { AedView } from '../api/types';
+import type { AedView, Pokrycie, StanGminy } from '../api/types';
+import { dataLabel } from '../lib/dataState';
 import { availableNow } from '../lib/format';
 import { navigate } from '../router';
-import { pinSvg, type PinKind } from './Brand';
+import { dataPinSvg, pinSvg, type PinKind } from './Brand';
+import type { MapMode } from './MapMode';
 
 export interface MapViewProps {
   items: AedView[];
@@ -20,6 +22,12 @@ export interface MapViewProps {
   label: string;
   height?: number;
   cluster?: boolean;
+  /** CR-TL-1: pins by availability (default) or by data freshness */
+  mode?: MapMode;
+  /** municipality layer (GET /pokrycie), shown in the data mode */
+  coverage?: Pokrycie | null;
+  /** fit the view to the municipality layer when it appears (E2); E1 keeps the nearest AEDs in view */
+  fitCoverage?: boolean;
 }
 
 const POLAND: L.LatLngBoundsExpression = [[49.0, 14.1], [54.9, 24.2]];
@@ -31,26 +39,30 @@ function pinKind(a: AedView): PinKind {
   return v === true ? 'ok' : v === false ? 'closed' : 'unknown';
 }
 
-function markerIcon(a: AedView): L.DivIcon {
+function markerIcon(a: AedView, mode: MapMode): L.DivIcon {
+  const osm = a.licencja === 'ODbL-1.0';
   return L.divIcon({
     className: 'aed-pin',
-    html: pinSvg(pinKind(a), a.licencja === 'ODbL-1.0'),
+    html: mode === 'dane' ? dataPinSvg(dataLabel(a).state, osm) : pinSvg(pinKind(a), osm),
     iconSize: [40, 52],
     iconAnchor: [20, 50],
   });
 }
 
-function markerName(a: AedView): string {
+function markerName(a: AedView, mode: MapMode): string {
+  if (mode === 'dane') return `${a.nazwa_obiektu}, ${a.miejscowosc} – ${dataLabel(a).long}`;
   const v = availableNow(a);
   const state = a.dostep === 'prywatny' ? 'tylko dla uprawnionych' : v === true ? 'dostępne teraz' : v === false ? 'teraz zamknięte' : 'godziny do sprawdzenia';
   return `${a.nazwa_obiektu}, ${a.miejscowosc} – ${state}${a.szafka_zamknieta ? ', szafka zamknięta' : ''}`;
 }
 
-export function MapView({ items, user, focusId, onPick, picked, label, height = 420, cluster = true }: MapViewProps) {
+export function MapView({ items, user, focusId, onPick, picked, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
   const extra = useRef<L.LayerGroup | null>(null);
+  const covLayer = useRef<L.GeoJSON | null>(null);
+  const covAttr = useRef<string | null>(null);
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
 
@@ -68,7 +80,7 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     m.on('blur', () => m.scrollWheelZoom.disable());
     extra.current = L.layerGroup().addTo(m);
     map.current = m;
-    return () => { m.remove(); map.current = null; layer.current = null; };
+    return () => { m.remove(); map.current = null; layer.current = null; covLayer.current = null; covAttr.current = null; };
   }, []);
 
   useEffect(() => {
@@ -83,8 +95,8 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     for (const a of items) {
       const ll: L.LatLngExpression = [a.szerokosc_geograficzna, a.dlugosc_geograficzna];
       pts.push(ll);
-      const name = markerName(a);
-      const mk = L.marker(ll, { icon: markerIcon(a), title: name, alt: name, keyboard: true, riseOnHover: true });
+      const name = markerName(a, mode);
+      const mk = L.marker(ll, { icon: markerIcon(a, mode), title: name, alt: name, keyboard: true, riseOnHover: true });
       mk.on('click', () => navigate(`/aed/${a.id_aed}`));
       mk.on('keypress', (e: L.LeafletKeyboardEvent) => { if (e.originalEvent.key === 'Enter' || e.originalEvent.key === ' ') navigate(`/aed/${a.id_aed}`); });
       group.addLayer(mk);
@@ -96,7 +108,7 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     if (focus) m.setView([focus.szerokosc_geograficzna, focus.dlugosc_geograficzna], 17);
     else if (pts.length === 1) m.setView(pts[0], 16);
     else if (pts.length > 1) m.fitBounds(L.latLngBounds(pts), { padding: [32, 32], maxZoom: 17 });
-  }, [items, user, focusId, cluster]);
+  }, [items, user, focusId, cluster, mode]);
 
   useEffect(() => {
     const g = extra.current;
@@ -109,9 +121,58 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     }
   }, [user, picked]);
 
+  // CR-TL-1: municipality layer – hatched where there is no AED at all (pattern injected into Leaflet's SVG)
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    covLayer.current?.remove();
+    covLayer.current = null;
+    if (covAttr.current) { m.attributionControl.removeAttribution(covAttr.current); covAttr.current = null; }
+    if (mode !== 'dane' || !coverage || !coverage.features.length) return;
+    const gj = L.geoJSON(coverage as unknown as Parameters<typeof L.geoJSON>[0], {
+      style: (f) => COV_STYLE[(f?.properties as { stan: StanGminy }).stan] ?? COV_STYLE.nieaktualne,
+      onEachFeature: (f, lyr) => {
+        const p = f.properties as { gmina: string; stan: StanGminy; liczba_aed: number; aktualne: number; nieaktualne: number };
+        lyr.bindTooltip(`<strong>${esc(p.gmina)}</strong><br>${COV_TEXT[p.stan]}${p.liczba_aed ? `<br>AED: ${p.liczba_aed} (aktualne ${p.aktualne}, nieaktualne ${p.nieaktualne})` : ''}`, { sticky: true });
+      },
+    }).addTo(m);
+    ensureHatch(m);
+    gj.bringToBack();
+    covLayer.current = gj;
+    const attr = coverage.meta?.atrybucja ?? 'Granice gmin: Państwowy Rejestr Granic – GUGiK';
+    m.attributionControl.addAttribution(esc(attr));
+    covAttr.current = esc(attr);
+    if (fitCoverage) m.fitBounds(gj.getBounds(), { padding: [16, 16] });
+  }, [coverage, mode, fitCoverage]);
+
   return (
     <div className="map" role="region" aria-label={label}>
       <div ref={el} className="map__canvas" style={{ height }} />
     </div>
   );
+}
+
+const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+
+const COV_TEXT: Record<StanGminy, string> = {
+  brak_danych: 'Brak AED w zbiorze',
+  nieaktualne: 'Co najmniej jedno AED z nieaktualnymi danymi',
+  aktualne: 'Wszystkie AED mają aktualne dane',
+};
+
+// Hatch #D9DDDA on #F2EFE6 with a dashed #6B7570 border (TL concept PDF); other states only a light tint.
+const COV_STYLE: Record<StanGminy, L.PathOptions> = {
+  brak_danych: { fillColor: 'url(#aed-hatch)', fillOpacity: 0.9, color: '#6B7570', weight: 1.5, dashArray: '5 4', opacity: 1 },
+  nieaktualne: { fillColor: '#E2A23B', fillOpacity: 0.14, color: '#B9791A', weight: 1, opacity: 0.6 },
+  aktualne: { fillColor: '#1A7A50', fillOpacity: 0.12, color: '#1A7A50', weight: 1, opacity: 0.6 },
+};
+
+function ensureHatch(m: L.Map) {
+  const svg = m.getPanes().overlayPane.querySelector('svg');
+  if (!svg || svg.querySelector('#aed-hatch')) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  const defs = document.createElementNS(ns, 'defs');
+  defs.innerHTML = '<pattern id="aed-hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+    + '<rect width="10" height="10" fill="#F2EFE6"/><rect width="5" height="10" fill="#D9DDDA"/></pattern>';
+  svg.insertBefore(defs, svg.firstChild);
 }

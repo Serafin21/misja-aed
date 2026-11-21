@@ -7,6 +7,7 @@ import type { ReactElement } from 'react';
 
 export const BRAND_NAME = 'AED w danych';
 export const BRAND_SLOGAN = 'Dane prosto z serca';
+export const BRAND_CTA = 'Masz AED? Udostępnij je na dane.gov.pl';
 
 // 5×5 grid of the pixel heart; 'a' = amber cell ("Twoje AED").
 const HEART: string[] = [
@@ -51,6 +52,35 @@ export function pinSvg(kind: PinKind, osm = false): string {
     + `<path d="M20 29.5s-8.6-5.3-8.6-11.2a4.6 4.6 0 0 1 8.6-2.3 4.6 4.6 0 0 1 8.6 2.3c0 5.9-8.6 11.2-8.6 11.2z" fill="${heart}"/>`
     + `<path d="M21.2 14.2l-4.4 7.2h3.2l-1.2 5.4 4.4-7.4H20z" fill="${bolt}"/>`
     + badge + '</svg>';
+}
+
+export type DataPinKind = 'aktualne' | 'nieaktualne';
+
+/**
+ * Map pin for the "aktualność danych" mode (CR-TL-1, TL concept PDF p. 1): the pixel heart from the logo inside the pin.
+ * aktualne: green pin, white cells. nieaktualne: white pin with dark-amber outline, dark-amber cells (#B9791A – 3.6:1
+ * on white; #E2A23B would be 2.2:1) and a clock badge. Dashed outline = OSM layer, as in the availability mode.
+ */
+export function dataPinSvg(kind: DataPinKind, osm = false): string {
+  const fresh = kind === 'aktualne';
+  const fill = fresh ? '#1A7A50' : '#fff';
+  const stroke = fresh ? '#fff' : '#B9791A';
+  const cellColor = fresh ? '#fff' : '#B9791A';
+  const dash = osm ? ' stroke-dasharray="4 2.5"' : '';
+  const pitch = 3.7, cell = 2.96, x0 = 20 - (4 * pitch + cell) / 2, y0 = 11.2;
+  let cells = '';
+  HEART.forEach((row, y) => row.split('').forEach((c, x) => {
+    if (c === '.') return;
+    cells += `<rect x="${(x0 + x * pitch).toFixed(2)}" y="${(y0 + y * pitch).toFixed(2)}" width="${cell}" height="${cell}" rx=".5" fill="${cellColor}"/>`;
+  }));
+  const badge = fresh ? '' : '<circle cx="33" cy="8" r="6.5" fill="#fff" stroke="#0F3B2B" stroke-width="1.6"/><path d="M33 4.8V8l2.2 1.4" stroke="#0F3B2B" stroke-width="1.6" fill="none" stroke-linecap="round"/>';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 52" width="40" height="52" aria-hidden="true" focusable="false">`
+    + `<path d="M20 50S4 32.5 4 19.5a16 16 0 0 1 32 0C36 32.5 20 50 20 50z" fill="${fill}" stroke="${stroke}" stroke-width="2.6"${dash}/>`
+    + cells + badge + '</svg>';
+}
+
+export function DataPin({ kind, size = 28 }: { kind: DataPinKind; size?: number }) {
+  return <span className="pin-inline" style={{ width: size * (40 / 52), height: size }} dangerouslySetInnerHTML={{ __html: dataPinSvg(kind) }} />;
 }
 
 export function Pin({ kind, size = 28 }: { kind: PinKind; size?: number }) {

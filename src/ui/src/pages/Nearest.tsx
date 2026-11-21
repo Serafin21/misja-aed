@@ -5,6 +5,7 @@ import { useMockMode } from '../lib/useMockMode';
 import type { AedView } from '../api/types';
 import { AedListItem } from '../components/AedListItem';
 import { MapView } from '../components/MapView';
+import { CoverageList, MapLegend, MapModeSwitch, useCoverage, useMapMode } from '../components/MapMode';
 import { Emergency, ErrorBox, Icon, Loading } from '../components/ui';
 import { usePageTitle } from '../router';
 
@@ -29,6 +30,8 @@ export function Nearest() {
   const [err, setErr] = useState<Error | null>(null);
   const [place, setPlace] = useState('');
   const mock = useMockMode();
+  const [mode, setMode] = useMapMode();
+  const cov = useCoverage(mode);
 
   async function load(p: Pos, now = onlyNow) {
     setPos(p);
@@ -118,10 +121,14 @@ export function Nearest() {
           <p className="hint">Od: {pos.label}. Odległość w linii prostej.</p>
           <div className="split">
             <ol className="aed-list" aria-label="Lista najbliższych AED">
-              {items.map((a, i) => <AedListItem key={a.id_aed} aed={a} from={pos} rank={i + 1} />)}
+              {items.map((a, i) => <AedListItem key={a.id_aed} aed={a} from={pos} rank={i + 1} mode={mode} />)}
             </ol>
             <div className="split__map">
-              <MapView items={items} user={pos} label="Mapa najbliższych AED. Te same informacje są na liście." height={460} cluster={false} />
+              <MapModeSwitch mode={mode} onChange={setMode} idPrefix="e1-mode" />
+              <MapView items={items} user={pos} label={`Mapa najbliższych AED, tryb: ${mode === 'dane' ? 'aktualność danych' : 'dostępność'}. Te same informacje są na liście.`} height={460} cluster={false}
+                mode={mode} coverage={cov.data} />
+              <MapLegend mode={mode} coverage={!!cov.data} />
+              {mode === 'dane' && !cov.loading && <CoverageList coverage={cov.data} collapsed />}
             </div>
           </div>
           {onlyNow && items.length < 5 && (

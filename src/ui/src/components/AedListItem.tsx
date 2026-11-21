@@ -2,9 +2,10 @@ import type { AedView } from '../api/types';
 import { address, distance, floor, osmDirections } from '../lib/format';
 import { describeHours } from '../lib/hours';
 import { Link } from '../router';
-import { AvailabilityBadge, Icon, LockedCabinet } from './ui';
+import { AvailabilityBadge, DataBadge, Icon, LockedCabinet } from './ui';
+import type { MapMode } from './MapMode';
 
-export function AedListItem({ aed, from, rank }: { aed: AedView; from?: { lat: number; lon: number } | null; rank?: number }) {
+export function AedListItem({ aed, from, rank, mode = 'dostepnosc' }: { aed: AedView; from?: { lat: number; lon: number } | null; rank?: number; mode?: MapMode }) {
   const where = [aed.opis_lokalizacji, floor(aed.pietro), aed.wewnatrz_budynku ? 'wewnątrz budynku' : 'na zewnątrz'].filter(Boolean).join(' · ');
   return (
     <li className="aed-item">
@@ -19,7 +20,7 @@ export function AedListItem({ aed, from, rank }: { aed: AedView; from?: { lat: n
           )}
         </div>
         <div className="aed-item__badges">
-          <AvailabilityBadge aed={aed} />
+          {mode === 'dane' ? <><DataBadge aed={aed} /><AvailabilityBadge aed={aed} /></> : <><AvailabilityBadge aed={aed} /><DataBadge aed={aed} /></>}
           {aed.mobilny && <span className="badge badge--info"><Icon name="car" />Urządzenie w pojeździe</span>}
         </div>
         <p className="aed-item__addr">{address(aed)}</p>

@@ -4,7 +4,7 @@ import { confirmAed, getAed, HttpError } from '../api/client';
 import type { AedDetail } from '../api/types';
 import { MapView } from '../components/MapView';
 import { QrSticker } from '../components/QrSticker';
-import { AvailabilityBadge, Emergency, ErrorBox, Icon, Loading, LockedCabinet } from '../components/ui';
+import { AvailabilityBadge, DataBadge, Emergency, ErrorBox, Icon, Loading, LockedCabinet } from '../components/ui';
 import { address, date, dictMeaning, floor, label, osmDirections } from '../lib/format';
 import { describeHours } from '../lib/hours';
 import { useAsync } from '../lib/useAsync';
@@ -38,6 +38,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
         <h1 id="page-title">{a.nazwa_obiektu}</h1>
         <div className="aed-item__badges">
           <AvailabilityBadge aed={a} />
+          <DataBadge aed={a} />
           {a.mobilny && <span className="badge badge--info"><Icon name="car" />Urządzenie w pojeździe – miejsce może się zmieniać</span>}
           {a.tryb_pediatryczny && <span className="badge badge--info">Tryb dla dzieci</span>}
         </div>

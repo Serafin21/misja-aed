@@ -1,6 +1,6 @@
 // REST client for CONTRACT §5. Falls back to in-browser mocks (data/sample/) when the API is unreachable.
 import * as mock from '../mocks/mockApi';
-import type { WynikImportu, Aed, AedDetail, AedFilters, AedView, ApiError, ListMeta, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
+import type { WynikImportu, Aed, AedDetail, AedFilters, AedView, ApiError, ListMeta, Pokrycie, Potwierdzenie, RaportWalidacji, Zrodlo } from './types';
 
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
 export const API_BASE = env.VITE_API_BASE || '/api/v1';
@@ -75,8 +75,13 @@ async function withFallback<T>(real: () => Promise<T>, fake: () => Promise<T>): 
   }
 }
 
-type JsonApiItem<T> = { type: string; id: string; attributes: T };
-const flat = <T extends object>(i: JsonApiItem<T>) => ({ ...(i.attributes as T), id_aed: i.id } as T & { id_aed: string });
+type ItemMeta = { stan_danych?: AedView['stan_danych']; wiek_danych_dni?: number | null };
+type JsonApiItem<T> = { type: string; id: string; attributes: T; meta?: ItemMeta };
+// CR-TL-1: freshness lives in meta – copy it next to the attributes
+const flat = <T extends object>(i: JsonApiItem<T>) => ({
+  ...(i.attributes as T), id_aed: i.id,
+  ...(i.meta?.stan_danych ? { stan_danych: i.meta.stan_danych, wiek_danych_dni: i.meta.wiek_danych_dni ?? null } : {}),
+} as T & { id_aed: string } & ItemMeta);
 
 function qs(params: Record<string, string | number | boolean | undefined>): string {
   const p = new URLSearchParams();
@@ -213,6 +218,14 @@ export function login(loginName: Role, haslo: string): Promise<Session> {
     () => http<{ token: string; rola: Role }>(`/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: loginName, haslo }) }),
     () => mock.mockLogin(loginName, haslo),
   ).then((s) => { setSession(s); return s; });
+}
+
+/** Municipality coverage layer (data-freshness map mode). null = no boundaries for this voivodeship / sample mode. */
+export function getCoverage(wojewodztwo = 'kujawsko-pomorskie'): Promise<Pokrycie | null> {
+  return withFallback(async () => {
+    try { return await http<Pokrycie>(`/pokrycie${qs({ wojewodztwo })}`); }
+    catch (e) { if (e instanceof HttpError && e.status === 404) return null; throw e; }
+  }, () => Promise.resolve(null));
 }
 
 export const templateUrl = (fmt: 'csv' | 'xlsx') => `${API_BASE}/szablon.${fmt}`;

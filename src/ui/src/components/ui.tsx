@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { AedView } from '../api/types';
 import { availableNow, label } from '../lib/format';
+import { dataLabel } from '../lib/dataState';
 
 /** Availability never relies on colour alone: icon + text (WCAG 1.4.1). */
 export function AvailabilityBadge({ aed }: { aed: AedView }) {
@@ -14,6 +15,17 @@ export function AvailabilityBadge({ aed }: { aed: AedView }) {
   if (v === true) return <span className="badge badge--ok"><Icon name="check" />Dostępne teraz</span>;
   if (v === false) return <span className="badge badge--no"><Icon name="clock" />Teraz zamknięte</span>;
   return <span className="badge badge--unknown"><Icon name="question" />Sprawdź godziny na miejscu</span>;
+}
+
+/** CR-TL-1: "Dane z MM.RRRR" / "Dane nieaktualne" – icon + text; the full date is in the title and for screen readers. */
+export function DataBadge({ aed }: { aed: Pick<AedView, 'data_weryfikacji' | 'stan_danych'> }) {
+  const d = dataLabel(aed);
+  return (
+    <span className={`badge ${d.state === 'aktualne' ? 'badge--fresh' : 'badge--stale'}`} title={d.long}>
+      <Icon name={d.state === 'aktualne' ? 'check' : 'clock'} />
+      <span aria-hidden="true">{d.short}</span><span className="visually-hidden">{d.long}</span>
+    </span>
+  );
 }
 
 export function LockedCabinet({ aed, compact = false }: { aed: AedView; compact?: boolean }) {

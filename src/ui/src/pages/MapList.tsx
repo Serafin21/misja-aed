@@ -4,7 +4,7 @@ import { listAed } from '../api/client';
 import type { AedFilters } from '../api/types';
 import { AedListItem } from '../components/AedListItem';
 import { MapView } from '../components/MapView';
-import { Pin } from '../components/Brand';
+import { CoverageList, MapLegend, MapModeSwitch, useCoverage, useMapMode, withMode } from '../components/MapMode';
 import { ErrorBox, Loading } from '../components/ui';
 import { dictValues } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
@@ -23,7 +23,7 @@ function readFilters(): AedFilters {
 }
 
 function writeFilters(f: AedFilters) {
-  const p = new URLSearchParams();
+  const p = withMode(new URLSearchParams());
   if (f.q) p.set('q', f.q);
   if (f.wojewodztwo) p.set('wojewodztwo', f.wojewodztwo);
   if (f.gmina) p.set('gmina', f.gmina);
@@ -40,6 +40,8 @@ export function MapList() {
   const [draft, setDraft] = useState<AedFilters>(f);
   const [view, setView] = useState<'oba' | 'lista' | 'mapa'>('oba');
   const st = useAsync(() => listAed({ ...f, per_page: 500 }), [JSON.stringify(f)]);
+  const [mode, setMode] = useMapMode();
+  const cov = useCoverage(mode);
 
   const set = <K extends keyof AedFilters>(k: K, v: AedFilters[K]) => setDraft((d) => ({ ...d, [k]: v }));
   const apply = (next: AedFilters) => { setF(next); writeFilters(next); };
@@ -91,6 +93,8 @@ export function MapList() {
         </p>
       </form>
 
+      <MapModeSwitch mode={mode} onChange={setMode} idPrefix="e2-mode" />
+
       <div className="segmented" role="group" aria-label="Widok">
         {(['oba', 'lista', 'mapa'] as const).map((v) => (
           <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>{v === 'oba' ? 'Lista i mapa' : v === 'lista' ? 'Tylko lista' : 'Tylko mapa'}</button>
@@ -109,21 +113,17 @@ export function MapList() {
             <section aria-labelledby="list-title" className="split__list">
               <h2 id="list-title">Lista</h2>
               {st.data.items.length === 0 ? <p>Brak AED dla wybranych filtrów.</p> : (
-                <ul className="aed-list">{st.data.items.map((a) => <AedListItem key={a.id_aed} aed={a} />)}</ul>
+                <ul className="aed-list">{st.data.items.map((a) => <AedListItem key={a.id_aed} aed={a} mode={mode} />)}</ul>
               )}
             </section>
           )}
           {view !== 'lista' && (
             <section aria-labelledby="map-title" className="split__map">
               <h2 id="map-title">Mapa</h2>
-              <MapView items={st.data.items} label="Mapa AED. Te same informacje są na liście." height={560} />
-              <ul className="legend-list" aria-label="Oznaczenia na mapie">
-                <li><Pin kind="ok" />Dostępne teraz</li>
-                <li><Pin kind="closed" />Teraz zamknięte lub niesprawne (znaczek zegara)</li>
-                <li><Pin kind="private" />Tylko dla uprawnionych (znaczek kłódki)</li>
-                <li><Pin kind="unknown" />Brak godzin – sprawdź na miejscu</li>
-                <li>Przerywana obwódka: warstwa OpenStreetMap (licencja ODbL)</li>
-              </ul>
+              <MapView items={st.data.items} label={`Mapa AED, tryb: ${mode === 'dane' ? 'aktualność danych' : 'dostępność'}. Te same informacje są na liście.`} height={560}
+                mode={mode} coverage={cov.data} fitCoverage />
+              <MapLegend mode={mode} coverage={!!cov.data} />
+              {mode === 'dane' && !cov.loading && <CoverageList coverage={cov.data} />}
             </section>
           )}
         </div>
