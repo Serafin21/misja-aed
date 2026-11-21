@@ -1,5 +1,16 @@
 # HANDOFF – Model A
 
+## 2026-11-21 14:30 – HANDOFF #2: CR od B, JSON-LD, docs/tech, utwardzenie
+
+- **Czas:** sob 13:40–14:30
+- **Zrobione:** CR-B1…B9 wdrożone (`dostepny_teraz` w atrybutach; `pochodzenie` i `potwierdzenia` na górnym poziomie karty; `POST /zgloszenia` → `{id, status}`; `GET /zgloszenia` w stylu JSON API z `mozliwy_duplikat`; decyzja `scal`; `GET /miejsca?q=`; `GET /eksport` z formatem, licencją i rozmiarem; klucze statystyk jak u B; `/api/docs`). Usługa `ui` w compose (port 80). JSON-LD (poziom 4) z nagłówkiem `Link`, limit anonimowych zgłoszeń, `docs/tech/` (ARCHITECTURE, DATA_PIPELINE, COMPLIANCE, RUN), pakiet `deliverables/dataset/`, kontrola licencji. 35 testów; czysty klon zielony na Pythonie 3.12 i 3.13.
+- **Jak uruchomić:** `docs/tech/RUN.md`.
+- **Założenia:** `AED_AUTH_MODE=demo` – żądanie bez tokenu działa jako konto demo, bo UI jeszcze nie wysyła tokenu.
+- **CR do B:** wysyłać `Authorization` po logowaniu; w imporcie dosyłać `dysponent_nazwa` i `dysponent_typ`; `zatwierdz` zgłoszenia wymaga `rekord` z adresem (inaczej 422 z polami).
+- **Znane błędy:** obraz Docker nie zbudowany (Docker Hub zablokowany w moim środowisku), `compose config` poprawny.
+- **Użycie AI:** kod, testy i dokumentacja z Claude (Opus), przegląd człowieka.
+- **Następny krok:** SYNC #1, pełny OSM na Macu, P10.
+
 ## 2026-11-21 13:40 – P3 + F1 + F2 + F3 (rdzeń gotowy przed SYNC #1)
 
 - **Czas:** sob 13:05–13:40
