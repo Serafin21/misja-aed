@@ -390,3 +390,10 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Czas: nd 01:25
 - Zrobione: panel → „Instytucje i konta”: przy koncie z wnioskiem przyciski **„Zatwierdź wniosek” / „Odrzuć”** (z uzasadnieniem), stan „wniosek – czeka na zatwierdzenie”. „Wszystkie AED”: przełącznik „Tylko AED ze zmianą do zatwierdzenia (N)”, w wierszu oznaczenie zmiany (kto, kiedy, link do szczegółów) i przyciski **„Zatwierdź zmianę” / „Odrzuć zmianę”**. Nowe AED (których jeszcze nie ma na liście) zatwierdza się dalej w „Zgłoszenia AED”.
 - Sprawdzone: wniosek OSP zatwierdzony z listy kont → konto loguje się; zmiana AED Krosna zatwierdzona z listy AED → nowy opis na mapie.
+
+## HANDOFF #36
+
+- Czas: nd (CR-TL-9 pkt 6)
+- Zrobione: „Panel administratora” → **„Panel moderacji prototypu”** (pasek, tytuł strony, nagłówek, scenariusz demo i prezentacja). Karta AED: przy AED dodanym w prototypie wiersz **„Status publikacji: Nieopublikowane w dane.gov.pl”** z opisem z API (`meta.status_publikacji`, `meta.opis_statusu_publikacji`); w panelu warstwa „dodane w prototypie (nieopublikowane w dane.gov.pl)”. README: konto `admin` / hasło demo `admin123` (serwer czyta je tylko z `ADMIN_PASSWORD`, `cp .env.example .env`), ścieżki dla jury zgodne z obecnymi kontami, odnośnik do `portal/README.md` (przyrost „Wykaz AED” w kodzie dane.gov.pl).
+- Sprawdzone: logowanie admin/admin123 → pasek „Zgłoszenia AED | Panel moderacji prototypu”, brak błędów JS; karta AED-PL-FF30C7097F pokazuje status publikacji; `npm run build` OK.
+- Uzupełnienie (CR-TL-9 pkt 7): `docs/JURY_QA.md` – pytanie 7 bez „scalamy” (wiersze dostawców nie są łączone, „możliwy duplikat” ≤ 25 m), pytanie 8 – publikacja przez dostawcę i wykaz zbiorczy, nowe pytanie 16 „Jak działa Wykaz AED i dlaczego wzorem DGA”.

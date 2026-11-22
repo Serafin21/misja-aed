@@ -60,6 +60,8 @@ export interface AedMeta {
   licencja_zbioru?: string | null; mozliwe_duplikaty?: string[]; fikcyjny_dostawca?: boolean;
   /** CR-TL-5: 'przejsciowy' = dataset published before the template; provider data shown unchanged */
   zgodnosc?: 'wzorzec' | 'przejsciowy';
+  /** CR-TL-9: AED added in the prototype – not from an AED list in dane.gov.pl, not in the aggregated list or export */
+  status_publikacji?: 'nieopublikowane_w_dane_gov_pl'; opis_statusu_publikacji?: string;
   /** CR-TL-6: on what basis the provider publishes this record */
   dostawca_podstawa?: PodstawaPublikacji;
 }

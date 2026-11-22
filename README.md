@@ -29,12 +29,16 @@ Aplikacja: http://localhost (port 80), API: http://localhost/api/v1, dokumentacj
 
 > Stan: konfiguracja gotowa, pierwsze zbudowanie obrazów przez zespół – sob wieczorem (wynik wpiszemy tutaj).
 
-**Konta testowe** (hasła z pliku `.env`, domyślne z `.env.example`). Logowanie: link w stopce „Logowanie dla dostawców i administratorów” (`/logowanie`).
+**Konta.** Logowanie: link na dole strony „Logowanie” (`/logowanie`).
 
-| Rola | Login | Hasło | Do czego |
+| Konto | Login | Hasło | Do czego |
 |---|---|---|---|
-| Dysponent (fikcyjny dostawca) | `dysponent` | `dysponent-demo` | Moje AED: dodanie i edycja własnych AED, „Pobierz pliki do publikacji”, zgłoszenia o własnych AED |
-| Administrator | `administrator` | `administrator-demo` | Panel administratora: agregacja, luki, zgłoszenia bez dostawcy, przypomnienia, konta, dziennik zdarzeń |
+| Administrator (moderator prototypu) | `admin` | `admin123` – hasło demo | Panel moderacji prototypu: konta instytucji (zakładanie, zatwierdzanie wniosków, hasła), wszystkie AED (edycja, usuwanie, przypisanie do instytucji), zatwierdzanie zgłoszeń AED |
+| Instytucja | zakłada administrator albo instytucja sama przez „Wniosek o konto” | ustawione przy zakładaniu | Zgłoszenia AED: nowe AED i poprawki (po zatwierdzeniu od razu na mapie), uwagi mieszkańców, przypomnienia |
+
+Hasło administratora serwer czyta **tylko** ze zmiennej `ADMIN_PASSWORD` (w kodzie nie ma wartości domyślnej). Hasło demo `admin123` jest w `.env.example` – przed uruchomieniem skopiuj go do `.env` (`cp .env.example .env`) i zmień hasło przed udostępnieniem strony.
+
+AED dodane w prototypie mają oznaczenie „nieopublikowane w dane.gov.pl” – nie pochodzą z wykazu w dane.gov.pl, nie trafiają do wykazu zbiorczego ani do eksportu; instytucja publikuje je sama w swoim wykazie AED.
 
 Mapa, karty AED, zgłoszenia i eksport listy nie wymagają logowania. Dane do prototypu: `python -m scripts.seed --reset --osm full --lista auto`.
 
@@ -58,10 +62,11 @@ Jak każdy uruchamia Claude Code na tym repo ze swojego konta: [`docs/user/claud
 
 1. **Mieszkaniec.** „Znajdź AED” → najbliższe AED → karta: dostawca danych, link do zbioru, data danych i data weryfikacji; instrukcja dostępu przy zamkniętej szafce.
 2. **Zgłoszenie.** Na karcie AED „Zgłoś problem z tym AED” (np. szafka zamknięta) → informacja, do którego dostawcy trafi uwaga. Dane na liście się nie zmieniają (K7).
-3. **Dostawca.** `/logowanie` kontem `dysponent` → Moje AED → dodaj AED albo wgraj plik → raport ze wzorcem → „Pobierz pliki do publikacji” (CSV, XML harvestera 1.13, słownik, instrukcja). Publikację na swoim koncie w dane.gov.pl wykonuje dostawca (K11).
-4. **Administrator.** `/logowanie` kontem `administrator` → Panel administratora → raport agregacji (zbiory na liście i poza nią), luki w gminach, zgłoszenia bez dostawcy. Administrator nie ma przycisków do edycji AED (K2).
+3. **Instytucja.** `/logowanie` kontem instytucji → Zgłoszenia AED → zgłoś nowe AED (adres zamiast współrzędnych) albo poprawkę → po zatwierdzeniu AED jest na mapie z oznaczeniem „nieopublikowane w dane.gov.pl”. Do wykazu zbiorczego trafi dopiero z wykazu AED, który instytucja opublikuje w dane.gov.pl.
+4. **Administrator.** `/logowanie` kontem `admin` → Panel moderacji prototypu → konta instytucji, wszystkie AED, zatwierdzanie zgłoszeń.
 5. **Warstwa „Do sprawdzenia”.** Mapa → warstwa OpenStreetMap: punkty bez dostawcy i bez daty, odróżnione od listy, z atrybucją ODbL (K5).
 6. **Programista.** Stopka → „Eksport listy” (kompilacja zbiorów dostawców z identyfikatorem dostawcy i zbioru w każdym rekordzie) i „Dostawcy”.
+7. **Portal dane.gov.pl – „Wykaz AED”.** Przyrost do kodu portalu wzorem wykazu chronionych danych (DGA): oznaczenie zasobu „Wykaz AED”, walidacja, nocny „Wykaz AED – wykaz zbiorczy” i `GET /aed-aggregated` – [`portal/README.md`](portal/README.md).
 
 ## Architektura
 

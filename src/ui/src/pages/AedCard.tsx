@@ -138,6 +138,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
             <dt>Zbiór w dane.gov.pl</dt><dd>{m.zbior_url ? <ExternalLink href={m.zbior_url}>{m.zbior_tytul ?? 'zbiór dostawcy'}</ExternalLink> : '—'}{m.zasob_url && <> · <ExternalLink href={m.zasob_url}>plik z danymi</ExternalLink></>}</dd>
             <dt>Dane na dzień</dt><dd>{m.data_danych ? date(m.data_danych) : '—'}</dd>
             <dt>Zasady korzystania</dt><dd>Źródło: {m.dostawca}, {m.licencja_zbioru ?? a.licencja}</dd>
+            {m.status_publikacji === 'nieopublikowane_w_dane_gov_pl' && <><dt>Status publikacji</dt><dd><strong>Nieopublikowane w dane.gov.pl</strong> – {m.opis_statusu_publikacji ?? 'dodane w prototypie, nie pochodzą z wykazu w dane.gov.pl.'}</dd></>}
             {m.zgodnosc === 'przejsciowy' && <><dt>Zbiór przejściowy</dt><dd>Zbiór opublikowany przed wzorcem danych AED. Pokazujemy dane dostawcy bez zmian – część pól może być pusta.</dd></>}
           </dl>
         )}

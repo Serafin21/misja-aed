@@ -111,7 +111,7 @@ Masz AED? Udostępnij je na dane.gov.pl
 
 ## Slajd 8 – Administrator: agregacja i luki
 
-1. Panel administratora → raport agregacji: zbiory na liście, zbiory po terminie, zbiory poza listą z powodem (np. bez 44 pól wzorca).
+1. Panel moderacji prototypu → raport agregacji: zbiory na liście, zbiory po terminie, zbiory poza listą z powodem (np. bez 44 pól wzorca).
 2. Luki: gminy bez żadnego dostawcy, z liczbą punktów OSM do sprawdzenia.
 3. Zgłoszenia bez dostawcy, przypomnienia o aktualizacji, dziennik zdarzeń.
 4. Administrator nie ma żadnego przycisku do zmiany danych AED (K2).

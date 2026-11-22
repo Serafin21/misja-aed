@@ -21,10 +21,10 @@ Godziny zapisujemy w składni opening_hours z OpenStreetMap, np. `Mo-Fr 08:00-16
 Licencja ODbL wymaga uznania autorstwa i tej samej licencji dla baz pochodnych. Żeby nie „zarazić” nią danych dysponentów na CC0, publikujemy OSM jako osobny zasób, a na mapie pokazujemy go z atrybucją i przerywaną obwódką pinezki.
 
 **7. Co z duplikatami między źródłami?**
-[A] Ten sam AED rozpoznajemy po odległości (do 5 m albo do 30 m przy podobnej nazwie lub adresie). Scalamy pole po polu – pierwszeństwo ma dysponent – i zapisujemy pochodzenie każdego rekordu w osobnym pliku.
+Nie łączymy rekordów różnych dostawców – za każdy wiersz odpowiada jego dostawca i tylko on może go poprawić. Gdy dwa AED różnych dostawców są bliżej niż 25 m, wykaz zbiorczy oznacza je jako „możliwy duplikat”, oba zostają widoczne, a dostawcy dostają sygnał, żeby to wyjaśnić u siebie.
 
 **8. Jak to trafia do dane.gov.pl?**
-[A] Generujemy CSV i GeoJSON według Standardu technicznego, metadane pl/en w DCAT-AP-PL i plik XML do automatycznego zasilania portalu. Schemat XSD potwierdzamy z zespołem portalu.
+Każdy dostawca publikuje swój wykaz AED na własnym koncie w dane.gov.pl – w panelu albo plikiem XML harvestera; nasza aplikacja przygotowuje mu gotowe pliki (CSV wg Standardu technicznego, XML, słownik). Portal co noc łączy wykazy we „Wykaz AED – wykaz zbiorczy”.
 
 **9. Czy to spełnia WCAG?**
 Celujemy w WCAG 2.2 AA. Lista ma te same informacje co mapa, stan nie zależy od koloru, wszystko działa z klawiatury, cele dotykowe mają co najmniej 44 px, układ działa od 320 px. Wyniki testów są w `docs/a11y/raport.md`.
@@ -46,3 +46,6 @@ Kompletność zależy od dysponentów; prototyp działa na danych przykładowych
 
 **15. Jak używaliście AI?**
 Zgodnie z regulaminem opisujemy to w `docs/AI_USAGE.md`. Asystenci AI pomagali pisać kod i teksty, a decyzje – zakres danych, nazwa, hasło, logo i architektura – podjął i sprawdził zespół.
+
+**16. Jak działa „Wykaz AED” i dlaczego wzorem DGA?**
+Portal dane.gov.pl już dziś robi to samo dla wykazu chronionych danych (DGA): instytucja zaznacza przy zasobie, że to wykaz, portal sprawdza plik i co noc łączy wszystkie wykazy w jeden plik Ministerstwa Cyfryzacji. Dodaliśmy do kodu portalu ten sam mechanizm dla AED: znacznik „Zasób zawiera wykaz AED”, sprawdzenie z wzorcem (44 pola), nocny „Wykaz AED – wykaz zbiorczy” w CSV i XLSX z dostawcą i linkiem do źródła przy każdym wierszu oraz adres API `/aed-aggregated`. Wzór DGA, bo jest sprawdzony, zespół portalu go zna i nie trzeba budować niczego od zera – szczegóły i tabela „DGA → AED” w `portal/README.md`.
