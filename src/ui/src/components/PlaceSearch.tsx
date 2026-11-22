@@ -134,8 +134,8 @@ export function PlaceSearch({ label, placeholder, hint, near, textOption = false
         {q && <button type="button" className="place-search__clear" aria-label="Wyczyść wyszukiwanie" onClick={() => { setQ(''); setItems([]); onClear?.(); }}>×</button>}
         </div>
         {locate && (
-          <button type="button" className="place-search__locate" onClick={useMyLocation}>
-            <Icon name="locate" /><span>Moja lokalizacja</span>
+          <button type="button" className="place-search__locate" onClick={useMyLocation} aria-label="Moja lokalizacja">
+            <Icon name="locate" /><span className="place-search__locate-text">Moja lokalizacja</span>
           </button>
         )}
       </div>

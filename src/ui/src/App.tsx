@@ -181,7 +181,7 @@ export function App() {
             </nav>
             <section aria-labelledby="f-contact">
               <h2 id="f-contact">Kontakt</h2>
-              <address className="footer-contact">[ADRES / KONTAKT ZESPOŁU]</address>
+              <address className="footer-contact">Zespół projektu „Misja AED”, HackNation 2026. Uwagi o konkretnym AED – przycisk „Zgłoś problem z tym AED” na jego karcie; uwagi o serwisie – w repozytorium kodu (link „Kod źródłowy” w stopce strony).</address>
             </section>
           </div>
           <p className="footer-legal">© 2026 Autorzy projektu „{APP_NAME}”, HackNation 2026. Mapa i dane OpenStreetMap: © autorzy OpenStreetMap (ODbL). Granice gmin: Państwowy Rejestr Granic – GUGiK.</p>

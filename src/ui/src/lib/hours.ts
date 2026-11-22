@@ -104,11 +104,21 @@ function fmtDays(spec: string, full = false): string {
   return spec.split(',').map((p) => p.split('-').map((d) => dict[d] ?? d).join('–')).join(', ');
 }
 
+const MONTH_PL: Record<string, string> = {
+  Jan: 'sty.', Feb: 'lut.', Mar: 'mar.', Apr: 'kwi.', May: 'maj', Jun: 'cze.', Jul: 'lip.', Aug: 'sie.', Sep: 'wrz.', Oct: 'paź.', Nov: 'lis.', Dec: 'gru.',
+};
+/** Hours outside the supported subset (months, holidays…): word-by-word Polish version instead of raw OSM syntax. */
+function translateRaw(value: string): string[] {
+  const word = (w: string) => MONTH_PL[w] ?? DAY_PL[w] ?? ({ PH: 'święta', SH: 'ferie', off: 'nieczynne', closed: 'nieczynne', open: 'otwarte' } as Record<string, string>)[w] ?? w;
+  return value.split(';').map((part) => part.trim()).filter(Boolean)
+    .map((part) => part.replace(/[A-Za-z]+/g, word).replace(/(\d)-(\d)/g, '$1–$2').replace(/(\.|\p{L})-(\p{L})/gu, '$1–$2').replace(/,(?=\S)/g, ', ').replace(/ (?=\d{2}:\d{2}|nieczynne|otwarte)/, ': '));
+}
+
 /** "Mo-Fr 08:00-16:00; Sa 10:00-14:00" → ["pon.–pt.: 08:00–16:00", "sob.: 10:00–14:00"] */
 export function describeHours(value: string | null | undefined): string[] {
   if (!value) return ['brak informacji'];
   if (value.trim() === '24/7') return ['całą dobę, 7 dni w tygodniu'];
-  if (!parseOpeningHours(value)) return [value];
+  if (!parseOpeningHours(value)) return translateRaw(value);
   return value.split(';').map((raw) => {
     const t = raw.trim().split(/\s+/);
     const hasDays = /^[A-Z][a-z]/.test(t[0]);

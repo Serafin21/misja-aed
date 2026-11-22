@@ -155,7 +155,7 @@ export function Contact() {
         <p>Ten serwis nie przyjmuje zgłoszeń alarmowych.</p>
       </div>
       <h2>Zespół projektu</h2>
-      <address className="footer-contact">[ADRES / KONTAKT ZESPOŁU]</address>
+      <address className="footer-contact">Zespół projektu „Misja AED”, HackNation 2026. Uwagi o konkretnym AED – przycisk „Zgłoś problem z tym AED” na jego karcie; uwagi o serwisie – w repozytorium kodu (link „Kod źródłowy” w stopce strony).</address>
       <h2>Zgłoszenia i uwagi</h2>
       <ul>
         <li>Błędne dane o AED: otwórz kartę urządzenia i wybierz „Zgłoś problem z tym AED”. Brakujące AED zgłasza instytucja, która za nie odpowiada – <Link to="/zglos">jak to działa</Link>.</li>

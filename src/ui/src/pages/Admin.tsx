@@ -24,7 +24,7 @@ export function Admin() {
   return (
     <>
       <h1 id="page-title">Panel moderacji prototypu</h1>
-      <RequireLogin role="administrator">
+      <RequireLogin role="administrator" sessionLine={false}>
         <SessionBar />
         <p className="lead">Instytucje i ich konta, wszystkie AED (edycja, usuwanie, przypisanie do instytucji) i narzędzia list. Nowe AED, zmiany i wnioski o konto zatwierdzasz w <Link to="/zgloszenia-aed">Zgłoszenia AED</Link>.</p>
         <nav aria-label="Sekcje panelu" className="toc">
