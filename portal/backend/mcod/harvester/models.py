@@ -47,6 +47,9 @@ from mcod.harvester.ckan_utils import (
     format_res_hvd_conflict_error_details,
     format_res_org_hvd_ec_conflict_error_details,
     format_too_many_dga_resources_for_organization,
+    format_res_aed_bad_file_error_details,
+    format_res_aed_url_not_accessible_error_details,
+    format_too_many_aed_resources_for_organization,
 )
 from mcod.harvester.exceptions import CKANPartialValidationException
 from mcod.harvester.managers import DataSourceManager
@@ -57,6 +60,7 @@ from mcod.lib.metadata_validators import (
 )
 from mcod.lib.model_sanitization import SanitizedCharField, SanitizedTextField
 from mcod.organizations.models import Organization
+from mcod.resources.aed_utils import validate_aed_file
 from mcod.resources.dga_utils import (
     get_dga_resource_for_institution,
     get_remote_extension_if_correct_dga_content_type,
@@ -1049,6 +1053,10 @@ class DataSource(AdminMixin, LogMixin, SoftDeletableModel, TimeStampedModel):
             CKANPartialImportError.TOO_MANY_DGA_RESOURCES_FOR_ORGANIZATION: format_too_many_dga_resources_for_organization,  # noqa: E501
             CKANPartialImportError.ORGANIZATION_ALREADY_HAS_DGA_RESOURCE: format_org_already_has_dga_resource,
             CKANPartialImportError.ORGANIZATION_HAS_MORE_THAN_ONE_DGA_RES: format_org_has_more_than_one_dga_resource,
+            # Wykaz AED
+            CKANPartialImportError.RES_AED_URL_NOT_ACCESSIBLE: format_res_aed_url_not_accessible_error_details,
+            CKANPartialImportError.RES_AED_BAD_FILE: format_res_aed_bad_file_error_details,
+            CKANPartialImportError.TOO_MANY_AED_RESOURCES_FOR_ORGANIZATION: format_too_many_aed_resources_for_organization,
         }
         return error_description_functions
 
@@ -1077,6 +1085,7 @@ class DataSource(AdminMixin, LogMixin, SoftDeletableModel, TimeStampedModel):
         self,
         item: ItemData,
         dga_per_organization: Dict[str, int],
+        aed_per_organization: Optional[Dict[str, int]] = None,
     ) -> None:
         self._ckan_validate_item_license_id(item)
         self._ckan_validate_item_organization_not_in_trash(item)
@@ -1092,6 +1101,50 @@ class DataSource(AdminMixin, LogMixin, SoftDeletableModel, TimeStampedModel):
         self._ckan_validate_item_org_single_dga_json(item, dga_per_organization)
         self._ckan_validate_item_org_does_not_have_dga_resource(item)
         self._ckan_validate_item_resources_dga_url(item)
+        # Wykaz AED validations
+        self._ckan_validate_item_org_single_aed_json(item, aed_per_organization or {})
+        self._ckan_validate_item_resources_aed_url(item)
+
+    @staticmethod
+    def _aed_resources(item: ItemData) -> List[Dict[str, Any]]:
+        return [r for r in item.get("resources", []) if r.get("contains_aed_list")]
+
+    def _get_number_of_aed_resources_per_organization(self, items: List[ItemData]) -> Dict[str, int]:
+        out: Dict[str, int] = {}
+        for item in items:
+            title: str = item["organization"]["title"]
+            out[title] = out.get(title, 0) + len(self._aed_resources(item))
+        return out
+
+    def _ckan_validate_item_org_single_aed_json(self, item: ItemData, aed_per_organization: Dict[str, int]) -> None:
+        """Jeden wykaz AED na instytucję w całym pliku (wzór: _ckan_validate_item_org_single_dga_json)."""
+        aed = self._aed_resources(item)
+        if aed and aed_per_organization.get(item["organization"]["title"], 0) > 1:
+            raise CKANPartialValidationException(
+                error_code=CKANPartialImportError.TOO_MANY_AED_RESOURCES_FOR_ORGANIZATION,
+                error_data={"item_id": item["ext_ident"], "resources": [{"ext_ident": r["ext_ident"]} for r in aed]},
+            )
+
+    def _ckan_validate_item_resources_aed_url(self, item: ItemData) -> None:
+        """Plik wykazu AED pobrany z linku zasobu przechodzi walidację wzorca (wzór: _ckan_validate_item_resources_dga_url)."""
+        for resource in self._aed_resources(item):
+            url: Optional[str] = resource.get("link")
+            try:
+                response = request_remote_dga(url) if url else None
+            except requests.exceptions.RequestException:
+                response = None
+            extension = get_remote_extension_if_correct_dga_content_type(response) if response is not None and response.status_code == 200 else None
+            if extension is None:
+                raise CKANPartialValidationException(
+                    error_code=CKANPartialImportError.RES_AED_URL_NOT_ACCESSIBLE,
+                    error_data={"item_id": item["ext_ident"], "resources_ids": [resource["ext_ident"]]},
+                )
+            errors: List[str] = validate_aed_file(BytesIO(response.content), extension)
+            if errors:
+                raise CKANPartialValidationException(
+                    error_code=CKANPartialImportError.RES_AED_BAD_FILE,
+                    error_data={"item_id": item["ext_ident"], "resource_id": resource["ext_ident"], "errors": errors},
+                )
 
     def _ckan_items_partial_validation(self, items: List[ItemData]) -> Tuple[List[ItemData], int, str]:
         """
@@ -1120,12 +1173,14 @@ class DataSource(AdminMixin, LogMixin, SoftDeletableModel, TimeStampedModel):
 
         # some validation must be done regarding all items
         number_of_dga_resources_per_organization: Dict[str, int] = self._get_number_of_dga_resources_per_organization(items)
+        number_of_aed_resources_per_organization: Dict[str, int] = self._get_number_of_aed_resources_per_organization(items)
 
         for item in items:
             try:
                 self._validate_ckan_item(
                     item,
                     dga_per_organization=number_of_dga_resources_per_organization,
+                    aed_per_organization=number_of_aed_resources_per_organization,
                 )
             except CKANPartialValidationException as exc:
                 items_errors[exc.error_code].append(exc.error_data)

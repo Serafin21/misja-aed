@@ -21,6 +21,10 @@ class CKANPartialImportError(Enum):
     TOO_MANY_DGA_RESOURCES_FOR_ORGANIZATION = 14
     ORGANIZATION_ALREADY_HAS_DGA_RESOURCE = 15
     ORGANIZATION_HAS_MORE_THAN_ONE_DGA_RES = 16
+    # Wykaz AED (HackNation 2026)
+    RES_AED_URL_NOT_ACCESSIBLE = 17
+    RES_AED_BAD_FILE = 18
+    TOO_MANY_AED_RESOURCES_FOR_ORGANIZATION = 19
 
 
 def format_invalid_license_error_details(errors_data: List[Dict[str, Any]]) -> str:
@@ -292,3 +296,46 @@ def format_org_already_has_dga_resource(errors_data: List[Dict[str, Any]]) -> st
 
     inner_error_desc: str = "<br>".join(inner_descriptions)
     return f'{error_desc}<div class="expandable">{inner_error_desc}</div>'
+
+
+# ---------- Wykaz AED (wzorem formatów DGA) ----------
+def format_res_aed_url_not_accessible_error_details(errors_data: List[Dict[str, Any]]) -> str:
+    error_desc = (
+        "<p>Zasób oznaczony jako wykaz AED ('contains_aed_list' = true) musi mieć dostępny link (url) do pliku "
+        "CSV, XLS albo XLSX.</p>"
+    )
+    inner = [
+        f"<p><strong>id zbioru danych:</strong> {e['item_id']}</p>"
+        + "<br>".join(f"<p><strong>id zasobu:</strong> {r}</p>" for r in e["resources_ids"])
+        for e in errors_data
+    ]
+    return f'{error_desc}<div class="expandable">{"<br>".join(inner)}</div>'
+
+
+def format_res_aed_bad_file_error_details(errors_data: List[Dict[str, Any]]) -> str:
+    from mcod.resources.aed_constants import AED_COLUMNS
+
+    error_desc = (
+        f"<p>Plik zasobu oznaczonego jako wykaz AED musi zawierać {len(AED_COLUMNS)} kolumn wzorcowego zakresu danych AED "
+        "(kolejność dowolna), wymagane wartości w każdym wierszu, współrzędne w Polsce i 7-cyfrowy kod TERYT gminy.</p>"
+    )
+    inner = [
+        f"<p><strong>id zbioru danych:</strong> {e['item_id']}</p><p><strong>id zasobu:</strong> {e['resource_id']}</p>"
+        + "".join(f"<p>{msg}</p>" for msg in e["errors"])
+        for e in errors_data
+    ]
+    return f'{error_desc}<div class="expandable">{"<br>".join(inner)}</div>'
+
+
+def format_too_many_aed_resources_for_organization(errors_data: List[Dict[str, Any]]) -> str:
+    error_desc = (
+        "<p>W pliku harvestera jest więcej niż 1 zasób tej samej instytucji z polem 'contains_aed_list' = true "
+        "(jeden wykaz AED na instytucję).</p>"
+    )
+    inner = [
+        f"<p><strong>id zbioru danych:</strong> {e['item_id']}</p>"
+        + "<br>".join(f"<p><strong>id zasobu:</strong> {r['ext_ident']}</p>" for r in e["resources"])
+        for e in errors_data
+    ]
+    return f'{error_desc}<div class="expandable">{"<br>".join(inner)}</div>'
+

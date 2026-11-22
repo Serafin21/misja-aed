@@ -31,6 +31,8 @@ from mcod.lib.widgets import (
 from mcod.organizations.models import Organization
 from mcod.regions.fields import RegionsMultipleChoiceField
 from mcod.resources.archives import is_password_protected_archive_file
+from mcod.resources.aed_constants import AED_RESOURCE_EXTENSIONS, ALLOWED_AED_INSTITUTIONS
+from mcod.resources.aed_utils import get_aed_resource_for_institution, get_main_aed_resource, validate_aed_file
 from mcod.resources.dga_constants import (
     ALLOWED_DGA_INSTITUTIONS,
     DGA_COLUMNS,
@@ -333,10 +335,59 @@ class ResourceForm(forms.ModelForm, HighValueDataFormValidatorMixin):
             if not is_main_dga_resource and organization:
                 self._remove_dga_flag_from_current_dga_resource_if_needed(data, organization)
 
+        # Wykaz AED (HackNation 2026) – walidacja wzorem wykazu DGA
+        contains_aed_list: bool = data.get("contains_aed_list") == "True"
+        if contains_aed_list and not self._is_main_aed_resource_updated(instance_pk):
+            self._validate_aed_list(data, organization, creating_resource)
+
         self.validate_high_value_data_flags_conflict(data)
         if organization:
             self._validate_high_value_data_from_ec_list_organization(data, organization)
         return data
+
+    @staticmethod
+    def _is_main_aed_resource_updated(pk) -> bool:
+        if pk is None:
+            return False
+        main = get_main_aed_resource()
+        return bool(main) and main.pk == pk
+
+    def _validate_aed_list(self, data: dict, organization: Optional[Organization], creating_resource: bool) -> None:
+        """Plik wykazu AED: CSV/XLS/XLSX z dysku, 44 kolumny wzorca, wymagane wartości, współrzędne w Polsce, TERYT;
+        jeden opublikowany wykaz AED na instytucję; wszystkie typy instytucji (ALLOWED_AED_INSTITUTIONS)."""
+        if data.get("link"):
+            self.add_error("link", _("Pick a file from disk in xls, xlsx or csv format if you mark the resource as an AED list."))
+            return
+        if organization and organization.institution_type not in ALLOWED_AED_INSTITUTIONS:
+            self.add_error("contains_aed_list", _("This institution type cannot publish an AED list."))
+        file = data.get("file") or data.get("file_ref")
+        if file is None and not creating_resource and self.instance.main_file:
+            file = create_uploaded_file_from_path(self.instance.main_file.path)
+        if file is not None:
+            extension: Optional[str] = guess_extension(getattr(file, "content_type", "") or "")
+            extension = extension[1:] if extension else os.path.splitext(file.name)[1][1:].lower()
+            if extension not in AED_RESOURCE_EXTENSIONS:
+                self.add_error("contains_aed_list", _("The AED list must be a csv, xls or xlsx file."))
+                return
+            errors = validate_aed_file(file, extension)
+            if errors:
+                self.add_error("contains_aed_list", mark_safe("<br>".join(errors)))
+                return
+        if organization and data.get("status") == "published":
+            try:
+                other = get_aed_resource_for_institution(organization.pk, self.instance.pk if self.instance else None)
+            except MultipleObjectsReturned:
+                self.add_error("contains_aed_list", _("There is more than one AED list resource for this institution."))
+                return
+            if other:
+                self.add_error(
+                    "contains_aed_list",
+                    mark_safe(
+                        _("The institution already has a published AED list: ")
+                        + f"{other.title} (id {other.pk}). "
+                        + _("Unmark it first – the portal keeps one AED list per institution.")
+                    ),
+                )
 
     def _validate_data_date(self, data: dict) -> None:
         data_date_err = Resource.get_auto_data_date_errors(data)
