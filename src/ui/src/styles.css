@@ -618,3 +618,10 @@ fieldset.mode-switch, .e2__filters fieldset { min-width: 0; }
 .account-secret__data dt { font-weight: var(--font-weight-bold); }
 .account-secret__data dd { margin: 0; }
 .pw-view { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+
+/* Phone: the location button inside the search box shows only the icon, so it does not cover the typed text */
+@media (max-width: 600px) {
+  .place-search__box--locate input { padding-right: 56px; }
+  .place-search__box--locate .place-search__locate { min-width: 0; width: 48px; height: 48px; padding: 0; flex-basis: auto; border-top: 0; }
+  .place-search__locate-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}

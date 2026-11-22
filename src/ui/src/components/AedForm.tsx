@@ -26,7 +26,7 @@ export function draftFromAed(a: Aed): Draft {
   return {
     nazwa_obiektu: a.nazwa_obiektu ?? '', miejscowosc: a.miejscowosc ?? '', ulica: [a.ulica_cecha && a.ulica_cecha !== 'inne' ? a.ulica_cecha : '', a.ulica ?? ''].filter(Boolean).join(' '),
     numer_budynku: a.numer_budynku ?? '', kod_pocztowy: a.kod_pocztowy ?? '', lat: a.szerokosc_geograficzna, lon: a.dlugosc_geograficzna,
-    opis_lokalizacji: a.opis_lokalizacji ?? '', wewnatrz: yn(a.wewnatrz_budynku), dostep: (a.dostep as Draft['dostep']) ?? '',
+    opis_lokalizacji: /^Brak opisu w (zbiorze|OpenStreetMap)/.test(a.opis_lokalizacji ?? '') ? '' : a.opis_lokalizacji ?? '', wewnatrz: yn(a.wewnatrz_budynku), dostep: (a.dostep as Draft['dostep']) ?? '',
     calodobowo: a.dostepny_24h === true || a.godziny_dostepnosci === '24/7' ? 'tak' : a.godziny_dostepnosci ? 'nie' : '',
     godziny: a.godziny_dostepnosci && a.godziny_dostepnosci !== '24/7' ? a.godziny_dostepnosci : '',
     szafka: yn(a.szafka_zamknieta), instrukcja_dostepu: a.instrukcja_dostepu ?? '', zdjecie: null,

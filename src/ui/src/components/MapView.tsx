@@ -114,7 +114,8 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
     // the container changes width (e.g. "Tylko mapa"): without this Leaflet leaves grey, untiled areas
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => m.invalidateSize({ pan: false })) : null;
     ro?.observe(el.current);
-    return () => { ro?.disconnect(); m.remove(); map.current = null; layer.current = null; covLayer.current = null; covAttr.current = null; ptsGroup.current = null; ptsCache.current.clear(); lastPts.current = { points: null, mode: 'dostepnosc' }; fitKey.current = ''; };
+    // stop a running zoom/pan animation first: removing the map mid-animation throws "_leaflet_pos" (Leaflet)
+    return () => { ro?.disconnect(); m.stop(); m.off(); m.remove(); map.current = null; layer.current = null; covLayer.current = null; covAttr.current = null; ptsGroup.current = null; ptsCache.current.clear(); lastPts.current = { points: null, mode: 'dostepnosc' }; fitKey.current = ''; };
   }, []);
 
   useEffect(() => {
@@ -186,7 +187,7 @@ export function MapView({ items, user, focusId, onPick, picked, label, height = 
       // draggable when the page lets the user pick a point (E4, E5 manual) – move the pin to the exact spot
       const pm = L.marker([picked.lat, picked.lon], { icon: L.divIcon({ className: 'pick-marker', html: '<span aria-hidden="true"></span>', iconSize: [30, 30], iconAnchor: [15, 28] }), title: 'Wybrane miejsce – możesz przesunąć pinezkę', keyboard: false, draggable: !!pickRef.current }).addTo(g);
       pm.on('dragend', () => { const ll = pm.getLatLng(); pickRef.current?.({ lat: +ll.lat.toFixed(6), lon: +ll.lng.toFixed(6) }); });
-      map.current?.setView([picked.lat, picked.lon], Math.max(map.current.getZoom(), 16));
+      map.current?.setView([picked.lat, picked.lon], Math.max(map.current.getZoom(), 16), { animate: false });
     }
   }, [user, picked]);
 
