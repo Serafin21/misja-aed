@@ -121,6 +121,7 @@ class ResourceFactory(factory.django.DjangoModelFactory):
     forced_file_type = False
     data_date = factory.Faker("past_date", start_date="-7d")
     contains_protected_data = False
+    contains_aed_list = False
 
     @factory.post_generation
     def link_tasks(self, create, extracted, **kwargs):

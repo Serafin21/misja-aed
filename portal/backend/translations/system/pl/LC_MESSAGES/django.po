@@ -5765,3 +5765,25 @@ msgstr "Kategoria nie jest dozwolona dla tego tematu."
 
 msgid "Uploaded file has no name."
 msgstr "Wczytany plik nie ma nazwy."
+
+# Wykaz AED (HackNation 2026)
+msgid "Contains AED list"
+msgstr "Zawiera wykaz AED"
+
+msgid "Pick a file from disk in xls, xlsx or csv format if you mark the resource as an AED list."
+msgstr "Wybierz z dysku plik xls, xlsx albo csv, jeśli oznaczasz zasób jako wykaz AED."
+
+msgid "This institution type cannot publish an AED list."
+msgstr "Instytucja tego typu nie może publikować wykazu AED."
+
+msgid "The AED list must be a csv, xls or xlsx file."
+msgstr "Wykaz AED musi być plikiem csv, xls albo xlsx."
+
+msgid "There is more than one AED list resource for this institution."
+msgstr "Instytucja ma więcej niż jeden zasób z wykazem AED."
+
+msgid "The institution already has a published AED list: "
+msgstr "Instytucja ma już opublikowany wykaz AED: "
+
+msgid "Unmark it first – the portal keeps one AED list per institution."
+msgstr "Najpierw odznacz go – portal przechowuje jeden wykaz AED na instytucję."

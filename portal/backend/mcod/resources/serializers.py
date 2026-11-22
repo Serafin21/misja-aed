@@ -150,6 +150,7 @@ class ResourceApiAttrs(ObjectAttrs, HighlightObjectMixin):
     has_high_value_data_from_ec_list = fields.Boolean()
     has_research_data = fields.Boolean()
     contains_protected_data = fields.Boolean()
+    contains_aed_list = fields.Boolean()
     regions = fields.Method("get_regions")
     files = fields.Method("get_files")
     supplement_docs = fields.Nested(SupplementSchema, data_key="supplements", many=True)
@@ -535,6 +536,7 @@ class ResourceCSVSchema(CSVSerializer, metaclass=CSVSchemaRegistrator):
     has_dynamic_data = fields.MetaDataNullBoolean(data_key=_("Resource has dynamic data"))
     has_research_data = fields.MetaDataNullBoolean(data_key=_("Resource has research data"))
     contains_protected_data = fields.MetaDataNullBoolean(data_key=_("Contains protected data list"))
+    contains_aed_list = fields.MetaDataNullBoolean(data_key=_("Contains AED list"))
 
     class Meta:
         ordered = True
@@ -626,6 +628,7 @@ class ResourceXMLSerializer(schemas.ExtSchema):
     has_dynamic_data = fields.Bool()
     has_research_data = fields.Bool()
     contains_protected_data = fields.Bool()
+    contains_aed_list = fields.Bool()
     all_regions = fields.Nested(RegionBaseSchema, data_key="regions", many=True)
     supplement_docs = fields.Nested(SupplementSchema, data_key="supplements", many=True)
 
@@ -655,6 +658,7 @@ class ResourceCSVMetadataSerializer(schemas.ExtSchema):
     has_dynamic_data = fields.MetaDataNullBoolean(data_key=_("Resource has dynamic data"))
     has_research_data = fields.MetaDataNullBoolean(data_key=_("Resource has research data"))
     contains_protected_data = fields.MetaDataNullBoolean(data_key=_("Contains protected data list"))
+    contains_aed_list = fields.MetaDataNullBoolean(data_key=_("Contains AED list"))
     regions = fields.Str(data_key=_("Resource regions"), attribute="all_regions_str")
     download_url = fields.Url(data_key=_("Download URL"))
     data_special_signs = fields.Nested(SpecialSignSchema, data_key=_("special signs"), many=True)

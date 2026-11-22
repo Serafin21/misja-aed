@@ -266,6 +266,21 @@ class ResourceForm(forms.ModelForm, HighValueDataFormValidatorMixin):
         ),
         widget=CheckboxSelect(attrs={"class": "inline"}),
     )
+    contains_aed_list = forms.ChoiceField(
+        required=False,
+        initial=False,
+        label=_("Contains AED list").capitalize(),
+        choices=[(True, _("Yes")), (False, _("No"))],
+        help_text=(
+            "Wskazanie TAK dla opublikowanego zasobu oznacza, że zasób jest aktualnym wykazem defibrylatorów AED "
+            "tej instytucji. Plik CSV, XLS albo XLSX musi zawierać 44 kolumny wzorcowego zakresu danych AED (kolejność "
+            "dowolna), w każdym wierszu: id_aed, nazwę obiektu, adres, TERYT gminy, współrzędne w Polsce, dostęp, godziny "
+            "albo „całą dobę”, datę weryfikacji i kontakt. Portal co noc łączy wykazy wszystkich instytucji w "
+            "„Wykaz AED – wykaz zbiorczy”; za treść każdego wiersza odpowiada instytucja, która go opublikowała. "
+            "Jedna instytucja ma jeden wykaz AED."
+        ),
+        widget=CheckboxSelect(attrs={"class": "inline"}),
+    )
     confirm_save = forms.CharField(required=False, widget=forms.HiddenInput())
 
     def __init__(self, *args, **kwargs):
@@ -648,6 +663,7 @@ class ChangeResourceForm(ResourceForm, UnEscapeWidgetMixin):
         data["has_high_value_data"] = instance.has_high_value_data
         data["has_research_data"] = instance.has_research_data
         data["contains_protected_data"] = instance.contains_protected_data
+        data["contains_aed_list"] = instance.contains_aed_list
         data["has_high_value_data_from_ec_list"] = instance.has_high_value_data_from_ec_list
         return data
 
