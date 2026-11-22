@@ -441,3 +441,8 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 ## HANDOFF #39 (portal uruchomiony)
 
 - Zrzuty z uruchomionego portalu dane.gov.pl w `pitch/zrzuty/01–06` i `12` (opis: `pitch/zrzuty/README.md`). Prezentacja (`pitch/prezentacja.md`, slajdy 3–7 i 10), `pitch/opis_projektu.md` i `README.md` – bez „portalu nie uruchomiliśmy”; testy Wykazu AED 28/28; znak umowny „-” na slajdzie 4.
+
+## #42 – Krótka prezentacja: zrzuty z uruchomionego portalu zamiast kodu (22.11, ok. 8:30)
+- `pitch/prezentacja_krotka.pdf` (teraz 8 slajdów): slajd „Wzorem DGA” (tekst kodu) zastąpiony dwoma slajdami ze zrzutami z uruchomionego portalu – pole „Contains AED list” + lista błędów walidacji (kadry z 02 i 03), lista zasobów z „Wykaz AED – wykaz zbiorczy” + odpowiedź `/aed-aggregated` (kadry z 04 i 06). Usunięte nieaktualne zdanie „panelu portalu nie uruchomiliśmy”. Kadry: `pitch/zrzuty/*_kadr.png`.
+- Do zrobienia: duża prezentacja (`prezentacja.pdf`) nadal ma na slajdach 6 i 12 zdanie, że portalu nie uruchomiono – nieaktualne.
+- Użycie AI: Claude (Opus 5.5) przyciął zrzuty i przebudował slajdy; człowiek B zlecił zmianę.
