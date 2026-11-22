@@ -174,3 +174,29 @@ def test_zatwierdzanie_z_listy(client):
                                                                          dlugosc=a["dlugosc_geograficzna"])).json()["id"]
     rows = client.get("/api/v1/admin/aed?oczekujace=true", headers=adm).json()["data"]
     assert [r["id_aed"] for r in rows] == [aid] and rows[0]["zgloszenie"]["id"] == zid
+
+
+def test_aed_z_prototypu_oznaczone_i_poza_eksportem(client):
+    """CR-TL-9 pkt 6: AED dodane w prototypie mają status „nieopublikowane_w_dane_gov_pl” i nie trafiają do eksportu."""
+    adm = _h(client, "admin", "admin123")
+    zid = client.post("/api/v1/zgloszenia-aed", headers=adm, json=_aed()).json()["id"]
+    aid = client.post(f"/api/v1/admin/zgloszenia-aed/{zid}/decyzja", headers=adm, json={"decyzja": "zatwierdz"}).json()["data"]["id_aed"]
+    m = client.get(f"/api/v1/aed/{aid}").json()["data"]["meta"]
+    assert m["status_publikacji"] == "nieopublikowane_w_dane_gov_pl" and "nie pochodzą z wykazu" in m["opis_statusu_publikacji"]
+    pts = {f["id"]: f["properties"] for f in client.get("/api/v1/aed/punkty").json()["features"]}
+    assert pts[aid]["status_publikacji"] == "nieopublikowane_w_dane_gov_pl" and pts["AED-PL-B939F7EBA4"]["status_publikacji"] is None
+    for plik in ("aed.csv", "aed_pochodzenie.csv", "aed.geojson", "aed.jsonld"):
+        assert aid not in client.get(f"/api/v1/eksport/{plik}").text, plik
+    assert "AED-PL-B939F7EBA4" in client.get("/api/v1/eksport/aed.csv").text
+
+
+def test_admin_bez_hasla_w_ustawieniach(monkeypatch):
+    import importlib
+
+    from src.api import auth
+    monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+    try:
+        assert "admin" not in importlib.reload(auth).DEMO  # no default password in the code
+    finally:
+        monkeypatch.setenv("ADMIN_PASSWORD", "admin123")
+        importlib.reload(auth)

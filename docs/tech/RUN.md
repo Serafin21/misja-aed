@@ -30,7 +30,7 @@ uvicorn src.api.main:app --reload                       # http://localhost:8000/
 | `python scripts/check_licenses.py` | licencje zależności |
 
 ## Konta demo
-`POST /api/v1/auth/login` z `{"login": "admin", "haslo": "admin123"}` (hasło: `ADMIN_PASSWORD` w `.env` – zmień przed udostępnieniem strony). Konta instytucji zakłada administrator (panel) albo powstają z zatwierdzonego wniosku (`POST /api/v1/konta/wnioski`). Token przekazujesz w nagłówku `Authorization: Bearer <token>`; każdy zapis wymaga zalogowania.
+`POST /api/v1/auth/login` z `{"login": "admin", "haslo": "admin123"}` (hasło demo z `.env.example`; serwer czyta je **tylko** ze zmiennej `ADMIN_PASSWORD` – w kodzie nie ma wartości domyślnej, więc bez tej zmiennej konto `admin` nie istnieje; zmień je przed udostępnieniem strony). Lokalnie bez Dockera: `ADMIN_PASSWORD=admin123 python3 -m uvicorn src.api.main:app --port 8000`. Konta instytucji zakłada administrator (panel) albo powstają z zatwierdzonego wniosku (`POST /api/v1/konta/wnioski`). Token przekazujesz w nagłówku `Authorization: Bearer <token>`; każdy zapis wymaga zalogowania.
 
 ## Najważniejsze adresy dla interfejsu
 - Mapa (zalecane): `GET /api/v1/aed/punkty` – cała Polska w jednym żądaniu (339 KB gzip, `ETag`), opcjonalnie `?bbox=`; szczegóły rekordu po kliknięciu z `GET /api/v1/aed/{id}`. Pełne rekordy z filtrami: `GET /api/v1/aed?bbox=…&per_page=1000`.

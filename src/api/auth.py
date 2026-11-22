@@ -22,7 +22,9 @@ SECRET = os.environ.get("AED_SECRET", "zmien-mnie-w-env")
 # Owner's decision (22.11): one built-in administrator account "admin" (password from ADMIN_PASSWORD, default admin123);
 # no institution accounts until the administrator creates them or approves a request. The old test accounts
 # (dysponent / administrator / moderator) exist only with AED_KONTA_TESTOWE=tak (automatic tests).
-DEMO = {"admin": os.environ.get("ADMIN_PASSWORD", "admin123")}
+# CR-TL-9: the password only from ADMIN_PASSWORD (no default in the code); without it the admin account is disabled.
+# Demo password: docs/tech/RUN.md and .env.example.
+DEMO = {"admin": os.environ["ADMIN_PASSWORD"]} if os.environ.get("ADMIN_PASSWORD") else {}
 DEMO_ROLE = {"admin": "administrator"}
 RESERVED = {"admin", "administrator", "moderator", "dysponent", "demo", "root"}
 if os.environ.get("AED_KONTA_TESTOWE") == "tak":

@@ -111,7 +111,13 @@ def lista_meta(rec: dict) -> dict:
             "czestotliwosc_aktualizacji": p.get("czestotliwosc"), "zbior_nieaktualny": p.get("zbior_nieaktualny", False),
             "licencja_zbioru": p.get("licencja_zbioru"), "mozliwe_duplikaty": p.get("mozliwe_duplikaty", []),
             "fikcyjny_dostawca": p.get("fikcyjny", False), "zgodnosc": p.get("zgodnosc", "wzorzec"),
-            "dostawca_podstawa": podstawa(p["dostawca"])}
+            "dostawca_podstawa": podstawa(p["dostawca"])} | (STATUS_PROTOTYPU if p.get("aplikacja") else {})
+
+
+# CR-TL-9: AED added in this prototype (approved submissions) are not part of any list in dane.gov.pl
+STATUS_PROTOTYPU = {"status_publikacji": "nieopublikowane_w_dane_gov_pl",
+                    "opis_statusu_publikacji": "Dodane w prototypie, nie pochodzą z wykazu w dane.gov.pl. Nie trafiają do "
+                                               "wykazu zbiorczego ani do eksportu – instytucja publikuje je sama w swoim wykazie AED."}
 
 
 def podstawa(dostawca: str) -> str:
@@ -302,7 +308,7 @@ def aed_points(request: Request, bbox: Optional[str] = Query(None, description="
     now = datetime.now(TZ)
     minute = now.strftime("%Y-%m-%dT%H:%M")
     _layer_filter([], warstwa_)
-    key = (box, minute, st.version, warstwa_)
+    key = (id(st), box, minute, st.version, warstwa_)
     if key not in _points_cache:
         feats = []
         for r in sorted(st.records.values(), key=lambda r: r["id_aed"]):
@@ -318,6 +324,7 @@ def aed_points(request: Request, bbox: Optional[str] = Query(None, description="
                                          "zbior_nieaktualny": bool(st.lista.get(r["id_aed"], {}).get("zbior_nieaktualny")),
                                          "duplikat": bool(st.lista.get(r["id_aed"], {}).get("mozliwe_duplikaty")),
                                          "zgodnosc": (st.lista[r["id_aed"]].get("zgodnosc", "wzorzec") if r["id_aed"] in st.lista else None),
+                                         "status_publikacji": ("nieopublikowane_w_dane_gov_pl" if r["id_aed"] in st.aplikacja else None),
                                          # for client-side filters next to the map (availability, freshness, area)
                                          "dostep": r.get("dostep"), "wiek_danych_dni": coverage.wiek_danych_dni(r),
                                          "mobilny": bool(r.get("mobilny")),

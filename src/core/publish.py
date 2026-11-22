@@ -64,6 +64,8 @@ def layers(store: Store) -> tuple[list[dict], list[dict]]:
     lista, pom = [], []
     for r in recs:
         p = store.lista.get(r["id_aed"])
+        if p and p.get("aplikacja"):
+            continue  # CR-TL-9: added in the prototype, not from a provider's list in dane.gov.pl – never exported
         if p:
             lista.append(r | {"dostawca": p["dostawca"], "dostawca_regon": p.get("regon"), "zbior_id": p["zbior_id"],
                               "zbior_url": p["zbior_url"], "zasob_url": p["zasob_url"], "data_danych": p.get("data_danych"),
@@ -77,7 +79,7 @@ def layers(store: Store) -> tuple[list[dict], list[dict]]:
 def pochodzenie_csv(store: Store) -> bytes:
     cols = ["id_aed", "dostawca", "dostawca_regon", "zbior_id", "zbior_tytul", "zbior_url", "zasob_id", "zasob_url", "data_danych",
             "zbior_zmodyfikowany", "czestotliwosc", "zbior_nieaktualny", "licencja_zbioru"]
-    rows = [{"id_aed": i} | p | {"dostawca_regon": p.get("regon")} for i, p in sorted(store.lista.items())]
+    rows = [{"id_aed": i} | p | {"dostawca_regon": p.get("regon")} for i, p in sorted(store.lista.items()) if not p.get("aplikacja")]
     return to_csv(rows, cols)
 
 
