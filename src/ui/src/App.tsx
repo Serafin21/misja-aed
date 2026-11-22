@@ -9,7 +9,7 @@ import { MapList } from './pages/MapList';
 import { Campaign } from './pages/Campaign';
 import { Dataset } from './pages/Dataset';
 import { Admin } from './pages/Admin';
-import { LoginPage, useSession } from './components/Auth';
+import { ForcedPasswordChange, LoginPage, useSession } from './components/Auth';
 import { Home } from './pages/Home';
 import { FirstAid } from './pages/FirstAid';
 import { Providers } from './pages/Providers';
@@ -146,7 +146,7 @@ export function App() {
       )}
       <div className="container"><Breadcrumbs path={path} /></div>
       <main id="main" className="container" tabIndex={-1}>
-        <Routes />
+        {session?.musi_zmienic_haslo ? <ForcedPasswordChange /> : <Routes />}
       </main>
       <footer className="site-footer">
         <div className="container">

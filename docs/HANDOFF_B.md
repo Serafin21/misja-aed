@@ -405,3 +405,9 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Sprawdzone: `tsc -b`, `npm run build` OK; `pytest` 107 passed; przegląd /znajdz, /aed/{id}, /dysponenci – bez błędów JS.
 - Znane: liczby tylko z `docs/tech/LICZBY.md` (18 297 OSM, 18% aktualnych, 351 z 2 479 gmin). Pole w panelu ma etykietę „Zawiera wykaz AED” (tłumaczenie), w tekstach tak samo.
 - Użycie AI (jedna linia): teksty, strona „Dla instytucji” i etykieta z Claude (sesja TL); treść merytoryczna z kodu portalu A.
+
+## HANDOFF #38 (CR-TL-11)
+
+- Czas: nd ~06:00
+- Zrobione: **koniec podglądu haseł** – w panelu nie ma „Pokaż hasło”; w kolumnie konta stan: „prosi o nowe hasło (data)”, „hasło jednorazowe do …” / „wygasło”, „hasło ustawione przez instytucję (niewidoczne)”; zakładka „Proszą o nowe hasło”; przycisk **„Wydaj hasło jednorazowe”** (potwierdzenie, ramka z hasłem pokazana raz + ważność). Logowanie: **„Nie pamiętam hasła”** (login albo służbowy e-mail → prośba do administratora). Po zalogowaniu hasłem jednorazowym aplikacja pokazuje tylko ekran **„Ustaw własne hasło”**; po zmianie – nowy token (stare sesje wylogowane) i przejście do „Zgłoszenia AED”.
+- Sprawdzone (Playwright): admin zakłada konto → hasło jednorazowe w ramce raz → instytucja loguje się nim → wymuszona zmiana → „Nie pamiętam hasła” → u admina plakietka i „Wydaj hasło jednorazowe” → stare hasło nie działa, nowe jednorazowe wymusza zmianę; brak błędów JS.
