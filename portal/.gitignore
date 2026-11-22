@@ -1,0 +1,19 @@
+# Lokalne środowisko portalu (CR-TL-9): sekrety, wolumeny baz, zależności i pliki z budowania – nie trafiają do repo
+backend/.env
+backend/**/.env
+backend/data/postgres/
+backend/data/elasticsearch/
+backend/data/redis/
+backend/data/rabbitmq/
+backend/media/
+backend/logs/
+backend/**/node_modules/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/htmlcov/
+backend/staticfiles/
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+volumes/
