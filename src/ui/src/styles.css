@@ -424,6 +424,8 @@ thead th { background: var(--color-surface); }
 /* ---------- model ról: helper layer "Do sprawdzenia" (OSM), role menu ---------- */
 .aed-pin--pomocnicza { filter: grayscale(1); opacity: .7; }
 .aed-pin--pomocnicza:hover, .aed-pin--pomocnicza:focus-visible { opacity: 1; }
+.badge--proto { background: #FFF4DD; color: #5C3D00; border-color: #B9791A; }
+.badge--legend { font-size: .85rem; padding: 0 6px; }
 .badge--helper { background: var(--color-surface-strong); color: var(--color-text); border-color: var(--color-border-input); }
 .map-popup__helper { color: var(--color-text-secondary); }
 .main-nav__role a { font-weight: var(--font-weight-bold); }

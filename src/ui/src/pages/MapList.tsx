@@ -253,6 +253,7 @@ export function MapList() {
               <li><span className="mini-legend__pin" dangerouslySetInnerHTML={{ __html: pinSvg('closed') }} />Zamknięte</li>
               <li><span className="mini-legend__pin" dangerouslySetInnerHTML={{ __html: pinSvg('unknown') }} />Godziny nieokreślone</li>
               <li><span className="mini-legend__pin mini-legend__pin--osm" dangerouslySetInnerHTML={{ __html: pinSvg('unknown', true) }} />Do sprawdzenia</li>
+              <li><span className="badge badge--proto badge--legend">Prototyp – nieopublikowane w dane.gov.pl</span>dodane w aplikacji, spoza Wykazu AED</li>
               <li><span className="mini-legend__near" aria-hidden="true">♥</span>Najbliższe</li>
               <li><span className="mini-legend__you" aria-hidden="true" />Ty</li>
             </ul>

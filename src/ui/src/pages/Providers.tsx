@@ -1,7 +1,7 @@
 // E5 – Dla instytucji. Start: two big choices – "Mam listę AED w pliku" / "Wpiszę AED ręcznie".
 // File: template → drop zone with progress → only unrecognised columns → results in 3 groups → publish ready ones.
 // Manual: the same 4-step wizard as E4 + institution data, a list, one publication at the end. Draft saved on the device.
-import { useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react';
+import { Fragment, useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react';
 import {
   approveImport, getSession, confirmMapping, createAed, decideDuplicates, fixImportRows, HttpError, isMockMode, NotSupported, templateUrl, uploadFile,
   type ImportInfo,
@@ -16,6 +16,42 @@ import { dictValues, label } from '../lib/format';
 import { FIELDS, fieldLabel, templateCsv } from '../lib/fields';
 import { hoursInWords } from '../lib/hoursBuilder';
 import { Link, usePageTitle } from '../router';
+
+// CR-TL-9: publication happens in the dane.gov.pl panel (portal/backend: contains_aed_list, aed_utils.validate_aed_df).
+// Error texts below are copied from portal/backend/mcod/resources/aed_utils.py and translations/system/pl/…/django.po.
+const PORTAL_ERRORS: { msg: string; fix: string }[] = [
+  { msg: 'Brak 3 z 44 kolumn wzorca AED: pietro, numer_lokalu, kontakt_email.', fix: 'Pobierz szablon i skopiuj dane do jego kolumn. Nazwy kolumn muszą być takie jak w szablonie – nawet jeśli kolumna zostaje pusta.' },
+  { msg: '2 z 15 wierszy nie spełnia wzorca AED: wiersz 4: brak wartości: data_weryfikacji', fix: 'Uzupełnij pola wymagane: id_aed, nazwa_obiektu, miejscowość, numer budynku, kod pocztowy, teryt_terc, współrzędne, dostep, godziny albo „całą dobę”, data_weryfikacji, telefon albo e-mail.' },
+  { msg: 'wiersz 7: współrzędne 21.01, 52.23 poza Polską (zamienione szerokość i długość?)', fix: 'Szerokość geograficzna (ok. 49–55) i długość (ok. 14–24) są zamienione miejscami.' },
+  { msg: 'wiersz 9: teryt_terc „201011” – wymagane 7 cyfr kodu TERYT gminy', fix: 'Arkusz uciął zero na początku. Ustaw kolumnę jako tekst i wpisz „0201011”.' },
+  { msg: 'wiersz 12: dostep „całodobowy” – dozwolone: publiczny, ograniczony, prywatny', fix: 'W kolumnie dostep wpisz jedną z trzech wartości; godziny podaj w godziny_dostepnosci albo dostepny_24h.' },
+  { msg: 'Wykaz AED musi być plikiem csv, xls albo xlsx.', fix: 'Zapisz plik jako CSV albo Excel (nie PDF, nie DOC).' },
+  { msg: 'Instytucja ma już opublikowany wykaz AED: … Najpierw odznacz go – portal przechowuje jeden wykaz AED na instytucję.', fix: 'Dodaj nową wersję pliku do istniejącego zasobu z wykazem zamiast tworzyć drugi.' },
+];
+
+function WykazAedGuide() {
+  return (
+    <section aria-labelledby="h-wykaz" className="panel">
+      <h2 id="h-wykaz">Jak opublikować wykaz AED w dane.gov.pl</h2>
+      <p>Każda instytucja publikuje <strong>swój</strong> wykaz AED na <strong>swoim</strong> koncie w dane.gov.pl. Portal co noc składa wykazy wszystkich instytucji w jeden zasób „Wykaz AED – wykaz zbiorczy” – tak jak robi to dziś z wykazem chronionych danych. Przy każdym wierszu jest nazwa Waszej instytucji i link do Waszego pliku. Poprawki wprowadzacie tylko Wy, w panelu dane.gov.pl.</p>
+      <ol className="steps">
+        <li><strong>Pobierz szablon</strong> – 44 kolumny wzorca: <a href={templateUrl('xlsx')} download>szablon XLSX</a> · <a href={templateUrl('csv')} download>szablon CSV</a>. Jeden wiersz = jedno AED.</li>
+        <li><strong>Wypełnij plik</strong> danymi Waszych AED. Kolumny z kodami (teryt_terc, kod_pocztowy) zapisz jako tekst, żeby nie zniknęły zera na początku.</li>
+        <li><strong>Zaloguj się do panelu dane.gov.pl</strong> na konto instytucji i otwórz swój zbiór danych (albo utwórz nowy, np. „Defibrylatory AED – [nazwa instytucji]”).</li>
+        <li><strong>Dodaj zasób</strong> i wybierz plik z dysku (CSV, XLS albo XLSX).</li>
+        <li><strong>Zaznacz pole „Zasób zawiera wykaz AED”</strong>. Przy imporcie XML to element <code>containsAedList</code>.</li>
+        <li><strong>Zapisz.</strong> Portal od razu sprawdza kolumny i pola wymagane. Jeśli coś jest nie tak, zobaczysz komunikat z numerem wiersza (przykłady niżej) – popraw plik i wgraj go ponownie.</li>
+        <li><strong>Następnej nocy</strong> Wasze AED pojawią się w zasobie „Wykaz AED – wykaz zbiorczy” i w API <code>/aed-aggregated</code>, a stąd na mapie z nazwą Waszej instytucji.</li>
+        <li><strong>Aktualizacja:</strong> dodajcie nową wersję pliku w tym samym zasobie. Instytucja ma jeden wykaz AED.</li>
+      </ol>
+      <h3>Typowe błędy walidacji i jak je poprawić</h3>
+      <dl className="facts">
+        {PORTAL_ERRORS.map((e) => (<Fragment key={e.msg}><dt><code>{e.msg}</code></dt><dd>{e.fix}</dd></Fragment>))}
+      </dl>
+      <p>Chcesz dołączyć? Zobacz <Link to="/akcja">akcję „AED w danych”</Link> – materiały i odznaka dla instytucji, które opublikowały wykaz.</p>
+    </section>
+  );
+}
 
 // ---------- institution data + local draft ----------
 interface Inst { owner: string; ownerType: string; lic: string }
@@ -57,11 +93,9 @@ export function Providers() {
               <p>Urząd, szkoła, szpital, firma: dane o Waszych defibrylatorach publikujecie <strong>sami, na koncie swojej instytucji w dane.gov.pl</strong> – dzięki temu wiadomo, kto za nie odpowiada. My pomagamy przygotować pliki według wspólnego wzoru.</p>
             </div>
           </section>
-          <ol className="steps">
-            <li><strong>Konto dostawcy</strong> w dane.gov.pl (jeśli Wasza instytucja go nie ma) i konto w tym kreatorze – zakłada je administrator po sprawdzeniu instytucji.</li>
-            <li><strong>Dodaj AED</strong> – z pliku albo ręcznie. Sprawdzimy dane ze wzorem.</li>
-            <li><strong>Zgłoś AED</strong> po zalogowaniu (menu „Zgłoszenia AED”). Po zatwierdzeniu przez administratora Wasze AED są od razu na mapie.</li>
-          </ol>
+          <WykazAedGuide />
+          <h2>Pomocnik prototypu: przygotuj plik przed publikacją</h2>
+          <p>Poniższy kreator działa w naszej aplikacji i pomaga przygotować plik według wzoru. <strong>Nie publikuje niczego w dane.gov.pl</strong> – plik wgrywacie sami w panelu dane.gov.pl (kroki powyżej). AED dodane tylko w aplikacji mają etykietę „Prototyp – nieopublikowane w dane.gov.pl” i nie trafiają do wykazu zbiorczego.</p>
           <p className="lead">Wybierz, jak chcesz dodać AED:</p>
           <div className="choice-cards">
             <button type="button" className="choice-card" onClick={() => setMode('file')}>

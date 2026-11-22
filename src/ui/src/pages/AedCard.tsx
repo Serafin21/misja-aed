@@ -54,6 +54,12 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
         )}
       </header>
 
+      {m.status_publikacji === 'nieopublikowane_w_dane_gov_pl' && (
+        <div className="callout callout--warn" role="note">
+          <p className="callout__title"><span className="badge badge--proto">Prototyp – nieopublikowane w dane.gov.pl</span></p>
+          <p>To AED dodano w prototypie aplikacji. Nie pochodzi z Wykazu AED w dane.gov.pl i nie trafia do wykazu zbiorczego ani do eksportu. Żeby było na wspólnej liście, instytucja musi opublikować je w swoim wykazie AED w panelu dane.gov.pl.</p>
+        </div>
+      )}
       {helper && (
         <div className="callout callout--warn" role="note">
           <p className="callout__title">Do sprawdzenia – punkt z mapy OpenStreetMap</p>
@@ -138,7 +144,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
             <dt>Zbiór w dane.gov.pl</dt><dd>{m.zbior_url ? <ExternalLink href={m.zbior_url}>{m.zbior_tytul ?? 'zbiór dostawcy'}</ExternalLink> : '—'}{m.zasob_url && <> · <ExternalLink href={m.zasob_url}>plik z danymi</ExternalLink></>}</dd>
             <dt>Dane na dzień</dt><dd>{m.data_danych ? date(m.data_danych) : '—'}</dd>
             <dt>Zasady korzystania</dt><dd>Źródło: {m.dostawca}, {m.licencja_zbioru ?? a.licencja}</dd>
-            {m.status_publikacji === 'nieopublikowane_w_dane_gov_pl' && <><dt>Status publikacji</dt><dd><strong>Nieopublikowane w dane.gov.pl</strong> – {m.opis_statusu_publikacji ?? 'dodane w prototypie, nie pochodzą z wykazu w dane.gov.pl.'}</dd></>}
+            {m.status_publikacji === 'nieopublikowane_w_dane_gov_pl' && <><dt>Status publikacji</dt><dd><strong>Prototyp – nieopublikowane w dane.gov.pl</strong> – {m.opis_statusu_publikacji ?? 'dodane w prototypie, nie pochodzą z wykazu w dane.gov.pl.'}</dd></>}
             {m.zgodnosc === 'przejsciowy' && <><dt>Zbiór przejściowy</dt><dd>Zbiór opublikowany przed wzorcem danych AED. Pokazujemy dane dostawcy bez zmian – część pól może być pusta.</dd></>}
           </dl>
         )}

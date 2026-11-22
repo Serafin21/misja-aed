@@ -53,6 +53,7 @@ export function AedSummary({ aed, rank, nearest = false, headingLevel = 3, compa
         <span className={`aed-sum__checked aed-sum__checked--${d.state}`} title={d.long}>
           {aed.data_weryfikacji ? `Aktualizacja: ${aed.data_weryfikacji.slice(8, 10)}.${aed.data_weryfikacji.slice(5, 7)}.${aed.data_weryfikacji.slice(0, 4)}` : 'Brak daty aktualizacji'}
         </span>
+        {aed.meta?.status_publikacji === 'nieopublikowane_w_dane_gov_pl' && <span className="badge badge--proto" title="Dodane w prototypie aplikacji – nie pochodzi z Wykazu AED w dane.gov.pl"><Icon name="question" />Prototyp – nieopublikowane w dane.gov.pl</span>}
         {aed.meta?.warstwa === 'pomocnicza' && <span className="badge badge--helper" title="Punkt z OpenStreetMap, niepotwierdzony przez właściciela"><Icon name="question" />Do sprawdzenia</span>}
       </p>
       <p className="aed-sum__addr">{address(aed)}</p>
