@@ -40,7 +40,7 @@ main:focus, h1:focus, h2[tabindex="-1"]:focus { outline: none; }
 .brand:hover { color: var(--color-text); }
 .brand__mark { display: inline-flex; }
 .brand__slogan { display: block; white-space: nowrap; font-size: 1rem; font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); line-height: 1.2; }
-@media (max-width: 420px) { .brand__slogan { display: none; } .brand { font-size: 1rem; gap: 6px; } .brand__mark svg { width: 28px; height: 28px; } .site-header__inner { column-gap: var(--space-s); } .brand { white-space: nowrap; } }
+@media (max-width: 420px) { .brand__slogan { display: none; } .brand { font-size: 1rem; gap: 6px; } .brand__mark svg, .brand__mark img { width: 28px; height: 28px; } .site-header__inner { column-gap: var(--space-s); } .brand { white-space: nowrap; } }
 .header-112 { margin-left: auto; display: inline-flex; align-items: center; gap: var(--space-s); color: var(--color-text); font-weight: var(--font-weight-bold); padding: 0 var(--space-m); min-height: var(--control-height); border: var(--border-width) solid var(--color-border-input); border-radius: var(--radius); text-decoration: none; }
 .header-112:hover { color: var(--color-action-hover); border-color: var(--color-action-hover); }
 .menu-btn { display: none; }
@@ -646,3 +646,6 @@ fieldset.mode-switch, .e2__filters fieldset { min-width: 0; }
 .portal-errors dt { margin: 0 0 4px; }
 .portal-errors dt code { white-space: normal; word-break: normal; overflow-wrap: break-word; font-size: .95rem; }
 .portal-errors dd { margin: 0; }
+
+.brand__mark img { display: block; width: 44px; height: auto; }
+@media (max-width: 420px) { .brand__mark img { width: 28px; } }

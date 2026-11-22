@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { probeApi } from './api/client';
 import { useMockMode } from './lib/useMockMode';
-import { APP_NAME, APP_TAGLINE, BRAND_NAME, LogoMark } from './components/Brand';
+import { APP_NAME, APP_TAGLINE, BRAND_NAME } from './components/Brand';
 import { ExternalLink, Icon } from './components/ui';
 import { About, AccessibilityStatement, Contact, Cookies, Licenses, Privacy } from './pages/Info';
 import { AedCard } from './pages/AedCard';
@@ -121,7 +121,7 @@ export function App() {
       <header className="site-header">
         <div className="container site-header__inner">
           <Link to="/" className="brand" aria-label={`${APP_NAME} – strona główna`}>
-            <span className="brand__mark"><LogoMark size={44} /></span>
+            <span className="brand__mark"><img src={`${import.meta.env.BASE_URL}akcja/logo/znak-naglowek.png`} alt="" width={44} height={44} /></span>
             <span>{APP_NAME}<span className="brand__slogan" aria-hidden="true">{APP_TAGLINE}</span></span>
           </Link>
           <button id="menu-btn" type="button" className="menu-btn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu((m) => !m)}>
