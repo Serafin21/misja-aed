@@ -295,6 +295,19 @@ class AggregatedDGAInfoFactory(factory.django.DjangoModelFactory):
         model = models.AggregatedDGAInfo
 
 
+class AEDResourceFactory(ResourceFactory):
+    """Wykaz AED dostawcy (wzór: DGAResourceFactory)."""
+
+    contains_aed_list = True
+
+
+class AggregatedAEDInfoFactory(factory.django.DjangoModelFactory):
+    resource = factory.SubFactory(ResourceFactory, contains_aed_list=True)
+
+    class Meta:
+        model = models.AggregatedAEDInfo
+
+
 class ResourceTxtFileFactory(BaseResourceFileFactory):
     file = factory.django.FileField(
         from_func=lambda: BytesIO(b"some text"),

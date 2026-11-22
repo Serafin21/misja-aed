@@ -24,7 +24,6 @@ from mcod.resources.aed_constants import (
     POLAND_LON,
     TERYT_TERC_PATTERN,
 )
-from mcod.resources.dga_utils import create_df_from_dga_file
 
 if TYPE_CHECKING:
     from mcod.resources.models import Resource
@@ -59,13 +58,32 @@ def _to_float(value: Any) -> Optional[float]:
 
 
 def create_df_from_aed_file(file: Union[InMemoryUploadedFile, BytesIO], extension: Optional[str]) -> Optional[pd.DataFrame]:
-    """DataFrame z pliku CSV/XLS/XLSX – ten sam odczyt co dla wykazu DGA (wykrywanie kodowania i separatora).
-    Wszystkie wartości jako tekst: TERYT „0201011” nie może stracić zera na początku."""
-    df = create_df_from_dga_file(file, extension)
-    if df is None:
+    """DataFrame z pliku CSV/XLS/XLSX (jak create_df_from_dga_file: wykrycie kodowania i separatora), ale wszystkie
+    wartości jako tekst – TERYT „0201011” i kod „00-060” nie mogą stracić zer na początku."""
+    import csv
+
+    from chardet import detect as detect_encoding
+
+    if extension in ("xls", "xlsx"):
+        df = pd.read_excel(file, dtype=str)
+    elif extension == "csv":
+        raw = file.read()
+        file.seek(0)
+        encoding = detect_encoding(raw)["encoding"]
+        if encoding is None:
+            logger.error("Could not detect AED file encoding")
+            return None
+        content = raw.decode(encoding)
+        try:
+            dialect = csv.Sniffer().sniff(content.splitlines()[0] if content else ",")
+            sep = dialect.delimiter
+        except csv.Error:
+            sep = ","
+        df = pd.read_csv(BytesIO(raw), sep=sep, dtype=str, encoding=encoding, keep_default_na=False)
+    else:
         return None
     df.columns = [str(c).strip() for c in df.columns]
-    return df.astype(object).where(pd.notna(df), None)
+    return df.astype(object).where(pd.notna(df) & (df != ""), None)
 
 
 def validate_aed_df_columns(df: pd.DataFrame) -> List[str]:
