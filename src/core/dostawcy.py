@@ -273,6 +273,9 @@ def _zrodlo_online(d: dict, dostawca: str | None = None) -> dict:
 PORTAL_PROVIDER_COLS = ("Nazwa dostawcy", "Typ instytucji", "Link do zasobu źródłowego", "Data aktualizacji zasobu")
 
 
+PORTAL_MISSING_SIGNS = ("-",)  # znaki umowne dane.gov.pl oznaczające brak wartości (portal/backend aed_constants)
+
+
 def _portal_get(url: str, timeout: int = 30) -> bytes:
     import urllib.request
     req = urllib.request.Request(url, headers={"Accept": "application/json, text/csv;q=0.9", "User-Agent": "MapaAED/1.0"})
@@ -295,6 +298,8 @@ def agreguj_z_portalu(store: Store, api: str) -> dict:
     rows = list(csv.DictReader(io.StringIO(_portal_get(csv_url, timeout=120).decode("utf-8-sig"))))
     items, per_provider = [], {}
     for row in rows:
+        # zasady dane.gov.pl: pusta komórka = znak umowny „-” (portal wpisuje go w wykazie zbiorczym) – czytamy jako brak
+        row = {k: (None if isinstance(v, str) and v.strip() in PORTAL_MISSING_SIGNS else v) for k, v in row.items()}
         provider = (row.get("Nazwa dostawcy") or "").strip()
         rec = _typed({f: row.get(f) for f in schema.field_order()})
         if not provider or not rec.get("id_aed") or rec.get("szerokosc_geograficzna") is None:

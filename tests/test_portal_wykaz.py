@@ -46,3 +46,20 @@ def test_lista_z_wykazu_zbiorczego_portalu(client, monkeypatch):
     monkeypatch.delenv("PORTAL_API")
     client.post("/api/v1/admin/agregacja", headers=adm)
     assert client.get("/api/v1/aed?per_page=100").json()["meta"]["count"] == 10  # without PORTAL_API – the previous path
+
+
+def test_znak_umowny_z_portalu_to_brak_wartosci(client, monkeypatch):
+    """Zasady dane.gov.pl: portal wpisuje w puste komórki wykazu zbiorczego znak umowny „-” – aplikacja czyta go jako brak."""
+    api = "http://api.mcod.local"
+    row = _row("Urząd Miasta Testowo", "AED-PL-P000000009", "52.2401", "-")
+    row |= {"pietro": "-", "numer_lokalu": "-", "kontakt_telefon": "-", "instrukcja_dostepu": "-"}
+    answers = {f"{api}/aed-aggregated": json.dumps({"csv_url": "http://api.mcod.local/media/w.csv"}).encode(),
+               "http://api.mcod.local/media/w.csv": _csv([row])}
+    monkeypatch.setattr(dostawcy, "_portal_get", lambda url, timeout=30: answers[url])
+    monkeypatch.setenv("PORTAL_API", api)
+    adm = {"Authorization": "Bearer " + client.post("/api/v1/auth/login", json={"login": "admin", "haslo": "admin123"}).json()["token"]}
+    assert client.post("/api/v1/admin/agregacja", headers=adm).json()["data"]["rekordy"] == 1
+    a = client.get("/api/v1/aed/AED-PL-P000000009").json()["data"]
+    attrs = a["attributes"]
+    assert attrs["pietro"] is None and attrs["numer_lokalu"] is None and attrs["kontakt_telefon"] is None and attrs["instrukcja_dostepu"] is None
+    assert a["meta"]["mozliwe_duplikaty"] == []
