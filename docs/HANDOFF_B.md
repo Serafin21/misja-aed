@@ -384,3 +384,9 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Czas: nd 01:10
 - Zrobione: panel → „Instytucje i konta”: kolumna **„Login i hasło”** z przyciskiem „Pokaż hasło” / „Ukryj” przy każdym koncie (`GET /konta/{login}/haslo`); przy zakładaniu konta jasna informacja: „Co najmniej 8 znaków. Jeśli zostawisz puste albo wpiszesz krótsze, komputer wygeneruje hasło sam”; ramka po założeniu mówi, czy hasło jest wpisane, czy wygenerowane. Formularz AED (`components/AedForm.tsx`): **pinezka ustawia się sama** po wpisaniu miejscowości, ulicy i numeru (po wyjściu z pola) i przed wysłaniem, kod pocztowy uzupełnia się z adresu; przy samej ulicy – komunikat „przesuń pinezkę na budynek”.
 - Sprawdzone: konto z hasłem „abc” → wygenerowane i widoczne w tabeli; instytucja: „Kraków, ul. Floriańska 30” → pinezka i kod 31-021; „Warszawa, al. Jerozolimskie 100” wysłane bez klikania mapy.
+
+## HANDOFF #35
+
+- Czas: nd 01:25
+- Zrobione: panel → „Instytucje i konta”: przy koncie z wnioskiem przyciski **„Zatwierdź wniosek” / „Odrzuć”** (z uzasadnieniem), stan „wniosek – czeka na zatwierdzenie”. „Wszystkie AED”: przełącznik „Tylko AED ze zmianą do zatwierdzenia (N)”, w wierszu oznaczenie zmiany (kto, kiedy, link do szczegółów) i przyciski **„Zatwierdź zmianę” / „Odrzuć zmianę”**. Nowe AED (których jeszcze nie ma na liście) zatwierdza się dalej w „Zgłoszenia AED”.
+- Sprawdzone: wniosek OSP zatwierdzony z listy kont → konto loguje się; zmiana AED Krosna zatwierdzona z listy AED → nowy opis na mapie.
