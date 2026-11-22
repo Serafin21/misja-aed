@@ -33,7 +33,7 @@ Danych o AED nie brakuje, brakuje odpowiedzialności: w OpenStreetMap jest 18 29
 3. **Dla instytucji**: instrukcja publikacji w panelu dane.gov.pl w krokach, szablon pliku (CSV, XLSX), typowe komunikaty walidacji portalu z poprawkami, kreator pliku i pakiet z XML harvestera.
 4. **Wzorcowy zakres danych AED**: 44 pola (XLSX), słownik danych, JSON Schema, CSVW, słowniki wartości.
 5. **Akcja „AED w danych”**: hasło „Dane prosto z serca”, wezwanie „Masz AED? Udostępnij je na dane.gov.pl”, logotyp (SVG, PNG, JPG, PDF) i księga znaku.
-6. **Model ról** (`docs/MODEL_ROL.md` v2.1): publikuje dostawca, administrator nie zmienia danych dostawców, zgłoszenia wracają do dostawcy, mapa = wykaz zbiorczy. Funkcje edycji AED przez administratora w aplikacji to **tryb pokazowy prototypu, docelowo wyłączony** (MODEL_ROL, „Zmiany v2.1”).
+6. **Model ról** (`docs/MODEL_ROL.md` v2.2): publikuje dostawca, administrator nie zmienia danych dostawców, zgłoszenia wracają do dostawcy, mapa = wykaz zbiorczy. Funkcje edycji AED przez administratora w aplikacji to **tryb pokazowy prototypu, docelowo wyłączony** (MODEL_ROL, „Zmiany v2.1”).
 7. **Referencyjny zakres źródeł** (pkt 2 zadania): każde źródło ma ten sam zakres referencyjny – wzorzec 44 pól (portal odrzuca wykaz bez kolumn wzorca i bez pól wymaganych); w wykazie zbiorczym każdy wiersz wskazuje swoje źródło (dostawca, typ instytucji, link do zasobu, data aktualizacji); eksport aplikacji `deliverables/dataset/zrodla.csv` opisuje każde źródło: format, licencja, częstotliwość aktualizacji, liczba rekordów, pokrycie pól wymaganych i zalecanych (%), obszar.
 8. **Testy**: aplikacja – 112 testów `pytest` (role, walidacja, agregacja, eksport); portal – 23 testy Wykazu AED bez bazy (`portal/local/run_aed_tests.sh`).
 

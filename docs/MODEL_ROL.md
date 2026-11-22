@@ -198,7 +198,7 @@ Każdy zapis jest autoryzowany po stronie serwera i rejestrowany w dzienniku zda
 
 - **Nadużycia.** Stosuje się limit zgłoszeń z jednego źródła i filtr treści przed przekazaniem zgłoszenia dostawcy.
 
-- **Dostępność cyfrowa.** Interfejs mieszkańca spełnia WCAG 2.1 na poziomie AA, zgodnie z ustawą o dostępności cyfrowej.
+- **Dostępność cyfrowa.** Interfejs mieszkańca spełnia WCAG 2.2 (aktualna wersja) na poziomie AA, zgodnie z ustawą o dostępności cyfrowej.
 
 ## 10. Akcja promocyjna dla dostawców
 
@@ -250,7 +250,7 @@ Model uznaje się za wdrożony w prototypie, gdy przechodzą wszystkie testy z t
 | K9  | Tryb aktualności rozróżnia zbiór nieaktualny i rekord do weryfikacji | dane testowe z przekroczonymi terminami                                           |
 | K10 | Każdy zapis jest w dzienniku zdarzeń                                 | operacja testowa daje wpis: kto, kiedy, co, przed i po                            |
 | K11 | Kreator kończy się pobraniem plików, nie publikacją                  | przycisk „Pobierz pliki do publikacji”; brak przycisku „Opublikuj”                |
-| K12 | Interfejs mieszkańca spełnia WCAG 2.1 AA                             | test automatyczny i obsługa samej klawiatury                                      |
+| K12 | Interfejs mieszkańca spełnia WCAG 2.2 AA                             | test automatyczny i obsługa samej klawiatury                                      |
 | K13 | Konto instytucji działa dopiero po zatwierdzeniu wniosku             | logowanie przed zatwierdzeniem odrzucone (403), po zatwierdzeniu działa            |
 | K14 | Zdjęcie AED jest wymagane, a jego metadane są usuwane                | zgłoszenie bez zdjęcia odrzucone; zapisane zdjęcie bez EXIF/GPS                    |
 | K15 | „Zgłoś AED” tylko po zalogowaniu i bez wartości „nie wiem”           | bez logowania 401; „nie wiem”/„nieznane” odrzucone (422)                           |
