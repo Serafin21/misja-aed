@@ -145,6 +145,8 @@ routes = [
     ("/resources/{id:int},{slug}/comments", res_views.ResourceCommentsView()),
     # DGA
     ("/dga-aggregated", res_views.AggregatedDGAInfoView()),
+    # Wykaz AED (HackNation 2026)
+    ("/aed-aggregated", res_views.AggregatedAEDInfoView()),
     # Depricated views
     ("/resources/{id:int}/incr_download_count", res_views.ResourceDownloadCounter()),
     (

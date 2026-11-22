@@ -99,6 +99,11 @@ class OpenApiSpec:
             schema=res_responses.AggregatedDGAInfoApiResponse,
             many=False,
         )
+        spec.components.schema(
+            "AggregatedAEDInfo",
+            schema=res_responses.AggregatedAEDInfoApiResponse,
+            many=False,
+        )
         spec.components.schema("Charts", schema=res_responses.ChartApiResponse, many=True)
         spec.components.schema("Chart", schema=res_responses.ChartApiResponse, many=False)
         spec.components.schema("ResourceTable", schema=res_responses.TableApiResponse, many=True)
@@ -120,6 +125,7 @@ class OpenApiSpec:
         spec.path(resource=res_views.ResourcesView)
         spec.path(resource=res_views.ResourceView)
         spec.path(resource=res_views.AggregatedDGAInfoView)
+        spec.path(resource=res_views.AggregatedAEDInfoView)
         spec.path(resource=res_views.ResourceTableView)
         spec.path(resource=res_views.ResourceTableRowView)
         spec.path(resource=search_views.SearchView)

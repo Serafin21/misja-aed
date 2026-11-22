@@ -698,3 +698,33 @@ class AggregatedDGAInfoApiResponse(ExtSchema):
     dataset_slug = fields.Str(attribute="resource.dataset.slug", data_key="dataset_slug")
     resource_id = fields.Int(attribute="resource.id", data_key="resource_id")
     resource_slug = fields.Str(attribute="resource.slug", data_key="resource_slug")
+
+
+class AggregatedAEDInfoApiResponse(ExtSchema):
+    """GET /aed-aggregated – gdzie jest „Wykaz AED – wykaz zbiorczy” (wzór: AggregatedDGAInfoApiResponse) oraz
+    bezpośrednie linki do plików CSV i XLSX (aplikacje odczytu, np. mapa AED, pobierają CSV)."""
+
+    dataset_id = fields.Int(attribute="resource.dataset.id", data_key="dataset_id")
+    dataset_slug = fields.Str(attribute="resource.dataset.slug", data_key="dataset_slug")
+    resource_id = fields.Int(attribute="resource.id", data_key="resource_id")
+    resource_slug = fields.Str(attribute="resource.slug", data_key="resource_slug")
+    updated_at = fields.DateTime(attribute="updated_at", data_key="updated_at")
+    csv_url = fields.Method("get_csv_url", data_key="csv_url")
+    xlsx_url = fields.Method("get_xlsx_url", data_key="xlsx_url")
+
+    @staticmethod
+    def _file_url(obj, extension: str):
+        for f in obj.resource.files.all():
+            if f.file and f.file.name.lower().endswith(f".{extension}"):
+                return f.download_url
+        return None
+
+    def get_csv_url(self, obj):
+        return self._file_url(obj, "csv")
+
+    def get_xlsx_url(self, obj):
+        return self._file_url(obj, "xlsx")
+
+    class Meta:
+        ordered = True
+
