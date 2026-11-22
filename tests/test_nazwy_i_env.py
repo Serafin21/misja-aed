@@ -85,5 +85,7 @@ def test_przypomnienie_bez_none(client):
                                                           "dysponent_nazwa": "Instytucja Bez Nazw", "dostawca_podstawa": "wlasciciel"}).status_code == 201
     aid = next(i for i, r in st.records.items() if i not in st.lista and not r.get("nazwa_obiektu"))  # an unnamed OSM point
     assert client.put(f"/api/v1/admin/aed/{aid}/przypisanie", headers=adm, json={"organizacja": "Instytucja Bez Nazw"}).status_code == 200
-    texts = [p["tresc"] for p in client.get("/api/v1/moje-aed/powiadomienia", headers=login("inst.bez.nazwy", "Haslo123456")).json()["data"]]
+    h = login("inst.bez.nazwy", "Haslo123456")
+    h = {"Authorization": "Bearer " + client.post("/api/v1/konta/ja/haslo", headers=h, json={"stare": "Haslo123456", "nowe": "Wlasne-haslo-1"}).json()["token"]}
+    texts = [p["tresc"] for p in client.get("/api/v1/moje-aed/powiadomienia", headers=h).json()["data"]]
     assert texts and all("None" not in t for t in texts) and any("Brak nazwy urządzenia" in t for t in texts)

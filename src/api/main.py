@@ -20,7 +20,7 @@ envfile.load()  # .env (or .env.example) before the modules that read settings
 from src.core import coverage, db, dedup, hours, importers, linked, mapping, pipeline, publish, schema, template, validate
 from src.core.store import TZ, get_store, now_min, today
 
-from . import auth, sejf
+from . import auth
 from .auth import check_login, require
 
 API = "/api/v1"
@@ -181,13 +181,38 @@ def login(body: Login):
     token = check_login(body.login, body.haslo)
     if not token:
         a = auth.account(auth.normalize_login(body.login))
+        if a and a["aktywne"] and auth.verify_password(body.haslo or "", a["haslo"]) and auth.temp_expired(a):
+            err(403, "haslo_wygaslo", f"Hasło jednorazowe wygasło (ważne {auth.TEMP_HOURS} godziny). Kliknij „Nie pamiętam hasła” – administrator wyda nowe.")
         if a and not a["aktywne"] and auth.verify_password(body.haslo or "", a["haslo"]):
             if str(a.get("utworzyl") or "").startswith("wniosek:"):  # CR-TL-8: request not approved yet
                 err(403, "konto_oczekuje", "Konto czeka na zatwierdzenie przez administratora.")
             err(403, "konto_zablokowane", "Konto jest zablokowane. Skontaktuj się z administratorem.")
         err(401, "bledne_dane_logowania", "Nieprawidłowy login lub hasło.")
     u = auth.user_for(auth.normalize_login(body.login))
-    return {"token": token, "rola": str(u), "login": u.login, "dysponent_nazwa": u.nazwa}
+    return {"token": token, "rola": str(u), "login": u.login, "dysponent_nazwa": u.nazwa, "musi_zmienic_haslo": u.musi_zmienic_haslo}
+
+
+class NiePamietamIn(BaseModel):
+    login_lub_email: str = Field(..., min_length=3, max_length=200)
+
+
+@app.post(f"{API}/auth/nie-pamietam-hasla", tags=["auth"], dependencies=[Depends(rate_limit)],
+          summary="Nie pamiętam hasła – prośba do administratora o hasło jednorazowe (CR-TL-11)",
+          description="Zawsze ta sama odpowiedź (nie zdradza, czy konto istnieje). Administrator widzi prośbę przy koncie i wydaje "
+                      "hasło jednorazowe (`POST /konta/{login}/reset-hasla`), które przekazuje instytucji sprawdzonym kanałem "
+                      "(telefon z wniosku, służbowy e-mail). Hasła nikt nie może odczytać – także administrator.")
+def forgot_password(body: NiePamietamIn):
+    from src.core import dziennik
+    q = body.login_lub_email.strip()
+    st = get_store()
+    r = st.conn.execute("SELECT login FROM konta WHERE login=? OR lower(email)=lower(?)", (auth.normalize_login(q), q)).fetchone()
+    if r:
+        st.conn.execute("UPDATE konta SET prosba_o_haslo=? WHERE login=?", (now_min(), r["login"]))
+        st.conn.commit()
+        dziennik.zapisz(f"nie-pamietam:{r['login']}", "konto:prosba_o_haslo", r["login"])
+    return {"ok": True, "meta": {"komunikat": "Jeśli takie konto istnieje, administrator dostał prośbę o nowe hasło. Skontaktuje się z "
+                                              "instytucją (telefon lub służbowy e-mail z wniosku) i przekaże hasło jednorazowe – "
+                                              "przy pierwszym logowaniu ustawisz własne."}}
 
 
 # ---------- read ----------
@@ -967,6 +992,9 @@ def _konto_out(a: dict) -> dict:
         {"aktywne": bool(a.get("aktywne")), "dostawca_podstawa": a.get("podstawa"),
          "oczekuje": not a.get("aktywne") and str(a.get("utworzyl") or "").startswith("wniosek:"),
          "wniosek_id": str(a.get("utworzyl"))[8:] if str(a.get("utworzyl") or "").startswith("wniosek:") and not a.get("aktywne") else None,
+         # CR-TL-11: no password is ever returned; only the state of a one-time password and a "forgot password" request
+         "haslo_jednorazowe_do": a.get("haslo_tymczasowe_do"), "haslo_jednorazowe_wygaslo": auth.temp_expired(a),
+         "prosba_o_haslo": a.get("prosba_o_haslo"),
          "liczba_aed": sum(1 for i in st.records if _same(st.organizacja(i), a.get("dysponent_nazwa")))}
 
 
@@ -989,29 +1017,32 @@ def account_create(body: KontoIn, role: str = Depends(require("administrator")))
     st = get_store()
     if body.rola == "dysponent" and not body.dostawca_podstawa:
         err(422, "walidacja", "Podaj podstawę publikacji.", {"dostawca_podstawa": "wlasciciel | zarzadca | weryfikujacy"})
-    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon, haslo_podglad) "
-                    "VALUES (?,?,?,?,1,?,?,?,?,?,?)",
-                    (login, body.rola, body.dysponent_nazwa.strip(), auth.hash_password(haslo), now_min(), getattr(role, "login", str(role)),
-                     body.email, body.dostawca_podstawa if body.rola == "dysponent" else None, body.regon, sejf.zaszyfruj(haslo)))
+    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon) "
+                    "VALUES (?,?,?,?,1,?,?,?,?,?)",
+                    (login, body.rola, body.dysponent_nazwa.strip(), "-", now_min(), getattr(role, "login", str(role)),
+                     body.email, body.dostawca_podstawa if body.rola == "dysponent" else None, body.regon))
     st.conn.commit()
+    do = auth.set_password(login, haslo, temporary=True)  # CR-TL-11: one-time – the institution sets its own at the first login
     from src.core import dziennik
     dziennik.zapisz(role, "konto:zalozenie", login, po=_konto_out(auth.account(login)))
-    return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo, "haslo_wygenerowane": wygenerowane,
+    return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo, "haslo_wygenerowane": wygenerowane, "haslo_jednorazowe_do": do,
             "meta": {"komunikat": ("Hasło wygenerowane automatycznie" + (" – wpisane było krótsze niż 8 znaków." if body.haslo else ".") if wygenerowane
-                                   else "Konto założone z podanym hasłem.") + " Login i hasło zobaczysz zawsze w panelu (Instytucje i konta)."}}
+                                   else "Konto założone z podanym hasłem.") + f" To hasło jednorazowe: przekaż je instytucji – działa {auth.TEMP_HOURS} godziny, "
+                                  "przy pierwszym logowaniu instytucja ustawi własne. Widzisz je tylko teraz – nie da się go później odczytać."}}
 
 
-@app.post(f"{API}/konta/{{login}}/reset-hasla", tags=["auth"], summary="Nowe hasło dla konta instytucji (moderator)")
+@app.post(f"{API}/konta/{{login}}/reset-hasla", tags=["auth"], summary="Hasło jednorazowe dla konta instytucji (administrator) – pokazywane raz")
 def account_reset(login: str, role: str = Depends(require("administrator"))):
     if not auth.account(login):
         err(404, "nie_znaleziono", "Nie ma takiego konta.")
     haslo = auth.new_password()
-    st = get_store()
-    st.conn.execute("UPDATE konta SET haslo=?, haslo_podglad=? WHERE login=?", (auth.hash_password(haslo), sejf.zaszyfruj(haslo), login))
-    st.conn.commit()
+    do = auth.set_password(login, haslo, temporary=True)  # the old password and every session opened with it stop working
     from src.core import dziennik
     dziennik.zapisz(role, "konto:reset_hasla", login)
-    return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo}
+    return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo, "haslo_jednorazowe_do": do,
+            "meta": {"komunikat": f"Hasło jednorazowe – przekaż je instytucji sprawdzonym kanałem (telefon lub służbowy e-mail z konta). "
+                                  f"Działa {auth.TEMP_HOURS} godziny; przy pierwszym logowaniu instytucja ustawi własne. "
+                                  "Widzisz je tylko teraz – nie da się go później odczytać."}}
 
 
 class KontoZmianaIn(BaseModel):
@@ -1023,7 +1054,7 @@ class KontoZmianaIn(BaseModel):
     regon: Optional[str] = Field(None, pattern=r"^\d{9}(\d{5})?$")
     dostawca_podstawa: Optional[str] = Field(None, pattern="^(wlasciciel|zarzadca|weryfikujacy)$")
     nowy_login: Optional[str] = None
-    haslo: Optional[str] = Field(None, min_length=8, max_length=200, description="nowe hasło ustawione przez administratora")
+    haslo: Optional[str] = Field(None, min_length=8, max_length=200, description="hasło jednorazowe ustawione przez administratora (instytucja zmieni je przy pierwszym logowaniu)")
 
 
 @app.patch(f"{API}/konta/{{login}}", tags=["auth"], summary="Zmień konto instytucji: dane, login, hasło, blokada (administrator)")
@@ -1057,26 +1088,12 @@ def account_update(login: str, body: KontoZmianaIn, role: str = Depends(require(
         if k in ch:
             st.conn.execute(f"UPDATE konta SET {c}=? WHERE login=?", (int(ch[k]) if k == "aktywne" else ch[k], login))
     if "haslo" in ch:
-        st.conn.execute("UPDATE konta SET haslo=?, haslo_podglad=? WHERE login=?", (auth.hash_password(ch["haslo"]), sejf.zaszyfruj(ch["haslo"]), login))
+        auth.set_password(login, ch["haslo"], temporary=True)
     st.conn.commit()
     st.load()
     op = "konto:blokada" if ch.get("aktywne") is False else "konto:odblokowanie" if ch.get("aktywne") is True and len(ch) == 1 else "konto:zmiana"
     dziennik.zapisz(role, op, login, przed=przed, po=_konto_out(auth.account(login)) | ({"haslo": "zmienione"} if "haslo" in ch else {}))
     return {"data": _konto_out(auth.account(login))}
-
-
-@app.get(f"{API}/konta/{{login}}/haslo", tags=["auth"], summary="Podgląd loginu i hasła konta (administrator) – zapisywany w dzienniku")
-def account_password_view(login: str, role: str = Depends(require("administrator"))):
-    from src.core import dziennik
-    if login == "admin":
-        return {"data": {"login": "admin", "haslo": auth.DEMO.get("admin"), "uwaga": "konto wbudowane – hasło w pliku .env (ADMIN_PASSWORD)"}}
-    a = auth.account(login)
-    if not a:
-        err(404, "nie_znaleziono", "Nie ma takiego konta.")
-    haslo = sejf.odszyfruj(a.get("haslo_podglad"))
-    dziennik.zapisz(role, "konto:podglad_hasla", login)
-    return {"data": {"login": login, "haslo": haslo,
-                     "uwaga": None if haslo else "Hasło ustawiono przed wprowadzeniem podglądu – ustaw nowe (Edytuj → Nowe hasło)."}}
 
 
 @app.delete(f"{API}/konta/{{login}}", tags=["auth"], summary="Usuń konto instytucji (administrator) – AED zostają na mapie")
@@ -1097,24 +1114,26 @@ class ZmianaHasla(BaseModel):
     nowe: str = Field(..., min_length=10, max_length=200)
 
 
-@app.post(f"{API}/konta/ja/haslo", tags=["auth"], summary="Zmiana własnego hasła (konto instytucji)")
-def account_password(body: ZmianaHasla, role: str = Depends(require("dysponent", "administrator"))):
+@app.post(f"{API}/konta/ja/haslo", tags=["auth"], summary="Zmiana własnego hasła (konto instytucji); po haśle jednorazowym – obowiązkowa",
+          description="Zwraca nowy token: zmiana hasła kończy wszystkie sesje otwarte starym hasłem (także cudze).")
+def account_password(body: ZmianaHasla, role: str = Depends(require("dysponent", "administrator", allow_temp=True))):
     a = auth.account(getattr(role, "login", ""))
     if not a:
         err(422, "walidacja", "Konta demo nie mają zmiany hasła (hasło w .env).")
     if not auth.verify_password(body.stare, a["haslo"]):
         err(422, "walidacja", "Obecne hasło jest nieprawidłowe.", {"stare": "Nieprawidłowe hasło."})
-    st = get_store()
-    st.conn.execute("UPDATE konta SET haslo=?, haslo_podglad=? WHERE login=?", (auth.hash_password(body.nowe), sejf.zaszyfruj(body.nowe), a["login"]))
-    st.conn.commit()
+    if body.nowe == body.stare:
+        err(422, "walidacja", "Nowe hasło musi być inne niż obecne.", {"nowe": "Wpisz inne hasło."})
+    auth.set_password(a["login"], body.nowe, temporary=False)
     from src.core import dziennik
     dziennik.zapisz(role, "konto:zmiana_hasla", a["login"])
-    return {"ok": True}
+    return {"ok": True, "token": auth.token_for(a["login"])}
 
 
 @app.get(f"{API}/konta/ja", tags=["auth"], summary="Kim jestem (po zalogowaniu)")
-def account_me(role: str = Depends(require("dysponent", "administrator"))):
-    return {"data": {"login": getattr(role, "login", None), "rola": str(role), "dysponent_nazwa": getattr(role, "nazwa", None)}}
+def account_me(role: str = Depends(require("dysponent", "administrator", allow_temp=True))):
+    return {"data": {"login": getattr(role, "login", None), "rola": str(role), "dysponent_nazwa": getattr(role, "nazwa", None),
+                     "musi_zmienic_haslo": getattr(role, "musi_zmienic_haslo", False)}}
 
 
 # ---------- sources & connectors ----------
@@ -1478,9 +1497,9 @@ def account_request(body: WniosekIn):
     w = {"id": wid, "status": "oczekuje", "nazwa_instytucji": body.nazwa_instytucji.strip(), "regon": body.regon,
          "podstawa": body.podstawa, "email_sluzbowy": body.email_sluzbowy.strip(), "telefon": body.telefon.strip(), "login": login,
          "utworzono": now_min(), "decyzja": None, "uzasadnienie": None, "kto": None, "kiedy": None}
-    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon, telefon, haslo_podglad) "
-                    "VALUES (?,?,?,?,0,?,?,?,?,?,?,?)", (login, "dysponent", w["nazwa_instytucji"], auth.hash_password(body.haslo), now_min(),
-                                                         f"wniosek:{wid}", w["email_sluzbowy"], body.podstawa, body.regon, w["telefon"], sejf.zaszyfruj(body.haslo)))
+    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon, telefon) "
+                    "VALUES (?,?,?,?,0,?,?,?,?,?,?)", (login, "dysponent", w["nazwa_instytucji"], auth.hash_password(body.haslo), now_min(),
+                                                       f"wniosek:{wid}", w["email_sluzbowy"], body.podstawa, body.regon, w["telefon"]))
     st.conn.execute("INSERT INTO wnioski VALUES (?,?,?,?)", (wid, "oczekuje", db.dumps(w), now_min()))
     st.conn.commit()
     dziennik.zapisz(f"wniosek:{login}", "konto:wniosek", wid, po=_wniosek_out(w))
@@ -1548,13 +1567,15 @@ def account_add_employee(body: PracownikIn, role: str = Depends(require("dyspone
         err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
     haslo = auth.new_password()
     st = get_store()
-    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon, telefon, haslo_podglad) "
-                    "VALUES (?,?,?,?,1,?,?,?,?,?,?,?)", (login, "dysponent", me["dysponent_nazwa"], auth.hash_password(haslo), now_min(),
-                                                         me["login"], body.email, me.get("podstawa"), me.get("regon"), None, sejf.zaszyfruj(haslo)))
+    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon, telefon) "
+                    "VALUES (?,?,?,?,1,?,?,?,?,?,?)", (login, "dysponent", me["dysponent_nazwa"], "-", now_min(),
+                                                       me["login"], body.email, me.get("podstawa"), me.get("regon"), None))
     st.conn.commit()
+    auth.set_password(login, haslo, temporary=True)
     dziennik.zapisz(role, "konto:pracownik", login, po=_konto_out(auth.account(login)))
     return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo,
-            "meta": {"komunikat": "Przekaż login i hasło pracownikowi. Hasła nie da się później odczytać."}}
+            "meta": {"komunikat": f"Przekaż login i hasło jednorazowe pracownikowi (działa {auth.TEMP_HOURS} godziny, przy pierwszym "
+                                  "logowaniu ustawi własne). Hasła nie da się później odczytać."}}
 
 
 # ---------- "Zgłoszenia AED": new AED and changes, by an institution or the administrator; every one approved by the administrator

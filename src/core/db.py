@@ -126,9 +126,15 @@ def connect(path: Path | str | None = None) -> LockedConnection:
             _conn.execute("PRAGMA journal_mode=WAL")
             _conn.executescript(DDL)
             cols = {r[1] for r in _conn.execute("PRAGMA table_info(konta)")}
-            for c in ("podstawa", "regon", "telefon", "haslo_podglad"):  # CR-TL-6 / CR-TL-8 – older databases get the new columns
+            # CR-TL-6 / CR-TL-8 / CR-TL-11 – older databases get the new columns
+            for c in ("podstawa", "regon", "telefon", "haslo_tymczasowe_do", "prosba_o_haslo"):
                 if c not in cols:
                     _conn.execute(f"ALTER TABLE konta ADD COLUMN {c} TEXT")
+            if "haslo_podglad" in cols:  # CR-TL-11: no readable copy of passwords – the column is removed
+                _conn.execute("UPDATE konta SET haslo_podglad=NULL")
+                _conn.execute("ALTER TABLE konta DROP COLUMN haslo_podglad")
+                _conn.commit()
+                _conn.execute("VACUUM")  # also wipe the old pages of the file
         return _conn
 
 
