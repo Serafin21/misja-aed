@@ -4,8 +4,8 @@
 // Approvals (new AED, changes, account requests) are on the page "Zgłoszenia AED".
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  adminAedAssign, adminAedDelete, adminAedEdit, adminAedList, aggregationReport, createAccount, decideAccountRequest, decideSubmission, deleteAccount, viewPassword, eventLog, getAed,
-  lateDatasets, listAccounts, listGaps, refreshNow, refreshStatus, runAggregation, sendReminders, updateAccount,
+  adminAedAssign, adminAedDelete, adminAedEdit, adminAedList, aggregationReport, createAccount, decideAccountRequest, decideSubmission, deleteAccount, eventLog, getAed,
+  lateDatasets, listAccounts, resetPassword, listGaps, refreshNow, refreshStatus, runAggregation, sendReminders, updateAccount,
   type AedAdmin, type Konto, type RaportZbioru, type StanOdswiezania,
 } from '../api/client';
 import { RequireLogin, SessionBar } from '../components/Auth';
@@ -226,8 +226,7 @@ function Accounts() {
   const empty = { rola: 'dysponent' as 'dysponent' | 'administrator', login: '', haslo: '', dysponent_nazwa: '', dostawca_podstawa: '' as PodstawaPublikacji | '', email: '', telefon: '', regon: '' };
   const [form, setForm] = useState(empty);
   const [creating, setCreating] = useState(false);
-  const [secret, setSecret] = useState<{ login: string; haslo: string; info: string } | null>(null);
-  const [shown, setShown] = useState<Record<string, string>>({});
+  const [secret, setSecret] = useState<{ login: string; haslo: string; info: string; title: string; until?: string | null } | null>(null);
   const [err, setErr] = useState<Error | null>(null);
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
@@ -245,7 +244,8 @@ function Accounts() {
         ...(inst ? { dostawca_podstawa: form.dostawca_podstawa as PodstawaPublikacji } : {}), ...(form.email.trim() ? { email: form.email.trim() } : {}) });
       const extra = { ...(form.telefon.trim() ? { telefon: form.telefon.trim() } : {}), ...(form.regon.trim() ? { regon: form.regon.trim() } : {}) };
       if (Object.keys(extra).length) await updateAccount(r.data.login, extra);
-      setSecret({ login: r.data.login, haslo: r.haslo_jednorazowe,
+      setSecret({ login: r.data.login, haslo: r.haslo_jednorazowe, title: 'Konto założone – oto dane do pierwszego logowania.',
+        until: (r as { haslo_jednorazowe_do?: string }).haslo_jednorazowe_do,
         info: !r.haslo_wygenerowane ? 'Konto założone z hasłem, które wpisałeś.'
           : form.haslo ? 'Wpisane hasło miało mniej niż 8 znaków – komputer wygenerował nowe.' : 'Hasło wygenerował komputer.' });
       setTimeout(() => document.getElementById('acc-secret')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
@@ -267,8 +267,20 @@ function Accounts() {
     if (edit.haslo) ch.haslo = edit.haslo;
     try {
       await updateAccount(edit.login, ch);
-      setInfo(`Zapisano konto ${ch.nowy_login ?? edit.login}${ch.haslo ? ' (nowe hasło ustawione – przekaż je instytucji bezpiecznym kanałem)' : ''}.`);
+      setInfo(`Zapisano konto ${ch.nowy_login ?? edit.login}${ch.haslo ? ' (hasło jednorazowe ustawione – przekaż je instytucji sprawdzonym kanałem; przy pierwszym logowaniu ustawi własne)' : ''}.`);
       setEdit(null); st.reload();
+    } catch (ex) { setErr(ex as Error); }
+  }
+  /** CR-TL-11: a lost password → a one-time password (shown here once); the old password and its sessions stop working. */
+  async function issueOneTime(k: Konto) {
+    if (!window.confirm(`Wydać hasło jednorazowe dla ${k.login} (${k.dysponent_nazwa})? Obecne hasło przestanie działać, a wszystkie sesje tego konta zostaną wylogowane.`)) return;
+    setErr(null); setInfo('');
+    try {
+      const r = await resetPassword(k.login);
+      setSecret({ login: k.login, haslo: r.haslo_jednorazowe, title: `Hasło jednorazowe dla ${k.dysponent_nazwa ?? k.login}.`, until: r.haslo_jednorazowe_do,
+        info: 'Przekaż je instytucji sprawdzonym kanałem – zadzwoń na telefon z konta albo wyślij na służbowy e-mail z konta, nie na adres podany w prośbie.' });
+      setTimeout(() => document.getElementById('acc-secret')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
+      st.reload();
     } catch (ex) { setErr(ex as Error); }
   }
   async function toggle(k: Konto) {
@@ -300,6 +312,7 @@ function Accounts() {
   const TABS: [string, string, (k: Konto) => boolean][] = [
     ['', 'Wszystkie', () => true], ['aktywne', 'Aktywne', (k) => k.aktywne], ['oczekuje', 'Czekają na zatwierdzenie', (k) => !!k.oczekuje],
     ['zablokowane', 'Zablokowane', (k) => !k.aktywne && !k.oczekuje], ['administrator', 'Administratorzy', (k) => k.rola === 'administrator'],
+    ['prosba', 'Proszą o nowe hasło', (k) => !!k.prosba_o_haslo],
   ];
   const tabFn = TABS.find((t) => t[0] === stan)![2];
   const rows = all.filter((k) => {
@@ -310,16 +323,16 @@ function Accounts() {
   return (
     <section className="admin-section" aria-labelledby="h-acc">
       <h2 id="h-acc">Instytucje i konta</h2>
-      <p>Wszystkie konta: instytucji odpowiedzialnych za AED i administratorów. Możesz zmienić każdą daną konta – także login i hasło (np. po utracie lub kradzieży hasła), zablokować albo usunąć konto. Wnioski instytucji o konto zatwierdzasz w <Link to="/zgloszenia-aed">Zgłoszenia AED</Link>.</p>
+      <p>Wszystkie konta: instytucji odpowiedzialnych za AED i administratorów. Możesz zmienić dane konta i login, zablokować albo usunąć konto. Haseł nie widzi nikt – także administrator. Gdy instytucja zgubi hasło (albo ktoś je ukradł), wydaj <strong>hasło jednorazowe</strong>: stare hasło i wszystkie sesje przestają działać, a instytucja przy pierwszym logowaniu ustawia własne. Wnioski instytucji o konto zatwierdzasz w <Link to="/zgloszenia-aed">Zgłoszenia AED</Link>.</p>
       {secret && (
         <div id="acc-secret" className="callout callout--ok account-secret" role="alert">
-          <p className="callout__title">Konto założone – oto dane do logowania. Przekaż je instytucji (np. telefonicznie albo osobno e-mailem).</p>
+          <p className="callout__title">{secret.title} Przekaż je instytucji (np. telefonicznie albo osobno e-mailem).</p>
           <dl className="account-secret__data">
             <dt>Login</dt><dd><span className="secret">{secret.login}</span></dd>
             <dt>Hasło</dt><dd><span className="secret">{secret.haslo}</span></dd>
           </dl>
           <p><strong>{secret.info}</strong></p>
-          <p className="hint">Login i hasło każdego konta możesz zawsze podejrzeć w tabeli poniżej (przycisk „Pokaż hasło”). Instytucja może zmienić hasło po zalogowaniu („Zmień hasło”).</p>
+          <p className="hint">To <strong>hasło jednorazowe</strong> – widzisz je tylko teraz, później nie da się go odczytać. Działa{secret.until ? ` do ${when(secret.until)}` : ' 72 godziny'}; przy pierwszym logowaniu instytucja musi ustawić własne hasło.</p>
           <p className="form-actions">
             <button type="button" className="btn btn--secondary" onClick={() => navigator.clipboard?.writeText(`Login: ${secret.login}\nHasło: ${secret.haslo}`)}>Kopiuj login i hasło</button>
             <button type="button" className="btn btn--tertiary" onClick={() => setSecret(null)}>Gotowe – ukryj</button>
@@ -345,7 +358,7 @@ function Accounts() {
               <input id="acc-login" required minLength={3} maxLength={60} autoCapitalize="none" spellCheck={false}
                 value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} placeholder="np. UM Krosno albo aed@krosno.pl" /></div>
             <div className="field"><label htmlFor="acc-pass">Hasło (nieobowiązkowe)</label>
-              <p id="acc-pass-hint" className="hint">Co najmniej 8 znaków. <strong>Jeśli zostawisz puste albo wpiszesz krótsze, komputer wygeneruje hasło sam</strong> i pokaże je po założeniu konta.</p>
+              <p id="acc-pass-hint" className="hint">Co najmniej 8 znaków. <strong>Jeśli zostawisz puste albo wpiszesz krótsze, komputer wygeneruje hasło sam</strong> i pokaże je raz, po założeniu konta. To hasło jednorazowe – przy pierwszym logowaniu instytucja ustawi własne.</p>
               <input id="acc-pass" type="text" autoComplete="off" aria-describedby="acc-pass-hint" value={form.haslo} onChange={(e) => setForm({ ...form, haslo: e.target.value })} /></div>
             <div className="field"><label htmlFor="acc-regon">REGON (nieobowiązkowy)</label>
               <input id="acc-regon" inputMode="numeric" value={form.regon} onChange={(e) => setForm({ ...form, regon: e.target.value })} /></div>
@@ -386,14 +399,9 @@ function Accounts() {
               <tr key={k.login}>
                 <td>{k.dysponent_nazwa}<div className="hint">{k.rola === 'administrator' ? 'administrator' : 'instytucja'}{k.regon ? ` · REGON ${k.regon}` : ''}{k.dostawca_podstawa ? ` · ${PODSTAWA_LABEL[k.dostawca_podstawa]}` : ''}</div></td>
                 <td><code>{k.login}</code>
-                  <div className="pw-view">
-                    {shown[k.login] !== undefined
-                      ? <><span className="secret">{shown[k.login] || '—'}</span>
-                        <button type="button" className="btn btn--tertiary btn--small" onClick={() => setShown((x) => { const y = { ...x }; delete y[k.login]; return y; })}>Ukryj</button></>
-                      : <button type="button" className="btn btn--tertiary btn--small" onClick={async () => {
-                        try { const v = await viewPassword(k.login); setShown((x) => ({ ...x, [k.login]: v.haslo ?? '' })); if (!v.haslo && v.uwaga) setInfo(`${k.login}: ${v.uwaga}`); }
-                        catch (ex) { setErr(ex as Error); } }}>Pokaż hasło<span className="visually-hidden"> konta {k.login}</span></button>}
-                  </div>
+                  {k.prosba_o_haslo && <div><span className="badge badge--stale">prosi o nowe hasło ({when(k.prosba_o_haslo)})</span></div>}
+                  {k.haslo_jednorazowe_do && <div className="hint">{k.haslo_jednorazowe_wygaslo ? 'hasło jednorazowe wygasło – wydaj nowe' : `hasło jednorazowe do ${when(k.haslo_jednorazowe_do)}`}</div>}
+                  {!k.wbudowane && !k.prosba_o_haslo && !k.haslo_jednorazowe_do && <div className="hint">hasło ustawione przez instytucję (niewidoczne)</div>}
                   {k.utworzono && <div className="hint">od {when(k.utworzono)}</div>}</td>
                 <td>{k.email ?? '—'}<div className="hint">{k.telefon ?? ''}</div></td>
                 <td>{k.rola === 'administrator' ? '—' : n(k.liczba_aed)}</td>
@@ -406,6 +414,7 @@ function Accounts() {
                     <button type="button" className="btn btn--secondary btn--small" onClick={() => decideRequest(k, 'odrzuc')}>Odrzuć<span className="visually-hidden"> wniosek {k.dysponent_nazwa}</span></button>
                   </>}
                   {!k.oczekuje && <button type="button" className="btn btn--secondary btn--small" onClick={() => toggle(k)}>{k.aktywne ? 'Zablokuj' : 'Odblokuj'}<span className="visually-hidden"> {k.login}</span></button>}
+                  {!k.oczekuje && <button type="button" className={`btn btn--small ${k.prosba_o_haslo ? 'btn--primary' : 'btn--secondary'}`} onClick={() => issueOneTime(k)}>Wydaj hasło jednorazowe<span className="visually-hidden"> dla {k.login}</span></button>}
                   <button type="button" className="btn btn--danger btn--small" onClick={() => remove(k)}>Usuń<span className="visually-hidden"> {k.login}</span></button>
                   </>}
                 </td>
@@ -420,7 +429,7 @@ function Accounts() {
           <div className="filters__grid">
             <div className="field"><label htmlFor="ed-name">Nazwa instytucji</label><input id="ed-name" value={edit.dysponent_nazwa ?? ''} onChange={(e) => setEdit({ ...edit, dysponent_nazwa: e.target.value })} /></div>
             <div className="field"><label htmlFor="ed-login">Login</label><input id="ed-login" autoCapitalize="none" value={edit.nowy_login} onChange={(e) => setEdit({ ...edit, nowy_login: e.target.value })} /></div>
-            <div className="field"><label htmlFor="ed-pass">Nowe hasło (zostaw puste, by nie zmieniać)</label><input id="ed-pass" type="text" autoComplete="off" value={edit.haslo} onChange={(e) => setEdit({ ...edit, haslo: e.target.value })} /></div>
+            <div className="field"><label htmlFor="ed-pass">Hasło jednorazowe (zostaw puste, by nie zmieniać; instytucja zmieni je przy pierwszym logowaniu)</label><input id="ed-pass" type="text" autoComplete="off" value={edit.haslo} onChange={(e) => setEdit({ ...edit, haslo: e.target.value })} /></div>
             <div className="field"><label htmlFor="ed-regon">REGON</label><input id="ed-regon" inputMode="numeric" value={edit.regon ?? ''} onChange={(e) => setEdit({ ...edit, regon: e.target.value })} /></div>
             <div className="field"><label htmlFor="ed-mail">E-mail</label><input id="ed-mail" type="email" value={edit.email ?? ''} onChange={(e) => setEdit({ ...edit, email: e.target.value })} /></div>
             <div className="field"><label htmlFor="ed-tel">Telefon</label><input id="ed-tel" type="tel" value={edit.telefon ?? ''} onChange={(e) => setEdit({ ...edit, telefon: e.target.value })} /></div>
