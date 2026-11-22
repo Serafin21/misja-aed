@@ -49,3 +49,6 @@ Zgodnie z regulaminem opisujemy to w `docs/AI_USAGE.md`. Asystenci AI pomagali p
 
 **16. Jak działa „Wykaz AED” i dlaczego wzorem DGA?**
 Portal dane.gov.pl już dziś robi to samo dla wykazu chronionych danych (DGA): instytucja zaznacza przy zasobie, że to wykaz, portal sprawdza plik i co noc łączy wszystkie wykazy w jeden plik Ministerstwa Cyfryzacji. Dodaliśmy do kodu portalu ten sam mechanizm dla AED: znacznik „Zasób zawiera wykaz AED”, sprawdzenie z wzorcem (44 pola), nocny „Wykaz AED – wykaz zbiorczy” w CSV i XLSX z dostawcą i linkiem do źródła przy każdym wierszu oraz adres API `/aed-aggregated`. Wzór DGA, bo jest sprawdzony, zespół portalu go zna i nie trzeba budować niczego od zera – szczegóły i tabela „DGA → AED” w `portal/README.md`.
+
+**17. Czy administrator widzi hasła instytucji? Co, gdy instytucja zgubi hasło?**
+Nie – **administrator nie widzi haseł**, nikt ich nie widzi: serwer trzyma tylko skrót hasła (PBKDF2), bez żadnej kopii do odczytu. Zgubione hasło odzyskuje się jak w dużych serwisach: „Nie pamiętam hasła” → administrator sprawdza instytucję telefonem lub służbowym e-mailem z konta i wydaje hasło jednorazowe (widzi je raz, ważne 72 godziny) → przy pierwszym logowaniu instytucja musi ustawić własne. Stare hasło i wszystkie otwarte sesje od razu przestają działać. Docelowo logowanie i odzyskanie dostępu przejmuje login.gov.pl z 2FA.
