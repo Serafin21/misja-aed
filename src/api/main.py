@@ -578,7 +578,7 @@ def my_notifications(role: str = Depends(require("dysponent", "administrator")))
     stale = sorted((r for i, r in st.records.items() if _same(st.organizacja(i), org) and coverage.stan_danych(r) == "nieaktualne"),
                    key=lambda r: r.get("data_weryfikacji") or "")
     rem = [{"id": -n - 1, "typ": "przypomnienie", "czas": today(), "przeczytane": False, "id_aed": r["id_aed"],
-            "tresc": f"AED „{r.get('nazwa_obiektu')}”: " + (f"ostatnio sprawdzone {r['data_weryfikacji']}" if r.get("data_weryfikacji")
+            "tresc": f"AED „{r.get('nazwa_obiektu') or 'Brak nazwy urządzenia'}”: " + (f"ostatnio sprawdzone {r['data_weryfikacji']}" if r.get("data_weryfikacji")
                                                          else "brak daty sprawdzenia") + " – sprawdź je na miejscu i zgłoś aktualne dane."}
            for n, r in enumerate(stale[:50])]
     return {"data": rem + dziennik.powiadomienia(org), "meta": {"przypomnienia": len(stale)}}
@@ -1880,7 +1880,7 @@ def admin_aed_list(q: Optional[str] = None, organizacja: Optional[str] = None, o
         if qn and qn not in " ".join(str(r.get(k) or "") for k in ("id_aed", "nazwa_obiektu", "miejscowosc", "ulica", "gmina", "dysponent_nazwa")).lower():
             continue
         out.append((r.get("nazwa_obiektu") or "", i, r, org))
-    out.sort(key=lambda x: (x[0].lower(), x[1]))
+    out.sort(key=lambda x: (not x[0], x[0].lower(), x[1]))  # unnamed AED last
     total = len(out)
     rows = [{"id_aed": i, "nazwa_obiektu": r.get("nazwa_obiektu"), "adres": " ".join(str(x) for x in (r.get("ulica"), r.get("numer_budynku")) if x),
              "miejscowosc": r.get("miejscowosc"), "gmina": r.get("gmina"), "warstwa": "aplikacja" if i in st.aplikacja else warstwa(r),

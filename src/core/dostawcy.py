@@ -430,7 +430,7 @@ def agreguj(store: Store, online: bool | None = None) -> dict:
                 for a_, b_, who in ((rec, r2, prov), (r2, rec, p2)):
                     other_p = p2 if who is prov else prov
                     dziennik.powiadom(who["dostawca"], "duplikat",
-                                      f"Możliwy duplikat: Twoje AED {a_['id_aed']} („{a_['nazwa_obiektu']}”) i AED {b_['id_aed']} "
+                                      f"Możliwy duplikat: Twoje AED {a_['id_aed']} („{a_.get('nazwa_obiektu') or 'Brak nazwy urządzenia'}”) i AED {b_['id_aed']} "
                                       f"dostawcy {other_p['dostawca']} są {round(d)} m od siebie. Oba są widoczne na liście; "
                                       "ustalcie między sobą, czy to to samo urządzenie.", pair)
     store.replace_list(items)

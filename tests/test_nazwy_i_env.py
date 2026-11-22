@@ -73,3 +73,17 @@ def test_env_plik_i_wzor(tmp_path, monkeypatch):
     monkeypatch.setenv("ADMIN_PASSWORD", "z-srodowiska")
     envfile.load(tmp_path)
     assert os.environ["ADMIN_PASSWORD"] == "z-srodowiska"  # the environment wins
+
+
+def test_przypomnienie_bez_none(client):
+    """An AED without a name is never written as "None" in texts for institutions (reminders)."""
+    from src.api import main
+    st = main.get_store()
+    login = lambda u, p: {"Authorization": "Bearer " + client.post("/api/v1/auth/login", json={"login": u, "haslo": p}).json()["token"]}
+    adm = login("admin", "admin123")
+    assert client.post("/api/v1/konta", headers=adm, json={"login": "inst.bez.nazwy", "haslo": "Haslo123456",
+                                                          "dysponent_nazwa": "Instytucja Bez Nazw", "dostawca_podstawa": "wlasciciel"}).status_code == 201
+    aid = next(i for i, r in st.records.items() if i not in st.lista and not r.get("nazwa_obiektu"))  # an unnamed OSM point
+    assert client.put(f"/api/v1/admin/aed/{aid}/przypisanie", headers=adm, json={"organizacja": "Instytucja Bez Nazw"}).status_code == 200
+    texts = [p["tresc"] for p in client.get("/api/v1/moje-aed/powiadomienia", headers=login("inst.bez.nazwy", "Haslo123456")).json()["data"]]
+    assert texts and all("None" not in t for t in texts) and any("Brak nazwy urządzenia" in t for t in texts)
