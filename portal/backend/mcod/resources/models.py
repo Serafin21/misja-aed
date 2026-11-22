@@ -577,6 +577,9 @@ class Resource(ExtendedModel):
     automatic_data_date_end = models.DateField(verbose_name=_("Data date end date update"), blank=True, null=True)
     endless_data_date_update = models.BooleanField(verbose_name=_("Endless data date update"), default=False)
     contains_protected_data = models.BooleanField(verbose_name=_("Contains protected data list"), default=False)
+    # Wykaz AED (HackNation 2026, wzorem contains_protected_data / wykazu DGA): zasób jest wykazem defibrylatorów AED
+    # dostawcy – trafia do nocnego „Wykaz AED – wykaz zbiorczy” (mcod/resources/aed_utils.py, tasks/aed.py).
+    contains_aed_list = models.BooleanField(verbose_name=_("Contains AED list"), default=False)
 
     def __str__(self):
         return self.title
@@ -1375,6 +1378,11 @@ class Resource(ExtendedModel):
         already published resources.
         """
         return self.contains_protected_data and self.is_published and not self.is_removed
+
+    @property
+    def is_aed_list(self) -> bool:
+        """Zasób jest opublikowanym wykazem AED dostawcy (wzorem is_dga)."""
+        return self.contains_aed_list and self.is_published and not self.is_removed
 
     @property
     def needs_es_and_rdf_db_update(self):
