@@ -80,6 +80,12 @@ const routes: Routes = [
           import('./pages/dga-information-point/dga-information-point.module').then((m) => m.DgaInformationPointModule),
       },
       {
+        path: '!aed',
+        data: { breadcrumbs: { translationKey: 'AedInformationPoint.Self' } },
+        loadChildren: () =>
+          import('./pages/aed-information-point/aed-information-point.module').then((m) => m.AedInformationPointModule),
+      },
+      {
         path: '!brokenlinks',
         data: { breadcrumbs: { translationKey: 'BrokenLinks.Self' } },
         loadChildren: () => import('./pages/broken-links/broken-links.routes').then((mod) => mod.BROKEN_LINKS_ROUTES),
