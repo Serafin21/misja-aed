@@ -312,11 +312,26 @@ def get_aed_source_df(resource: "Resource") -> Optional[pd.DataFrame]:
     return pd.DataFrame(ok, columns=df.columns) if ok else None
 
 
+def _main_aed_street(row) -> Optional[str]:
+    cecha, ulica = row.get("ulica_cecha"), row.get("ulica")
+    if _is_empty(ulica):
+        return None
+    return f"{cecha} {ulica}".strip() if not _is_empty(cecha) else str(ulica)
+
+
+def _main_aed_hours(row) -> Optional[str]:
+    if str(row.get("dostepny_24h") or "").strip().lower() in ("true", "tak", "1"):
+        return "24/7"
+    return None if _is_empty(row.get("godziny_dostepnosci")) else row.get("godziny_dostepnosci")
+
+
 def create_main_aed_df(resources) -> pd.DataFrame:
-    """Wykaz zbiorczy: wiersze wszystkich dostawców jeden pod drugim + dostawca, typ instytucji, link do zasobu
-    źródłowego, data aktualizacji zasobu i „Możliwy duplikat”. Bez scalania i bez zmiany treści wierszy."""
+    """Wykaz zbiorczy: wiersze wszystkich dostawców jeden pod drugim, w zakresie kolumn MAIN_AED_COLUMNS (czytelne
+    nagłówki jak w wykazie DGA) + nazwa dostawcy, link do zasobu źródłowego i „Możliwy duplikat”. Bez scalania i bez
+    zmiany treści wierszy; pełne 44 pola wzorca zostają w zasobie dostawcy."""
     from mcod.resources.aed_constants import (
         AED_COLUMNS,
+        MAIN_AED_COLUMN_SOURCES,
         MAIN_AED_COLUMNS,
         MAIN_AED_DUPLICATE_COLUMN,
     )
@@ -329,16 +344,48 @@ def create_main_aed_df(resources) -> pd.DataFrame:
         org = resource.dataset.organization
         df = df.reindex(columns=AED_COLUMNS)
         df.insert(0, "Nazwa dostawcy", org.title)
-        df.insert(1, "Typ instytucji", org.get_institution_type_display())
-        df.insert(2, "Link do zasobu źródłowego", getattr(resource, "frontend_absolute_url", None) or resource.link)
-        updated = resource.data_date or (resource.modified.date() if resource.modified else None)
-        df.insert(3, "Data aktualizacji zasobu", updated.isoformat() if updated else None)
+        df.insert(1, "Link do zasobu źródłowego", getattr(resource, "frontend_absolute_url", None) or resource.link)
         parts.append(df)
-    columns_without_lp = [c for c in MAIN_AED_COLUMNS if c != "Lp."]
-    main_df = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=columns_without_lp)
-    main_df[MAIN_AED_DUPLICATE_COLUMN] = mark_possible_duplicates(main_df) if not main_df.empty else []
+    if not parts:
+        return pd.DataFrame(columns=MAIN_AED_COLUMNS)
+    full = pd.concat(parts, ignore_index=True)
+    # duplikaty liczone na pełnych danych (współrzędne, dostawca, id_aed) – przed zawężeniem kolumn
+    duplicates = mark_possible_duplicates(full)
+    main_df = pd.DataFrame(index=full.index)
+    for name, field in MAIN_AED_COLUMN_SOURCES:
+        if field:
+            main_df[name] = full[field]
+    main_df["Nazwa dostawcy"] = full["Nazwa dostawcy"]
+    main_df["Link do zasobu źródłowego"] = full["Link do zasobu źródłowego"]
+    main_df["Ulica"] = [_main_aed_street(r) for r in full.to_dict(orient="records")]
+    main_df["Godziny dostępności"] = [_main_aed_hours(r) for r in full.to_dict(orient="records")]
+    main_df[MAIN_AED_DUPLICATE_COLUMN] = duplicates
     main_df.insert(0, "Lp.", range(1, len(main_df) + 1))
     return main_df[MAIN_AED_COLUMNS]
+
+
+def add_style_to_main_aed_excel_file(file_path: str, sheet_name: str) -> None:
+    """Styl arkusza wykazu zbiorczego jak add_style_to_main_dga_excel_file: zamrożony wiersz nagłówka, bez ramek,
+    wyrównanie do lewej, stałe szerokości kolumn."""
+    from openpyxl import load_workbook
+    from openpyxl.styles import Alignment, Border
+
+    from mcod.resources.aed_constants import MAIN_AED_COLUMNS
+
+    widths = {"Lp.": 6, "Identyfikator AED": 22, "Nazwa dostawcy": 32, "Nazwa obiektu": 36, "Miejscowość": 18,
+              "Ulica": 24, "Numer budynku": 10, "Opis lokalizacji": 40, "Dostęp": 12, "Godziny dostępności": 26,
+              "Szerokość geograficzna": 12, "Długość geograficzna": 12, "Data weryfikacji": 14,
+              "Link do zasobu źródłowego": 50, "Możliwy duplikat": 30}
+    workbook = load_workbook(filename=file_path)
+    worksheet = workbook[sheet_name]
+    worksheet.freeze_panes = "A2"
+    for row in worksheet.iter_rows():
+        for cell in row:
+            cell.border = Border()
+            cell.alignment = Alignment(horizontal="left")
+    for idx, name in enumerate(MAIN_AED_COLUMNS, start=1):
+        worksheet.column_dimensions[worksheet.cell(row=1, column=idx).column_letter].width = widths.get(name, 16)
+    workbook.save(file_path)
 
 
 MAIN_AED_FILES_CACHE_KEY = "main_aed_files_to_clean"
@@ -378,6 +425,7 @@ def create_main_aed_files() -> Tuple[str, str]:
     df = df.astype(object).where(pd.notna(df) & (df.astype(str).apply(lambda c: c.str.strip()) != ""), AED_MISSING_VALUE_SIGN)
     df.to_csv(base + ".csv", index=False, encoding="utf-8")
     save_df_to_xlsx(df=df, file_path=base + ".xlsx", sheet_name=settings.MAIN_AED_XLSX_WORKSHEET_NAME)
+    add_style_to_main_aed_excel_file(file_path=base + ".xlsx", sheet_name=settings.MAIN_AED_XLSX_WORKSHEET_NAME)
     logger.info(f"Main AED files created: {len(df)} rows.")
     return base + ".csv", base + ".xlsx"
 
@@ -430,9 +478,9 @@ def main_aed_table_schema() -> Dict[str, Any]:
     """Schemat danych wykazu zbiorczego (tabular_data_schema): kolumny są stałe, więc portal nie zgaduje typów
     z próbki (zgadywanie „po większości” uznałoby numer budynku „5A” albo kod „00-950” za błąd). Współrzędne i „Lp.”
     są liczbami, reszta tekstem; znak umowny „-” = brak wartości (missingValues = znaki umowne zasobu)."""
-    from mcod.resources.aed_constants import MAIN_AED_COLUMNS
+    from mcod.resources.aed_constants import MAIN_AED_COLUMNS, MAIN_AED_NUMBER_COLUMNS
 
-    numbers = {"szerokosc_geograficzna": "number", "dlugosc_geograficzna": "number", "Lp.": "integer"}
+    numbers = {**{c: "number" for c in MAIN_AED_NUMBER_COLUMNS}, "Lp.": "integer"}
     return {
         "fields": [{"name": c, "type": numbers.get(c, "string"), "format": "default"} for c in MAIN_AED_COLUMNS],
         "missingValues": list(AED_MISSING_VALUE_SIGNS),
