@@ -13,7 +13,7 @@ import { AedForm, draftFromAed, draftFromSubmission } from '../components/AedFor
 import { LoginPage, SessionBar, useSession } from '../components/Auth';
 import { ReportsQueue } from '../components/ReportsQueue';
 import { ErrorBox, Icon, Loading } from '../components/ui';
-import { address } from '../lib/format';
+import { address, aedName } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { Link, usePageTitle } from '../router';
 
@@ -71,7 +71,7 @@ function FormFor({ editing, organizations, onDone, onCancel }: { editing: Editin
   if (editing.kind === 'zmiana') {
     const a = editing.dev.aed;
     return <AedForm key={`z-${a.id_aed}`} mode="zmiana" idAed={a.id_aed} initial={draftFromAed(a)} hasPhoto={!!a.zdjecie_url}
-      title={`Zgłoś zmianę: ${a.nazwa_obiektu}`} onDone={onDone} onCancel={onCancel} />;
+      title={`Zgłoś zmianę: ${aedName(a.nazwa_obiektu)}`} onDone={onDone} onCancel={onCancel} />;
   }
   const z = editing.z;
   return <AedForm key={`p-${z.id}`} mode="poprawka" submissionId={z.id} idAed={z.id_aed} initial={draftFromSubmission(z)} hasPhoto
@@ -106,7 +106,7 @@ function InstitutionZgloszenia() {
               {devices.data.map((d) => (
                 <li key={d.id} className="device">
                   <div>
-                    <p className="device__name"><Link to={`/aed/${d.id}`}>{d.aed.nazwa_obiektu || 'AED bez nazwy'}</Link></p>
+                    <p className="device__name"><Link to={`/aed/${d.id}`}>{aedName(d.aed.nazwa_obiektu)}</Link></p>
                     <p className="hint">{address(d.aed)}{d.aed.data_weryfikacji ? ` · sprawdzone ${d.aed.data_weryfikacji}` : ' · brak daty sprawdzenia'}</p>
                     {d.zgloszenie && <p><span className={`badge ${BADGE[d.zgloszenie.status]}`}>Zmiana {STATUS[d.zgloszenie.status]}</span>{d.zgloszenie.komentarz ? ` ${d.zgloszenie.komentarz}` : ''}</p>}
                   </div>

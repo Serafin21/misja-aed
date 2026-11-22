@@ -6,14 +6,14 @@ import { MapView } from '../components/MapView';
 import { QrSticker } from '../components/QrSticker';
 import { AvailabilityBadge, DataBadge, Emergency, ErrorBox, ExternalLink, Icon, Loading, LockedCabinet } from '../components/ui';
 import { ErrorSummary, Req, RequiredNote, useValidation } from '../components/form';
-import { address, date, dictMeaning, floor, label, osmDirections } from '../lib/format';
+import { address, date, dictMeaning, floor, label, osmDirections, aedName } from '../lib/format';
 import { describeHours } from '../lib/hours';
 import { useAsync } from '../lib/useAsync';
 import { Link, usePageTitle } from '../router';
 
 export function AedCard({ id }: { id: string }) {
   const st = useAsync(() => getAed(id), [id]);
-  usePageTitle(st.data?.aed.nazwa_obiektu ?? 'Karta AED');
+  usePageTitle(st.data ? aedName(st.data.aed.nazwa_obiektu) : 'Karta AED');
   if (st.loading && !st.data) return <><h1>Karta AED</h1><Loading /></>;
   if (st.error) return <><h1>Karta AED</h1><ErrorBox error={st.error} onRetry={st.reload} /></>;
   if (!st.data) {
@@ -37,7 +37,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
   return (
     <article className="card-page" aria-labelledby="page-title">
       <header className="card-page__head">
-        <h1 id="page-title">{a.nazwa_obiektu}</h1>
+        <h1 id="page-title">{aedName(a.nazwa_obiektu)}</h1>
         <div className="aed-item__badges">
           <AvailabilityBadge aed={a} />
           <DataBadge aed={a} />
@@ -109,7 +109,7 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
         </section>
       </div>
 
-      <MapView items={[a]} focusId={a.id_aed} label={`Mapa: położenie AED ${a.nazwa_obiektu}`} height={300} cluster={false} />
+      <MapView items={[a]} focusId={a.id_aed} label={`Mapa: położenie AED ${aedName(a.nazwa_obiektu)}`} height={300} cluster={false} />
 
       <div className="card-grid">
         <section aria-labelledby="h-ver" className="panel">
@@ -133,8 +133,8 @@ function Card({ d, onConfirmed }: { d: AedDetail; onConfirmed: () => void }) {
         </section>
       </div>
 
-      <Passport id={a.id_aed} name={a.nazwa_obiektu} onDone={onConfirmed} />
-      <QrSticker id={a.id_aed} name={a.nazwa_obiektu} />
+      <Passport id={a.id_aed} name={aedName(a.nazwa_obiektu)} onDone={onConfirmed} />
+      <QrSticker id={a.id_aed} name={aedName(a.nazwa_obiektu)} />
 
       <section aria-labelledby="h-src" className="panel">
         <h2 id="h-src">Skąd są te dane i kto za nie odpowiada</h2>

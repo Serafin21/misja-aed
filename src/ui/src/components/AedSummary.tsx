@@ -2,7 +2,7 @@
 // name · open/closed + when the data was checked · address · how to get there · hours (or "nieokreślone") ·
 // access (free / locked cabinet – how to open it / only for authorised people) · "Nawiguj" + details.
 import type { AedView } from '../api/types';
-import { address, availableNow, distance, floor } from '../lib/format';
+import { address, availableNow, distance, floor, aedName } from '../lib/format';
 import { dataLabel } from '../lib/dataState';
 import { describeHours } from '../lib/hours';
 import { APP_LABEL, directionsUrl, preferredMapsApp, type MapsApp } from '../lib/navigation';
@@ -44,7 +44,7 @@ export function AedSummary({ aed, rank, nearest = false, headingLevel = 3, compa
       <div className="aed-sum__head">
         <H className="aed-sum__title" id={`t-${aed.id_aed}`}>
           {rank !== undefined && <span className="aed-sum__rank">{rank}.</span>}
-          <Link to={`/aed/${aed.id_aed}`}>{aed.nazwa_obiektu || 'AED bez nazwy'}</Link>
+          <Link to={`/aed/${aed.id_aed}`}>{aedName(aed.nazwa_obiektu)}</Link>
         </H>
         {aed.odleglosc_m !== undefined && <span className="aed-sum__dist"><span className="visually-hidden">Odległość: </span>{distance(aed.odleglosc_m)}</span>}
       </div>
@@ -62,9 +62,9 @@ export function AedSummary({ aed, rank, nearest = false, headingLevel = 3, compa
       <p className={`aed-sum__access${acc.warn ? ' aed-sum__access--warn' : ''}`}><Icon name={acc.icon} /><span>{acc.text}</span></p>
       <div className="aed-sum__actions">
         <a className="btn btn--primary btn--small aed-sum__nav" href={directionsUrl(app, lat, lon, aed.nazwa_obiektu)} target="_blank" rel="noopener noreferrer">
-          <Icon name="arrow" />Nawiguj<span className="visually-hidden"> do {aed.nazwa_obiektu} – {APP_LABEL[app]}, otwiera się w nowym oknie</span>
+          <Icon name="arrow" />Nawiguj<span className="visually-hidden"> do {aedName(aed.nazwa_obiektu)} – {APP_LABEL[app]}, otwiera się w nowym oknie</span>
         </a>
-        <Link className="aed-sum__more" to={`/aed/${aed.id_aed}`}>Szczegóły<span className="visually-hidden">: {aed.nazwa_obiektu}</span></Link>
+        <Link className="aed-sum__more" to={`/aed/${aed.id_aed}`}>Szczegóły<span className="visually-hidden">: {aedName(aed.nazwa_obiektu)}</span></Link>
         <a className="aed-sum__alt" href={directionsUrl(other, lat, lon, aed.nazwa_obiektu)} target="_blank" rel="noopener noreferrer">
           {APP_LABEL[other]}<span className="visually-hidden"> – nawigacja, otwiera się w nowym oknie</span>
         </a>
