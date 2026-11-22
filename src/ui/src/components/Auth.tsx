@@ -69,8 +69,9 @@ function PasswordForm() {
 
 
 /** Renders children only for a logged-in user with one of `roles`; otherwise a login form for `role`. */
-export function RequireLogin({ role, roles = [role], children }: { role: Role; roles?: Role[]; children: ReactNode }) {
+export function RequireLogin({ role, roles = [role], children, sessionLine = true }: { role: Role; roles?: Role[]; children: ReactNode; sessionLine?: boolean }) {
   const s = useSession();
+  if (s && roles.includes(s.rola) && !sessionLine) return <>{children}</>; // the page shows its own SessionBar
   if (s && roles.includes(s.rola)) {
     return (
       <>
