@@ -1,0 +1,24 @@
+{
+  "/api/**": {
+    "target": "http://172.18.18.102:8000",
+    "secure": false,
+    "pathRewrite": { "^/api": "" },
+    "changeOrigin": true
+  },
+  "/media": {
+    "target": "http://172.18.18.102:8000",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/pl/admin": {
+    "target": "http://172.18.18.101:8001",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/cms": {
+    "target": "http://172.18.18.103:8002",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/cms": "" }
+  }
+}

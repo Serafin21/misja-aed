@@ -3,7 +3,7 @@
 > Przed finałem zweryfikować z `docs/HANDOFF_A.md` (P10). Odpowiedzi oznaczone [A] zależą od backendu.
 
 **1. Czym różnicie się od istniejących map AED?**
-Nie budujemy kolejnej mapy, tylko zbiór danych w dane.gov.pl, z którego może korzystać każda mapa, aplikacja i dyspozytor. Do tego wzorcowy zakres danych, żeby wszyscy dysponenci udostępniali dane tak samo, i akcja, która ich do tego zachęca. Nasza aplikacja pokazuje, co da się z tymi danymi zrobić.
+Nie budujemy kolejnej mapy, tylko mechanizm w dane.gov.pl, który składa wykazy dostawców w jedną listę – „Wykaz AED – wykaz zbiorczy”, z którego może korzystać każda mapa, aplikacja i dyspozytor. Do tego wzorcowy zakres danych, żeby wszyscy dysponenci udostępniali dane tak samo, i akcja, która ich do tego zachęca. Nasza aplikacja pokazuje, co da się z tymi danymi zrobić.
 
 **2. Skąd weźmiecie dane, skoro nie ma rejestru?**
 Z trzech dróg naraz: pliki dysponentów (urzędy, szkoły, uczelnie, PSP i OSP) przez kreator importu, dane OpenStreetMap jako osobna warstwa na licencji ODbL oraz zbiory już opublikowane w dane.gov.pl. Do tego zgłoszenia obywateli, które przechodzą moderację.

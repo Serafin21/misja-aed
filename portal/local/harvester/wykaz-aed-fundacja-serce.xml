@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Zasilenie automatyczne (harvester XML) – plik instytucji testowej według propozycji XSD 1.14 (portal/xsd/):
+     wersja 1.13 portalu + element resource/containsAedList. Adres pliku CSV wskazuje lokalny serwer plików
+     (portal/local/harvester/, `python -m http.server 8899`), z którego korzysta lokalny portal. -->
+<ns:datasets xmlns:ns="urn:otwarte-dane:harvester:1.14">
+  <dataset status="published">
+    <extIdent>wykaz-aed-fundacja-serce</extIdent>
+    <title><polish>Defibrylatory AED – Fundacja Serce dla Miasta</polish><english>AED defibrillators – Fundacja Serce dla Miasta</english></title>
+    <description><polish>Wykaz defibrylatorów AED, za które odpowiada Fundacja Serce dla Miasta. Zgodny z wzorcowym zakresem danych AED (44 pola).</polish><english>List of AED defibrillators the foundation is responsible for. Follows the AED reference data scope (44 fields).</english></description>
+    <updateFrequency>monthly</updateFrequency>
+    <categories><category>HEAL</category></categories>
+    <conditions>
+      <source>true</source>
+      <modification>true</modification>
+      <responsibilities>Fundacja Serce dla Miasta odpowiada za jakość, aktualność i poprawność danych o defibrylatorach AED w tym zbiorze.</responsibilities>
+      <dbOrCopyrighted>Wykaz AED jest bazą danych; korzystanie na warunkach licencji CC0 1.0.</dbOrCopyrighted>
+      <dbOrCopyrightedLicenseChosen>CC0 1.0</dbOrCopyrightedLicenseChosen>
+    </conditions>
+    <resources>
+      <resource status="published">
+        <extIdent>wykaz-aed-fundacja-serce-csv</extIdent>
+        <url>HARVESTER_CSV_URL</url>
+        <title><polish>Wykaz AED – Fundacja Serce dla Miasta (CSV)</polish><english>AED list – CSV</english></title>
+        <description><polish>Jeden wiersz = jedno AED; 44 pola wzorca AED; UTF-8, przecinek, wiersz nagłówka; „-” = brak wartości.</polish><english>One row = one AED; 44 fields of the AED standard.</english></description>
+        <availability>remote</availability>
+        <dataDate>2026-11-22</dataDate>
+        <hasDynamicData>false</hasDynamicData>
+        <hasHighValueData>false</hasHighValueData>
+        <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+        <hasResearchData>false</hasResearchData>
+        <containsProtectedData>false</containsProtectedData>
+        <containsAedList>true</containsAedList>
+        <specialSigns><specialSign>-</specialSign></specialSigns>
+      </resource>
+    </resources>
+    <tags><tag lang="pl">AED</tag><tag lang="pl">defibrylator</tag><tag lang="en">AED</tag></tags>
+    <lastUpdateDate>2026-11-22T09:00:00</lastUpdateDate>
+    <hasDynamicData>false</hasDynamicData>
+    <hasHighValueData>false</hasHighValueData>
+    <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
+    <hasResearchData>false</hasResearchData>
+  </dataset>
+</ns:datasets>
