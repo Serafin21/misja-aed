@@ -1,5 +1,16 @@
 # HANDOFF – Model A
 
+## 2026-11-23 – HANDOFF #17: CR-TL-11 – administrator nie widzi haseł, odzyskanie dostępu
+
+- **Usunięte:** `GET /konta/{login}/haslo`, `src/api/sejf.py`, kolumna `konta.haslo_podglad` (stare bazy: `ALTER TABLE … DROP COLUMN` + `VACUUM` przy starcie, `src/core/db.py`), wszystkie wywołania szyfrowania. Hasło tylko jako PBKDF2-SHA256 z solą.
+- **Odzyskanie dostępu (jak w dużych serwisach):** `POST /auth/nie-pamietam-hasla` (login albo e-mail; zawsze ta sama odpowiedź, limit zapytań; prośba widoczna przy koncie: `prosba_o_haslo`) → administrator `POST /konta/{login}/reset-hasla` → **hasło jednorazowe** pokazane raz, ważne 72 h (`auth.TEMP_HOURS`), stare hasło przestaje działać. Jednorazowe jest też hasło nowego konta, pracownika i hasło wpisane przez administratora w edycji konta (hasło z wniosku instytucji – jej własne).
+- **Pierwsze logowanie hasłem jednorazowym:** `musi_zmienic_haslo: true` w `POST /auth/login` i `GET /konta/ja`; każde inne zapytanie → `403 zmien_haslo`; `POST /konta/ja/haslo` (nowe ≠ stare) zwraca nowy token. Po 72 h logowanie → `403 haslo_wygaslo`.
+- **Sesje:** token = HMAC(login | skrót hasła) – nowe hasło (zmiana, reset) od razu kończy wszystkie stare sesje, także złodzieja hasła.
+- **UI (B, zrobione w tej sesji):** „Wydaj hasło jednorazowe” w panelu (ramka z hasłem raz), stan hasła i prośby przy koncie, zakładka „Proszą o nowe hasło”, „Nie pamiętam hasła” przy logowaniu, ekran „Ustaw własne hasło”.
+- **Dokumenty:** MODEL_ROL v2.2 §9, CONTRACT v3.1 (CR-TL-11), JURY_QA pytanie 17 („administrator nie widzi haseł”).
+- **Zlecenie TL nr 2 (etykieta pola):** `portal/backend/mcod/resources/forms.py:272` bez `.capitalize()` – zrobione. Nr 1 (hosting) i nr 3 (zrzuty portalu) – nie zrobione: brak konta hostingowego w sesji; portal nie startuje w sesji (blokady sieci, `portal/README.md`).
+- **Testy:** `pytest` – 112 passed (nowy `test_haslo_niewidoczne_jednorazowe_i_odzyskanie`); portal `portal/local/run_aed_tests.sh` – 23 passed. Przeklikane (Playwright): założenie konta → hasło jednorazowe raz → wymuszona zmiana → „Nie pamiętam hasła” → hasło jednorazowe od admina → stare nie działa; brak błędów JS.
+
 ## 2026-11-22 – ZLECENIA TL dla A (po scaleniu CR-TL-9, przed 10:30)
 
 1. **Hosting publicznego prototypu (priorytet).** Jury chce klikalnego prototypu bez konfiguracji. Postaw obraz z `docker compose up --build` (API + UI) na publicznym adresie https (dowolny hosting kontenerów z wolnym planem; `ADMIN_PASSWORD` inne niż demo, `AED_PUBLIC_URL` = adres publiczny). Minimum awaryjne: statyczny build UI w trybie demonstracyjnym (`VITE_USE_MOCKS=1 VITE_ROUTER=hash npm run build`) na GitHub Pages. Adres wpisz w `SUBMISSION.md` w miejsce `PROTOTYP_URL` (TL sprawdza link przed wysłaniem).
