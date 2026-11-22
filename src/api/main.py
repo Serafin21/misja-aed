@@ -13,6 +13,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field, StrictBool
 
+from src.core import envfile
+
+envfile.load()  # .env (or .env.example) before the modules that read settings
+
 from src.core import coverage, db, dedup, hours, importers, linked, mapping, pipeline, publish, schema, template, validate
 from src.core.store import TZ, get_store, now_min, today
 
