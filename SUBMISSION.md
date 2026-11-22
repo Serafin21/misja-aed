@@ -40,7 +40,7 @@ Danych o AED nie brakuje, brakuje odpowiedzialności: w OpenStreetMap jest 18 29
 Ograniczenia: portal z Wykazem AED działa lokalnie na 2 instytucjach testowych (kroki uruchomienia: `portal/README.md`), etykiety panelu po angielsku w lokalnej instalacji; dostawcy w prototypie są fikcyjni, obok 3 prawdziwych zbiorów samorządów opublikowanych przed wzorcem (Krosno, Przemyśl, Marki – 50 AED); logowanie kontami testowymi (docelowo login.gov.pl i 2FA); zgłoszenia mieszkańców symulowane w aplikacji (docelowo komentarze do zasobu w dane.gov.pl).
 
 ## Link do demo (do 2 min)
-DEMO_URL
+https://github.com/Serafin21/misja-aed/blob/main/pitch/demo.mp4
 
 ## Prezentacja (PDF do 10 MB)
 https://github.com/Serafin21/misja-aed/blob/main/pitch/prezentacja.pdf

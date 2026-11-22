@@ -4,6 +4,8 @@
 
 > Serwer zasypia po 15 minutach bez ruchu. Jeśli strona ładuje się dłużej, poczekaj do 2–3 minut i odśwież – serwer się budzi i wczytuje dane.
 
+**Film demo (do 2 min): `pitch/demo.mp4`** – najszybszy sposób, żeby zobaczyć całe rozwiązanie.
+
 ## Co oceniacie
 
 1. **Wykaz AED w portalu dane.gov.pl** (rdzeń) – zmiana w kodzie portalu wzorem istniejącego wykazu chronionych danych (DGA): instytucja zaznacza przy swoim zasobie „Zawiera wykaz AED”, portal sprawdza plik i składa wykazy wszystkich dostawców w jeden „Wykaz AED – wykaz zbiorczy” (API `/aed-aggregated`). Każdy wiersz ma dostawcę, który za niego odpowiada; wiersze nie są scalane.
@@ -35,7 +37,8 @@ Kod przeczytacie w repozytorium, bez dostępu do zewnętrznych domen:
 | Wymaganie | Gdzie |
 |---|---|
 | Opis i tytuł | `SUBMISSION.md`, `pitch/opis_projektu.md` |
-| Prezentacja | `pitch/prezentacja.pdf` (krótsza: `pitch/prezentacja_krotka.pdf`) |
+| Prezentacja | `pitch/prezentacja.pdf` |
+| Film demo (do 2 min) | `pitch/demo.mp4` – całe rozwiązanie w 2 minuty |
 | Prototyp | https://misja-aed.onrender.com/ |
 | Wzorcowy zakres danych (XLSX) | `deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx` |
 | Kod źródłowy | to repozytorium (`src/` – aplikacja, `portal/` – zmiana w portalu) |
