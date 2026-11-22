@@ -1,0 +1,22 @@
+# Render Blueprint – public prototype of „Mapa danych AED” (API + UI in one container, free plan).
+# Render: New → Blueprint → this repository → Apply. Data is reseeded on every start (no persistent disk on free plan).
+services:
+  - type: web
+    name: mapa-danych-aed
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeploy: false
+    envVars:
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: AED_SECRET
+        generateValue: true
+      - key: AED_SEED_OSM
+        value: auto
+      - key: AED_SEED_LISTA
+        value: auto
+      - key: AED_GEOKODER
+        value: gugik
