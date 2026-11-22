@@ -430,6 +430,19 @@
               </a>
             </li>
 
+            <!-- Wykaz AED (HackNation 2026) – obok punktu informacyjnego DGA -->
+            <li class="nav-item" role="presentation">
+              <a
+                class="nav-link"
+                role="menuitem"
+                [routerLink]="['/!' + routerEndpoints.AED] | localize"
+                routerLinkActive="active"
+                #menuLinkAedInformationPoint="routerLinkActive"
+                [attr.aria-current]="menuLinkAedInformationPoint.isActive ? true : null">
+                {{ 'Menu.AedInformationPoint' | translate }}
+              </a>
+            </li>
+
             <!--  broken links        -->
             <li class="nav-item expanded-section" role="presentation">
               <a

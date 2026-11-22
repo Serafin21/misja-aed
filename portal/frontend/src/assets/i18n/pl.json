@@ -933,7 +933,8 @@
     "Regulations": "Regulamin",
     "Showcases": "PoCoTo",
     "DGAInformationPoint": "Punkt informacyjny DGA",
-    "More": "Więcej"
+    "More": "Więcej",
+    "AedInformationPoint": "Wykaz AED"
   },
   "MyDashboard": {
     "Self": "Mój pulpit",
@@ -1645,5 +1646,10 @@
     "ButtonNext": "Dalej",
     "ButtonClose": "Zakończ",
     "ButtonBack": "Cofnij"
+  },
+  "AedInformationPoint": {
+    "Self": "Wykaz AED",
+    "List": "Wykaz AED – wykaz zbiorczy",
+    "Intro": "Wykaz zbiorczy defibrylatorów AED tworzony przez portal z wykazów AED opublikowanych przez instytucje (zasoby oznaczone jako „Zawiera wykaz AED”). Każdy wiersz pochodzi od wskazanego dostawcy, który odpowiada za jego treść – kolumny „Nazwa dostawcy” i „Link do zasobu źródłowego”. Wiersze nie są scalane; AED różnych dostawców bliżej niż 25 m mają oznaczenie „Możliwy duplikat”."
   }
 }

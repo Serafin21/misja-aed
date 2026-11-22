@@ -933,7 +933,8 @@
     "Regulations": "Regulations",
     "Showcases": "PoCoTo",
     "DGAInformationPoint": "DGA Information Point",
-    "More": "More"
+    "More": "More",
+    "AedInformationPoint": "AED list"
   },
   "MyDashboard": {
     "Self": "My dashboard",
@@ -1642,5 +1643,10 @@
     "ButtonNext": "Next",
     "ButtonClose": "Close",
     "ButtonBack": "Back"
+  },
+  "AedInformationPoint": {
+    "Self": "AED list",
+    "List": "AED list – aggregated list",
+    "Intro": "Aggregated list of AED defibrillators built by the portal from the AED lists published by institutions (resources marked as “Contains AED list”). Each row comes from the named provider, who is responsible for its content – see the “Provider name” and “Source resource link” columns. Rows are not merged; AEDs of different providers closer than 25 m are marked as a “Possible duplicate”."
   }
 }
