@@ -6,7 +6,7 @@
 
 Zespół **MKS**, HackNation 2026, zadanie Ministerstwa Cyfryzacji „Misja AED – dane na ratunek”. **Jury: zacznij od [`INSTRUKCJA_DLA_JURY.md`](INSTRUKCJA_DLA_JURY.md).**
 
-Rozwiązanie to **Wykaz AED w portalu dane.gov.pl** + **Mapa danych AED jako strona odczytu** + **akcja „AED w danych” dla dostawców**:
+Najważniejsza część: **tabela „Wykaz AED – wykaz zbiorczy” w portalu dane.gov.pl** – strona jak istniejący wykaz chronionych danych (DGA), z innym zakresem kolumn, zasilana ręcznie (plik w panelu + „Zawiera wykaz AED”) i automatycznie (harvester XML z `containsAedList`); zrzut z uruchomionego portalu: [`pitch/zrzuty/14_portal_strona_wykaz_aed_tabela.png`](pitch/zrzuty/14_portal_strona_wykaz_aed_tabela.png). Mapa danych AED to dodatek – przykładowy odbiorca, który czyta wykaz z API. Całość:
 
 1. Dostawca (urząd, szpital, szkoła, firma, fundacja) w panelu dane.gov.pl dodaje do swojego zbioru zasób z wykazem AED i zaznacza **„Zawiera wykaz AED”** (w XML: `containsAedList`).
 2. Portal sprawdza plik: kolumny wzorca (44 pola) i pola wymagane – komunikat z numerem wiersza, jeśli coś się nie zgadza.

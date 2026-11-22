@@ -1,5 +1,14 @@
 # HANDOFF – Model A
 
+## 2026-11-22 – HANDOFF #19 (TL za A): CR-TL-14 – tabela Wykazu AED we frontendzie portalu, kolumny jak DGA, harvester
+
+- **Import frontendu** `portal/frontend` (mcod-frontend 3.5.2, mirror commit `56cbf8a`, jeden commit bez zmian `8c1bf24`; `portal/IMPORT.md` – SHA-256).
+- **Frontend „Wykaz AED (frontend): …”** (`e268652`, `59ec0e4`, `033cfc9`): `AedService`, `ApiConfig.aed_aggregated`, `RouterEndpoints.AED`, moduł `pages/aed-information-point` (`!aed` → `!list-aed` → `!table`), resolver, link w menu obok DGA, PL/EN. `ng build` OK.
+- **Kolumny** (`4460097`): 15 czytelnych nagłówków (`MAIN_AED_COLUMN_SOURCES`), styl XLSX jak DGA, schemat tabeli, testy; aplikacja czyta nowe nagłówki (`61a2b6d`, test). Testy: aplikacja 115, portal 26 bez bazy.
+- **Na żywo (9:00–9:20):** backend + frontend portalu; zasób Urzędu (ręcznie) + import XML Fundacji (harvester, `ok`) → wykaz zbiorczy 5 wierszy, duplikat 7 m; strona `/pl/aed` z tabelą. Zrzuty 13, 14, 16 (B: nowe – na slajdzie „Dowód 1”). Nie zrobione: 14b (DGA bez danych/CMS w lokalnej bazie), 15 i 02p–04p (panel nie wczytał się w przeglądarce w sesji).
+- **Poprawka środowiska:** `local.py.sample` ma `"timeout": 1` w ustawieniach indeksu – ES 6.8 odrzuca, tabela zasobu nie powstaje; opis w `portal/README.md`.
+- **Użycie AI:** kod, skrypty i zrzuty z Claude (sesja TL).
+
 ## 2026-11-22 – HANDOFF #18: portal dane.gov.pl uruchomiony w sesji – „Wykaz AED” sprawdzony na żywo
 
 - **Portal działa w sesji:** Postgres, Elasticsearch (wtyczki z plików – host `artifacts.elastic.co` dopuszczony w środowisku), Fuseki, Redis, RabbitMQ, Celery, panel i API (`portal/local/Dockerfile.es`, `Dockerfile.rdfdb`, `compose.local.yml`; kroki: `portal/README.md`, „Uruchomienie w sesji zespołu”). `init_mcod_db` z migracjami 0075/0076, indeksy ES.
