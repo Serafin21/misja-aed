@@ -338,7 +338,7 @@ export interface ImportDgp { kod_zrodla: string; status: string; dodane?: number
 export const searchDgp = (q: string, importuj: boolean) =>
   http<{ data: ZbiorDgp[]; meta: { count: number; importy: ImportDgp[]; pominiete_niezwiazane?: number; bledy: string[] } }>(`/zrodla/dane-gov-pl/szukaj`, json('POST', { q, importuj }));
 
-export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; dostawca_podstawa?: PodstawaPublikacji | null; email: string | null; telefon?: string | null; regon?: string | null; aktywne: boolean; oczekuje?: boolean; utworzono: string | null; utworzyl: string | null; liczba_aed: number }
+export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; dostawca_podstawa?: PodstawaPublikacji | null; email: string | null; telefon?: string | null; regon?: string | null; aktywne: boolean; oczekuje?: boolean; wniosek_id?: string | null; utworzono: string | null; utworzyl: string | null; liczba_aed: number }
 export const listAccounts = () => http<{ data: Konto[] }>(`/konta`).then((r) => r.data);
 export const createAccount = (b: { login: string; dysponent_nazwa: string; dostawca_podstawa?: PodstawaPublikacji; email?: string; rola?: Role; haslo?: string }) =>
   http<{ data: Konto; haslo_jednorazowe: string; haslo_wygenerowane?: boolean; meta?: { komunikat: string } }>(`/konta`, json('POST', b));
@@ -470,8 +470,9 @@ export const geocodeAddress = (q: string) =>
 export interface MojeUrzadzenie { id: string; attributes: Aed; meta?: AedMeta; zgloszenie: { id: string; status: ZgloszenieAed['status']; komentarz: string | null } | null }
 export const myDevices = () => http<{ data: MojeUrzadzenie[] }>(`/moje-urzadzenia`).then((r) => r.data.map((d) => ({ ...d, aed: flat(d as unknown as JsonApiItem<AedView>) })));
 export interface AedAdmin { id_aed: string; nazwa_obiektu: string | null; adres: string; miejscowosc: string | null; gmina: string | null;
-  warstwa: 'lista' | 'pomocnicza' | 'aplikacja'; organizacja: string | null; edytowane: boolean; data_weryfikacji: string | null; szerokosc: number; dlugosc: number }
-export const adminAedList = (p: { q?: string; organizacja?: string; warstwa?: string; page?: number; per_page?: number }) =>
+  warstwa: 'lista' | 'pomocnicza' | 'aplikacja'; organizacja: string | null; edytowane: boolean; data_weryfikacji: string | null; szerokosc: number; dlugosc: number;
+  zgloszenie: { id: string; nadawca: string | null; utworzono: string | null } | null }
+export const adminAedList = (p: { q?: string; organizacja?: string; warstwa?: string; page?: number; per_page?: number; oczekujace?: boolean }) =>
   http<{ data: AedAdmin[]; meta: { count: number; page: number; per_page: number } }>(`/admin/aed${qs(p)}`);
 export const adminAedEdit = (id: string, pola: Record<string, unknown>) => http<{ data: unknown }>(`/admin/aed/${encodeURIComponent(id)}`, json('PATCH', { pola }));
 export const adminAedDelete = (id: string) => http<{ ok: boolean }>(`/admin/aed/${encodeURIComponent(id)}`, json('DELETE'));

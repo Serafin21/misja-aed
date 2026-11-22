@@ -4,7 +4,7 @@
 // Approvals (new AED, changes, account requests) are on the page "Zgłoszenia AED".
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  adminAedAssign, adminAedDelete, adminAedEdit, adminAedList, aggregationReport, createAccount, deleteAccount, viewPassword, eventLog, getAed,
+  adminAedAssign, adminAedDelete, adminAedEdit, adminAedList, aggregationReport, createAccount, decideAccountRequest, decideSubmission, deleteAccount, viewPassword, eventLog, getAed,
   lateDatasets, listAccounts, listGaps, refreshNow, refreshStatus, runAggregation, sendReminders, updateAccount,
   type AedAdmin, type Konto, type RaportZbioru, type StanOdswiezania,
 } from '../api/client';
@@ -274,6 +274,20 @@ function Accounts() {
   async function toggle(k: Konto) {
     try { await updateAccount(k.login, { aktywne: !k.aktywne }); st.reload(); } catch (ex) { setErr(ex as Error); }
   }
+  async function decideRequest(k: Konto, d: 'zatwierdz' | 'odrzuc') {
+    if (!k.wniosek_id) return;
+    setErr(null); setInfo('');
+    let why: string | undefined;
+    if (d === 'odrzuc') {
+      why = window.prompt(`Dlaczego odrzucasz wniosek ${k.dysponent_nazwa}? (instytucja nie zobaczy konta)`)?.trim();
+      if (!why) return;
+    }
+    try {
+      await decideAccountRequest(k.wniosek_id, d, why);
+      setInfo(d === 'zatwierdz' ? `Konto ${k.login} (${k.dysponent_nazwa}) zatwierdzone – instytucja może się zalogować.` : `Wniosek ${k.login} odrzucony.`);
+      st.reload();
+    } catch (ex) { setErr(ex as Error); }
+  }
   async function remove(k: Konto) {
     if (!window.confirm(`Usunąć konto ${k.login} (${k.dysponent_nazwa})? AED instytucji zostaną na mapie.`)) return;
     try { await deleteAccount(k.login); setInfo(`Usunięto konto ${k.login}.`); st.reload(); } catch (ex) { setErr(ex as Error); }
@@ -383,10 +397,14 @@ function Accounts() {
                   {k.utworzono && <div className="hint">od {when(k.utworzono)}</div>}</td>
                 <td>{k.email ?? '—'}<div className="hint">{k.telefon ?? ''}</div></td>
                 <td>{k.rola === 'administrator' ? '—' : n(k.liczba_aed)}</td>
-                <td>{k.oczekuje ? 'czeka na zatwierdzenie' : k.aktywne ? 'aktywne' : 'zablokowane'}</td>
+                <td>{k.oczekuje ? <span className="badge badge--stale">wniosek – czeka na zatwierdzenie</span> : k.aktywne ? 'aktywne' : 'zablokowane'}</td>
                 <td className="table-actions">
                   {k.wbudowane ? <span className="hint">hasło w pliku .env (ADMIN_PASSWORD)</span> : <>
                   <button type="button" className="btn btn--secondary btn--small" onClick={() => setEdit({ ...k, nowy_login: k.login, haslo: '' })}>Edytuj<span className="visually-hidden"> {k.login}</span></button>
+                  {k.oczekuje && k.wniosek_id && <>
+                    <button type="button" className="btn btn--primary btn--small" onClick={() => decideRequest(k, 'zatwierdz')}>Zatwierdź wniosek<span className="visually-hidden"> {k.dysponent_nazwa}</span></button>
+                    <button type="button" className="btn btn--secondary btn--small" onClick={() => decideRequest(k, 'odrzuc')}>Odrzuć<span className="visually-hidden"> wniosek {k.dysponent_nazwa}</span></button>
+                  </>}
                   {!k.oczekuje && <button type="button" className="btn btn--secondary btn--small" onClick={() => toggle(k)}>{k.aktywne ? 'Zablokuj' : 'Odblokuj'}<span className="visually-hidden"> {k.login}</span></button>}
                   <button type="button" className="btn btn--danger btn--small" onClick={() => remove(k)}>Usuń<span className="visually-hidden"> {k.login}</span></button>
                   </>}
@@ -438,7 +456,9 @@ function AllAed() {
   const [warstwa, setWarstwa] = useState('wszystkie');
   const [org, setOrg] = useState('');
   const [page, setPage] = useState(1);
-  const list = useAsync(() => adminAedList({ q: query || undefined, warstwa, organizacja: org || undefined, page, per_page: 25 }), [query, warstwa, org, page]);
+  const [pend, setPend] = useState(false);
+  const list = useAsync(() => adminAedList({ q: query || undefined, warstwa, organizacja: org || undefined, page, per_page: 25, oczekujace: pend || undefined }), [query, warstwa, org, page, pend]);
+  const pendCount = useAsync(() => adminAedList({ oczekujace: true, per_page: 1 }).then((r) => r.meta.count), [list.data]);
   const orgs = useAsync(() => listAccounts().then((a) => [...new Set(a.filter((k) => k.dysponent_nazwa).map((k) => k.dysponent_nazwa!))].sort()), []);
   const [edit, setEdit] = useState<{ id: string; rec: Aed; org: string; vals: Record<string, string> } | null>(null);
   const [err, setErr] = useState<Error | null>(null);
@@ -472,6 +492,20 @@ function AllAed() {
       setInfo(`Zapisano zmiany AED „${edit.vals.nazwa_obiektu}”.`); setEdit(null); list.reload();
     } catch (ex) { setErr(ex as Error); }
   }
+  async function decideChange(r: AedAdmin, d: 'zatwierdz' | 'odrzuc') {
+    if (!r.zgloszenie) return;
+    setErr(null); setInfo('');
+    let why: string | undefined;
+    if (d === 'odrzuc') {
+      why = window.prompt(`Dlaczego odrzucasz zmianę „${r.nazwa_obiektu}”? (instytucja zobaczy ten komentarz)`)?.trim();
+      if (!why) return;
+    }
+    try {
+      await decideSubmission(r.zgloszenie.id, d, why);
+      setInfo(d === 'zatwierdz' ? `Zmiana „${r.nazwa_obiektu}” zatwierdzona – jest już na mapie.` : `Zmiana „${r.nazwa_obiektu}” odrzucona.`);
+      list.reload();
+    } catch (ex) { setErr(ex as Error); }
+  }
   async function remove(r: AedAdmin) {
     if (!window.confirm(`Usunąć AED „${r.nazwa_obiektu}”? Zniknie z mapy (także po odświeżeniu danych).`)) return;
     try { await adminAedDelete(r.id_aed); setInfo(`Usunięto „${r.nazwa_obiektu}”.`); list.reload(); } catch (ex) { setErr(ex as Error); }
@@ -498,6 +532,10 @@ function AllAed() {
           </select></div>
         <button type="submit" className="btn btn--secondary">Szukaj</button>
       </form>
+      <div className="switch">
+        <input id="all-pend" type="checkbox" checked={pend} onChange={(e) => { setPage(1); setPend(e.target.checked); }} />
+        <label htmlFor="all-pend">Tylko AED ze zmianą do zatwierdzenia{pendCount.data !== undefined ? ` (${n(pendCount.data)})` : ''}</label>
+      </div>
       {list.loading && !list.data && <Loading />}
       {list.error && <ErrorBox error={list.error} onRetry={list.reload} />}
       {list.data && (
@@ -508,12 +546,18 @@ function AllAed() {
             <tbody>
               {list.data.data.map((r) => (
                 <tr key={r.id_aed}>
-                  <td><Link to={`/aed/${r.id_aed}`}>{r.nazwa_obiektu || 'bez nazwy'}</Link>{r.edytowane && <div className="hint">zmienione przez administratora</div>}</td>
+                  <td><Link to={`/aed/${r.id_aed}`}>{r.nazwa_obiektu || 'bez nazwy'}</Link>{r.edytowane && <div className="hint">zmienione przez administratora</div>}
+                    {r.zgloszenie && <div><span className="badge badge--stale">zmiana czeka na zatwierdzenie</span>
+                      <div className="hint">od {r.zgloszenie.nadawca ?? '—'}, {when(r.zgloszenie.utworzono)} · <Link to="/zgloszenia-aed">zobacz szczegóły</Link></div></div>}</td>
                   <td>{[r.adres, r.miejscowosc].filter(Boolean).join(', ') || '—'}</td>
                   <td>{WARSTWA[r.warstwa]}</td>
                   <td>{r.organizacja ?? '—'}</td>
                   <td>{r.data_weryfikacji ?? '—'}</td>
                   <td className="table-actions">
+                    {r.zgloszenie && <>
+                      <button type="button" className="btn btn--primary btn--small" onClick={() => decideChange(r, 'zatwierdz')}>Zatwierdź zmianę<span className="visually-hidden"> {r.nazwa_obiektu}</span></button>
+                      <button type="button" className="btn btn--secondary btn--small" onClick={() => decideChange(r, 'odrzuc')}>Odrzuć zmianę<span className="visually-hidden"> {r.nazwa_obiektu}</span></button>
+                    </>}
                     <button type="button" className="btn btn--secondary btn--small" onClick={() => openEdit(r)}>Edytuj<span className="visually-hidden"> {r.nazwa_obiektu}</span></button>
                     <button type="button" className="btn btn--danger btn--small" onClick={() => remove(r)}>Usuń<span className="visually-hidden"> {r.nazwa_obiektu}</span></button>
                   </td>
