@@ -43,7 +43,7 @@ export function SessionBar() {
 /** CR-TL-11: after logging in with a one-time password the institution must set its own before anything else. */
 export function ForcedPasswordChange() {
   const s = useSession();
-  useEffect(() => { document.title = 'Ustaw własne hasło – Mapa AED'; }, []);
+  useEffect(() => { document.title = 'Ustaw własne hasło – Mapa danych AED'; }, []);
   return (
     <>
       <h1 id="page-title">Ustaw własne hasło</h1>

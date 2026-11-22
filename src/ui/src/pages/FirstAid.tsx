@@ -22,7 +22,7 @@ function AedPhoto() {
   return (
     <figure className="aid-photo">
       <img
-        src="/img/aed-tomaszow-mazowiecki.jpg"
+        src={`${import.meta.env.BASE_URL}img/aed-tomaszow-mazowiecki.jpg`}
         width={800}
         height={450}
         alt="Zielona okrągła szafka z AED zawieszona na drewnianej ścianie przy chodniku. Na szafce biały znak: serce z błyskawicą."

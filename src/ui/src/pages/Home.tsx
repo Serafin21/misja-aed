@@ -27,7 +27,7 @@ export function Home() {
         <Link to="/pierwsza-pomoc">Pierwsza pomoc: jak użyć AED</Link>
       </div>
       <p className="brandbook-link">
-        <a href="/akcja/ksiega_znaku.pdf" target="_blank" rel="noopener">Księga znaku akcji „AED w danych” (PDF)<span className="visually-hidden"> – otwiera się w nowym oknie</span></a>
+        <a href={`${import.meta.env.BASE_URL}akcja/ksiega_znaku.pdf`} target="_blank" rel="noopener">Księga znaku akcji „AED w danych” (PDF)<span className="visually-hidden"> – otwiera się w nowym oknie</span></a>
         <span className="hint"> – logo do pobrania na ostatniej stronie</span>
       </p>
     </>
