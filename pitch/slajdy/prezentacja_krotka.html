@@ -56,29 +56,23 @@
 
 <!-- 4 · ok. 30 s -->
 <section class="slide">
-  <p class="kicker">Zmiana w portalu dane.gov.pl</p>
-  <h2>Wzorem istniejącego wykazu DGA</h2>
-  <div class="cols" style="margin-top:6px">
-    <div>
-      <p class="codehead">git log --oneline -- portal/</p>
-      <div class="code" style="font-size:16px"><span class="k">b229557</span> Import: kod portalu – <span class="s">bez zmian</span>
-<span class="k">1464bf3</span> Wykaz AED: model
-<span class="k">48fb8da</span> Wykaz AED: walidacja pliku
-<span class="k">3184384</span> Wykaz AED: pole w panelu
-<span class="k">e5f4f91</span> Wykaz AED: zadanie nocne
-<span class="k">5a214fd</span> Wykaz AED: /aed-aggregated
-<span class="k">67ce118</span> Wykaz AED: testy</div>
-    </div>
-    <div>
-      <table style="font-size:18px">
-        <tr><th>DGA w portalu</th><th>Wykaz AED</th></tr>
-        <tr><td><code>contains_protected_data</code></td><td><code>contains_aed_list</code></td></tr>
-        <tr><td><code>create_main_dga_resource_task</code></td><td><code>create_main_aed_resource_task</code></td></tr>
-        <tr><td><code>/dga-aggregated</code></td><td><code>/aed-aggregated</code></td></tr>
-      </table>
-      <p style="font-size:20px;margin-top:16px">Kod leży w repozytorium – jury przeczyta go bez dostępu do zewnętrznych stron.</p>
-    </div>
-  </div>
+  <p class="kicker">Zmiana w portalu dane.gov.pl · uruchomiony portal</p>
+  <h2>Dostawca zaznacza „Zawiera wykaz AED” – portal sprawdza plik</h2>
+  <p class="codehead" style="margin-top:4px">Panel dostawcy: nowe pole przy zasobie (wzorem „Contains protected data list” – DGA)</p>
+  <img src="../zrzuty/02_portal_pole_kadr.png" alt="Panel portalu dane.gov.pl: pole Contains AED list zaznaczone na Tak, z opisem wykazu AED" style="width:100%;border:1px solid #C9D3CC;border-radius:6px">
+  <p class="codehead" style="margin-top:14px">Plik z błędami nie przechodzi – lista błędów wiersz po wierszu</p>
+  <img src="../zrzuty/03_portal_walidacja_kadr.png" alt="Panel portalu: komunikat 3 z 3 wierszy nie spełnia wzorca AED – zamienione współrzędne, brak kontaktu, zły TERYT, zły słownik dostępu" style="width:100%;border:1px solid #C9D3CC;border-radius:6px">
+  <p class="src">Zrzuty z portalu dane.gov.pl uruchomionego lokalnie z naszą zmianą (22.11.2026) · kod: <code>portal/</code></p>
+</section>
+
+<!-- 5 · ok. 25 s -->
+<section class="slide">
+  <p class="kicker">Zmiana w portalu dane.gov.pl · uruchomiony portal</p>
+  <h2>Co noc jeden „Wykaz AED – wykaz zbiorczy” i API</h2>
+  <img src="../zrzuty/04_portal_wykazy_kadr.png" alt="Lista zasobów w panelu portalu: Wykaz AED – wykaz zbiorczy (CSV, XLSX) oraz wykazy dwóch instytucji, wszystkie opublikowane" style="width:78%;border:1px solid #C9D3CC;border-radius:6px">
+  <p class="codehead" style="margin-top:12px">GET /aed-aggregated – odpowiedź API portalu</p>
+  <img src="../zrzuty/06_portal_api_kadr.png" alt="Odpowiedź API /aed-aggregated z linkami do plików CSV i XLSX wykazu zbiorczego" style="width:100%;border:1px solid #C9D3CC;border-radius:6px">
+  <p class="src">Ten sam mechanizm co wykaz chronionych danych (DGA): <code>contains_aed_list</code>, zadanie nocne, <code>/aed-aggregated</code>.</p>
 </section>
 
 <!-- 5 · ok. 30 s -->
@@ -109,7 +103,6 @@
 <section class="slide title">
   <p class="kicker">Co dalej</p>
   <h1 style="font-size:48px">Przegląd zmiany z zespołem dane.gov.pl → pilotaż z jedną gminą → akcja w gminach bez AED</h1>
-  <p style="font-size:22px">Uczciwie: kod Wykazu AED w portalu ma testy (23 bez bazy – passed), ale panelu portalu nie uruchomiliśmy w całości w środowisku hackathonu.</p>
   <p style="margin-top:auto;font-size:18px">Zespół MKS · github.com/Serafin21/misja-aed · INSTRUKCJA_DLA_JURY.md</p>
 </section>
 

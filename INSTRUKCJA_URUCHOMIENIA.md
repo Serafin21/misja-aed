@@ -4,12 +4,13 @@ Instrukcja dla osoby, która **nie programuje i nie zna Gita**. Opisuje komputer
 
 Na końcu każdego kroku jest **„Co powinieneś zobaczyć”** – jeśli widzisz coś innego, zajrzyj do części **„Gdy coś nie działa”** na dole.
 
-> Ta instrukcja uruchamia **aplikację „Mapa danych AED” i jej serwer danych**. Zmiany w samym portalu dane.gov.pl („Wykaz AED”) są w katalogu `portal/` – jak je przejrzeć bez uruchamiania, opisuje część 10.
+> **Najważniejsze rozwiązanie jest w portalu dane.gov.pl, nie w aplikacji.** Zanim cokolwiek uruchomisz, przeczytaj część 0. Aplikacja „Mapa danych AED” (części 1–9) tylko **czyta** wykaz z portalu; jej konta i zgłoszenia to dodatek prototypu.
 
 ---
 
 ## Spis treści
 
+0. **[Najpierw: Wykaz AED w portalu dane.gov.pl](#0-najpierw-wykaz-aed-w-portalu-danegovpl)**
 1. [Zainstaluj trzy programy](#1-zainstaluj-trzy-programy)
 2. [Otwórz Wiersz polecenia](#2-otwórz-wiersz-polecenia-cmd)
 3. [Pobierz projekt z GitHuba](#3-pobierz-projekt-z-githuba)
@@ -17,11 +18,48 @@ Na końcu każdego kroku jest **„Co powinieneś zobaczyć”** – jeśli widz
 5. [Wczytaj dane o AED](#5-wczytaj-dane-o-aed)
 6. [Uruchom serwer danych (okno 1)](#6-uruchom-serwer-danych-okno-1)
 7. [Uruchom stronę (okno 2)](#7-uruchom-stronę-okno-2)
-8. **[Najważniejsze: dostawca zgłasza AED, administrator sprawdza](#8-najważniejsze-dostawca-zgłasza-aed-administrator-sprawdza)**
+8. [Prototyp aplikacji: dostawca zgłasza AED, administrator sprawdza](#8-prototyp-aplikacji-dostawca-zgłasza-aed-administrator-sprawdza)
 9. [Pozostałe funkcje](#9-pozostałe-funkcje)
 10. [Zobacz zmiany w kodzie portalu dane.gov.pl](#10-zobacz-zmiany-w-kodzie-portalu-danegovpl)
 11. [Jak wyłączyć i jak uruchomić ponownie](#11-jak-wyłączyć-i-jak-uruchomić-ponownie)
 12. [Gdy coś nie działa](#12-gdy-coś-nie-działa)
+
+---
+
+## 0. Najpierw: Wykaz AED w portalu dane.gov.pl
+
+**Co zrobiliśmy.** W kodzie portalu dane.gov.pl (katalog `portal/backend`, pierwszy commit = oryginalny kod portalu bez zmian) dodaliśmy **Wykaz AED** – tą samą metodą, którą portal już dziś buduje **wykaz chronionych danych (DGA)**. Wykaz AED wygląda i działa jak wykaz DGA; różni się zakresem kolumn (44 pola wzorca AED, plik `deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx`).
+
+| Wykaz DGA (jest w portalu) | Wykaz AED (nasza zmiana) |
+|---|---|
+| pole zasobu `contains_protected_data` | pole zasobu `contains_aed_list` – w panelu „Zawiera wykaz AED” |
+| walidacja kolumn pliku DGA | walidacja pliku AED: kolumny, pola wymagane, współrzędne w Polsce, TERYT, słownik dostępu |
+| `create_main_dga_resource_task` | `create_main_aed_resource_task` – co noc o 3:40 |
+| zasób „wykaz zbiorczy” DGA w zbiorze Ministerstwa Cyfryzacji | zasób **„Wykaz AED – wykaz zbiorczy”** (CSV + XLSX) w zbiorze Ministerstwa Cyfryzacji, ze stałym schematem tabeli |
+| `GET /dga-aggregated` | `GET /aed-aggregated` |
+
+### 0.1. Zasilanie ręczne (dostawca w panelu dane.gov.pl)
+
+1. Dostawca (gmina, szpital, szkoła, fundacja) loguje się w panelu dane.gov.pl na konto swojej instytucji.
+2. W swoim zbiorze danych dodaje zasób i wybiera plik CSV, XLS albo XLSX z kolumnami wzorca.
+3. Zaznacza **„Zawiera wykaz AED: Tak”** (w lokalnej instalacji bez skompilowanych tłumaczeń pole ma etykietę „Contains AED list”) i zapisuje.
+4. Portal od razu sprawdza plik. Jeśli są błędy, nie zapisze zasobu i pokaże je wiersz po wierszu (np. „wiersz 2: współrzędne … poza Polską (zamienione szerokość i długość?)”).
+5. Następnej nocy portal łączy wykazy wszystkich instytucji w jeden zasób **„Wykaz AED – wykaz zbiorczy”**. Każdy wiersz ma nazwę dostawcy i link do jego zasobu; wiersze różnych dostawców nie są scalane.
+
+**Sprawdzone na uruchomionym portalu** (22.11, zrzuty w `pitch/zrzuty/`): pole w panelu (`02_…`), odrzucenie pliku z błędami (`03_…`), wykazy dwóch instytucji i wykaz zbiorczy w panelu (`04_…`), plik CSV wykazu zbiorczego (`05_…`), odpowiedź `/aed-aggregated` (`06_…`).
+
+### 0.2. Zasilanie automatyczne (harvester XML i CKAN)
+
+Instytucje, które zasilają portal automatycznie, dodają w opisie zasobu w pliku XML element **`<containsAedList>true</containsAedList>`** (propozycja schematu 1.14 = obecny 1.13 + ten element, `portal/xsd/`). Harvester sprawdza plik z adresu `url` tak samo jak przy zasilaniu ręcznym i pilnuje, żeby instytucja miała jeden wykaz AED. Obsługa CKAN – w `mcod/harvester/ckan_utils.py`.
+
+**Stan:** kod i test jednostkowy (`test_xml_harvester_aed_resources_info`) – są. **Pełnego przebiegu harvestera na uruchomionym portalu nie pokazujemy zrzutem.**
+
+### 0.3. Jak to sprawdzić
+
+- **Bez uruchamiania:** część 10 tej instrukcji (historia zmian i najważniejsze pliki) oraz `portal/README.md`.
+- **Uruchomienie portalu** (Docker, kilkanaście usług – dla osób technicznych): `portal/README.md`, sekcja „Uruchomienie w sesji zespołu”.
+
+> **Uczciwie:** w uruchomionym portalu działał panel, API i zadania (Celery). Publicznej strony dane.gov.pl, na której wykaz jest wyświetlany jako tabela, nie uruchamialiśmy – jej kod jest w osobnym repozytorium portalu. Wykaz zbiorczy jest jednak zwykłym zasobem z danymi tabelarycznymi, więc ta strona pokaże go tak jak każdy inny wykaz.
 
 ---
 
@@ -178,9 +216,9 @@ cd /d C:\misja-aed\src\ui && npm install && npm run dev
 
 ---
 
-## 8. Najważniejsze: dostawca zgłasza AED, administrator sprawdza
+## 8. Prototyp aplikacji: dostawca zgłasza AED, administrator sprawdza
 
-To jest główna ścieżka prototypu: **instytucja (dostawca danych) wprowadza swoje AED**, a **administrator sprawdza każde zgłoszenie**, zanim trafi na mapę. Przejdź kroki po kolei – zajmie to ok. 10 minut.
+To jest **dodatek – tryb pokazowy prototypu**, nie droga publikacji. Docelowo instytucja publikuje wykaz w panelu dane.gov.pl (część 0). W prototypie **instytucja (dostawca danych) wprowadza swoje AED**, a **administrator sprawdza każde zgłoszenie**, zanim trafi na mapę. Przejdź kroki po kolei – zajmie to ok. 10 minut.
 
 > **Przygotuj zdjęcie.** Formularz wymaga zdjęcia AED albo szafki. Możesz użyć dowolnego pliku JPG albo PNG z komputera. Jeśli nie masz żadnego, otwórz **http://localhost:5173/img/aed-tomaszow-mazowiecki.jpg**, kliknij obraz prawym przyciskiem myszy → **„Zapisz obraz jako…”** i zapisz go na pulpicie.
 

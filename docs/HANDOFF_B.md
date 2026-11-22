@@ -441,3 +441,14 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 ## HANDOFF #39 (portal uruchomiony)
 
 - Zrzuty z uruchomionego portalu dane.gov.pl w `pitch/zrzuty/01–06` i `12` (opis: `pitch/zrzuty/README.md`). Prezentacja (`pitch/prezentacja.md`, slajdy 3–7 i 10), `pitch/opis_projektu.md` i `README.md` – bez „portalu nie uruchomiliśmy”; testy Wykazu AED 28/28; znak umowny „-” na slajdzie 4.
+
+## #42 – Krótka prezentacja: zrzuty z uruchomionego portalu zamiast kodu (22.11, ok. 8:30)
+- `pitch/prezentacja_krotka.pdf` (teraz 8 slajdów): slajd „Wzorem DGA” (tekst kodu) zastąpiony dwoma slajdami ze zrzutami z uruchomionego portalu – pole „Contains AED list” + lista błędów walidacji (kadry z 02 i 03), lista zasobów z „Wykaz AED – wykaz zbiorczy” + odpowiedź `/aed-aggregated` (kadry z 04 i 06). Usunięte nieaktualne zdanie „panelu portalu nie uruchomiliśmy”. Kadry: `pitch/zrzuty/*_kadr.png`.
+- Do zrobienia: duża prezentacja (`prezentacja.pdf`) nadal ma na slajdach 6 i 12 zdanie, że portalu nie uruchomiono – nieaktualne.
+- Użycie AI: Claude (Opus 5.5) przyciął zrzuty i przebudował slajdy; człowiek B zlecił zmianę.
+
+## #43 – Po uwadze mentora (Kuba): portal na pierwszym miejscu w instrukcji i dużej prezentacji (22.11, ok. 8:40)
+- `INSTRUKCJA_URUCHOMIENIA.md`: nowa część 0 „Najpierw: Wykaz AED w portalu dane.gov.pl” – tabela DGA → AED, zasilanie ręczne (panel, „Zawiera wykaz AED”, walidacja, wykaz zbiorczy), zasilanie automatyczne (`containsAedList` w XML, CKAN), co sprawdzono na uruchomionym portalu (zrzuty 02–06), uczciwie: publicznej strony z tabelą nie uruchamialiśmy, harvester bez przebiegu na żywym portalu. Część 8 (konta i zgłoszenia w aplikacji) opisana jako dodatek – tryb pokazowy prototypu.
+- `pitch/prezentacja.pdf`: slajdy 6–7 – zrzuty z uruchomionego portalu (pole, walidacja, wykaz zbiorczy, `/aed-aggregated`) zamiast tekstu kodu; slajd 12 – ograniczenia zgodne ze stanem (bez „nie uruchomiliśmy”).
+- **Dla sesji z uruchomionym portalem (TL/A), przed 10:00:** (1) zrzut wykazu zbiorczego jako tabeli – co najmniej odpowiedź API portalu z wierszami tego zasobu (dane tabelaryczne zasobu); (2) jeden przebieg harvestera XML z `<containsAedList>true</containsAedList>` i zrzut. Mentor: „najważniejsze, żeby na portalu znalazła się tabela osadzona w dane.gov.pl”, „manualne i automatyczne zasilenie”.
+- Użycie AI: Claude (Opus 5.5) sprawdził kod portalu względem uwagi mentora i przebudował instrukcję i slajdy; człowiek B zlecił.
