@@ -1,4 +1,4 @@
-# Instrukcja dla jury – MKS · Misja AED – dane na ratunek
+# Instrukcja dla jury – MKS 
 
 **Prototyp online: https://misja-aed.onrender.com/** – bez instalacji i konfiguracji.
 
