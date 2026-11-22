@@ -286,6 +286,8 @@ HARVESTER_XML_VERSION_TO_SCHEMA_PATH = {
     "1.11": HARVESTER_DATA_DIR.path("xml_import_otwarte_dane_1_11.xsd").root,
     "1.12": HARVESTER_DATA_DIR.path("xml_import_otwarte_dane_1_12.xsd").root,
     "1.13": HARVESTER_DATA_DIR.path("xml_import_otwarte_dane_1_13.xsd").root,
+    # propozycja: 1.13 + resource/containsAedList (Wykaz AED, HackNation 2026) – kopia w portal/xsd/
+    "1.14": HARVESTER_DATA_DIR.path("xml_import_otwarte_dane_1_14.xsd").root,
 }
 
 HARVESTER_IMPORTERS = {

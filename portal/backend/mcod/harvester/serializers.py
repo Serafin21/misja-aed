@@ -33,6 +33,11 @@ from mcod.lib.metadata_validators import (
 from mcod.regions.api import PeliasApi
 from mcod.regions.exceptions import MalformedTerytCodeError
 from mcod.resources.dga_constants import DGA_COLUMNS
+from mcod.resources.aed_utils import (
+    get_aed_resource_for_institution,
+    get_aed_resources_info_from_xml_harvester_file,
+    validate_aed_file,
+)
 from mcod.resources.dga_utils import (
     get_dga_resource_for_institution,
     get_dga_resources_info_from_xml_harvester_file,
@@ -256,6 +261,7 @@ class ResourceSchema(ResourceMixin, CKANPreProcessedSchema):
     )
     has_research_data = Bool(allow_none=True, missing=None)
     contains_protected_data = Bool(allow_none=True, missing=False)
+    contains_aed_list = Bool(allow_none=True, missing=False)
     package_id = UUID()
     position = Int()
     resource_type = Str(allow_none=True)
@@ -278,6 +284,7 @@ class ResourceSchema(ResourceMixin, CKANPreProcessedSchema):
             "has_high_value_data_from_ec_list",
             "has_research_data",
             "contains_protected_data",
+            "contains_aed_list",
         )
         unknown = EXCLUDE
 
@@ -434,6 +441,7 @@ class XMLResourceSchema(ResourceMixin, XMLPreProcessedSchema):
     has_high_value_data_from_ec_list = Bool(data_key="hasHighValueDataFromEuropeanCommissionList", allow_none=True, missing=None)
     has_research_data = Bool(data_key="hasResearchData", allow_none=True, missing=None)
     contains_protected_data = Bool(data_key="containsProtectedData", missing=False)
+    contains_aed_list = Bool(data_key="containsAedList", missing=False)
     supplements = Nested(XMLSupplementSchema, many=True)
     is_auto_data_date = Bool(data_key="isAutoDataDate")
     data_date_update_period = Str(
@@ -566,6 +574,11 @@ class XMLResourceSchema(ResourceMixin, XMLPreProcessedSchema):
             raise ValidationError(message=msg_high_value_data_flags_conflict, field_name=serializer_field_name)
 
     @validates_schema
+    def validate_contains_aed_list(self, data, **kwargs):
+        if data.get("contains_aed_list"):
+            validate_xml_contains_aed_list(data, self.context)
+
+    @validates_schema
     def validate_contains_protected_data(self, data, **kwargs):  # noqa: C901
         contains_protected_data: bool = data["contains_protected_data"]
 
@@ -675,6 +688,46 @@ class XMLResourceSchema(ResourceMixin, XMLPreProcessedSchema):
                             "with a value equal to true. Resource: 'title' = %(title)s, 'id' = %(id)s."
                         ) % {"field_name": "containsProtectedData", "title": resource_dga_db.title, "id": resource_dga_db.pk}
                         raise ValidationError(message=msg_institution_owns_dga, field_name=field_name)
+
+
+def validate_xml_contains_aed_list(data, context) -> None:
+    """Wykaz AED w pliku XML harvestera (wzór: XMLResourceSchema.validate_contains_protected_data):
+    plik z linku przechodzi walidację wzorca AED, w pliku XML najwyżej jeden wykaz AED, instytucja nie ma innego wykazu."""
+    field_name = "contains_aed_list"
+    url: Optional[str] = data.get("link")
+    try:
+        response = request_remote_dga(url) if url else None
+    except requests.exceptions.RequestException:
+        response = None
+    if response is None or response.status_code != 200:
+        raise ValidationError(
+            message="Adres w polu 'url' zasobu z polem 'containsAedList' = true nie odpowiada.", field_name=field_name
+        )
+    extension: Optional[str] = get_remote_extension_if_correct_dga_content_type(response)
+    if extension is None:
+        raise ValidationError(
+            message="Zasób z polem 'containsAedList' = true musi wskazywać w polu 'url' plik xls, xlsx albo csv.",
+            field_name=field_name,
+        )
+    errors = validate_aed_file(BytesIO(response.content), extension)
+    if errors:
+        raise ValidationError(message="Wykaz AED niezgodny ze wzorcem: " + " ".join(errors[:6]), field_name=field_name)
+    aed_info = get_aed_resources_info_from_xml_harvester_file(loaded_data=context["loaded_data"])
+    if len(aed_info) > 1:
+        details = ", ".join(f"Zasób {i}: 'title' = {t}, 'ext_ident' = {e}" for i, (e, t) in enumerate(aed_info, start=1))
+        raise ValidationError(
+            message="W pliku harvestera jest więcej niż 1 zasób z polem 'containsAedList' = true. " + details,
+            field_name=field_name,
+        )
+    try:
+        existing = get_aed_resource_for_institution(context["organization"].pk)
+    except MultipleObjectsReturned as e:
+        raise ValidationError(message=str(e), field_name=field_name)
+    if existing is not None and not existing.is_added_by_harvester_with_id(context["source_id"]):
+        raise ValidationError(
+            message=f"Dostawca ma już w portalu wykaz AED: 'title' = {existing.title}, 'id' = {existing.pk}.",
+            field_name=field_name,
+        )
 
 
 class XMLDatasetSchema(XMLPreProcessedSchema):
