@@ -39,7 +39,7 @@ function WykazAedGuide() {
         <li><strong>Wypełnij plik</strong> danymi Waszych AED. Kolumny z kodami (teryt_terc, kod_pocztowy) zapisz jako tekst, żeby nie zniknęły zera na początku.</li>
         <li><strong>Zaloguj się do panelu dane.gov.pl</strong> na konto instytucji i otwórz swój zbiór danych (albo utwórz nowy, np. „Defibrylatory AED – [nazwa instytucji]”).</li>
         <li><strong>Dodaj zasób</strong> i wybierz plik z dysku (CSV, XLS albo XLSX).</li>
-        <li><strong>Zaznacz pole „Zasób zawiera wykaz AED”</strong>. Przy imporcie XML to element <code>containsAedList</code>.</li>
+        <li><strong>Zaznacz pole „Zawiera wykaz AED”</strong> (zasób zawiera wykaz AED). Przy imporcie XML to element <code>containsAedList</code>.</li>
         <li><strong>Zapisz.</strong> Portal od razu sprawdza kolumny i pola wymagane. Jeśli coś jest nie tak, zobaczysz komunikat z numerem wiersza (przykłady niżej) – popraw plik i wgraj go ponownie.</li>
         <li><strong>Następnej nocy</strong> Wasze AED pojawią się w zasobie „Wykaz AED – wykaz zbiorczy” i w API <code>/aed-aggregated</code>, a stąd na mapie z nazwą Waszej instytucji.</li>
         <li><strong>Aktualizacja:</strong> dodajcie nową wersję pliku w tym samym zasobie. Instytucja ma jeden wykaz AED.</li>
