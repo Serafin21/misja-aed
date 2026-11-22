@@ -12,13 +12,13 @@ Zasada: **publikuje dostawca, który odpowiada za dane. Portal scala wykazy wiel
 
 ## A. Klikalny prototyp (bez instalacji)
 
-1. Otwórz link do prototypu z pola „Link do prototypu” w `SUBMISSION.md`.
+1. Otwórz https://serafin21.github.io/misja-aed/ (tryb demonstracyjny: dane przykładowe, bez logowania – logowanie i panele działają po uruchomieniu lokalnym, sekcja C).
 2. Kliknij **„Znajdź AED”**, wpisz miejscowość albo kliknij **„Moja lokalizacja”**.
 3. Kliknij AED na liście → **„Szczegóły”**. Sekcja **„Skąd są te dane i kto za nie odpowiada”** pokazuje dostawcę, link do zbioru w dane.gov.pl i datę danych.
 4. Zwróć uwagę na oznaczenia: **„Do sprawdzenia”** = punkt z OpenStreetMap, poza wspólną listą; **„Prototyp – nieopublikowane w dane.gov.pl”** = AED dodane w aplikacji, poza wykazem zbiorczym.
 5. W stopce kliknij **„Dla instytucji”** – instrukcja publikacji wykazu AED w panelu dane.gov.pl w krokach, szablon pliku i typowe komunikaty walidacji portalu.
 6. W stopce kliknij **„Akcja „AED w danych””** – hasło, logotyp, księga znaku.
-7. (Opcjonalnie) Stopka → **„Logowanie”**, konto `admin`, hasło `admin123` → „Panel moderacji prototypu”. To tryb pokazowy – patrz sekcja D.
+7. (Tylko w wersji uruchomionej lokalnie) Stopka → **„Logowanie”**, konto `admin`, hasło `admin123` → „Panel moderacji prototypu”. To tryb pokazowy – patrz sekcja D.
 
 ## B. Kod zmian w portalu dane.gov.pl (bez dostępu do zewnętrznych domen)
 
