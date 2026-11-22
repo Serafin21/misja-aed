@@ -35,7 +35,7 @@ Kod przeczytacie w repozytorium, bez dostępu do zewnętrznych domen:
 | Wymaganie | Gdzie |
 |---|---|
 | Opis i tytuł | `SUBMISSION.md`, `pitch/opis_projektu.md` |
-| Prezentacja | `pitch/prezentacja.pdf` |
+| Prezentacja | `pitch/prezentacja.pdf` (krótsza: `pitch/prezentacja_krotka.pdf`) |
 | Prototyp | https://misja-aed.onrender.com/ |
 | Wzorcowy zakres danych (XLSX) | `deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx` |
 | Kod źródłowy | to repozytorium (`src/` – aplikacja, `portal/` – zmiana w portalu) |

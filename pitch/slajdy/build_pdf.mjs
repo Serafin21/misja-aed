@@ -10,6 +10,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const here = path.dirname(fileURLToPath(import.meta.url));
 const decks = [
   ['prezentacja.html', '../prezentacja.pdf'],
+  ['prezentacja_krotka.html', '../prezentacja_krotka.pdf'],
 ];
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});

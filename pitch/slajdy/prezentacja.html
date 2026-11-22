@@ -2,128 +2,266 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<title>Wykaz AED w dane.gov.pl – zespół MKS (prezentacja)</title>
+<title>Wykaz AED w dane.gov.pl – zespół MKS (prezentacja szczegółowa)</title>
 <link rel="stylesheet" href="styl.css">
-<style>
-  p, li { font-size: 24px; }
-  h2 { font-size: 42px; }
-</style>
 </head>
 <body>
 
-<!-- 1 · ok. 15 s -->
+<!-- 1 -->
 <section class="slide title">
   <div style="display:flex;align-items:center;gap:28px;margin-bottom:18px">
     <img src="../../brand/logo/png/aed-w-danych_poziome-bez-hasla_negatyw.png" alt="Logo akcji AED w danych" style="height:86px">
     <p style="font-size:30px;font-weight:700;color:#E2A23B;margin:0">„Dane prosto z serca”</p>
   </div>
-  <p class="kicker">HackNation 2026 · Misja AED – dane na ratunek · zespół MKS</p>
-  <h1 style="font-size:64px">Wykaz AED w dane.gov.pl</h1>
-  <p style="font-size:30px;max-width:980px">Jedna lista defibrylatorów od wielu dostawców – w kodzie portalu, tak jak wykaz chronionych danych.</p>
-  <p style="margin-top:auto;font-size:18px">github.com/Serafin21/misja-aed</p>
+  <p class="kicker">HackNation 2026 · Misja AED – dane na ratunek · zespół MKS · stolik 15f</p>
+  <h1>Wykaz AED w dane.gov.pl</h1>
+  <p style="font-size:26px;max-width:960px">Jedna lista defibrylatorów od wielu dostawców – zbudowana w kodzie portalu dane.gov.pl, tak jak portal już dziś buduje wykaz chronionych danych (DGA).</p>
+  <div class="cols-3" style="margin-top:36px">
+    <div class="box" style="background:#1A7A50"><h3 style="color:#fff">1. Wykaz AED w portalu</h3><p class="small" style="color:#fff">Zmiana w kodzie dane.gov.pl: pole przy zasobie, walidacja, nocne łączenie, API.</p></div>
+    <div class="box" style="background:#1A7A50"><h3 style="color:#fff">2. Mapa danych AED</h3><p class="small" style="color:#fff">Strona, która czyta wykaz: najbliższe AED, dostawca i źródło przy każdym punkcie.</p></div>
+    <div class="box" style="background:#1A7A50"><h3 style="color:#fff">3. Akcja „AED w danych”</h3><p class="small" style="color:#fff">Logo, hasło i księga znaku dla instytucji, które mają AED i jeszcze go nie publikują.</p></div>
+  </div>
+  <p style="margin-top:auto;font-size:16px">Repozytorium: github.com/Serafin21/misja-aed · jury: <code style="background:#1A7A50;color:#fff">INSTRUKCJA_DLA_JURY.md</code></p>
 </section>
 
-<!-- 2 · ok. 25 s -->
+<!-- 2 -->
 <section class="slide">
   <p class="kicker">Problem</p>
-  <h2>Za dane o AED nikt nie odpowiada</h2>
-  <div class="cols-3" style="margin-top:30px">
-    <div><div class="stat" style="font-size:84px">18 297</div><p>AED w OpenStreetMap – bez właściciela danych</p></div>
-    <div><div class="stat stat--amber" style="font-size:84px">3 219</div><p>z 18 347 AED sprawdzono w ostatnim roku</p></div>
-    <div><div class="stat stat--amber" style="font-size:84px">351</div><p>z 2 479 gmin bez żadnego AED w danych</p></div>
+  <h2>AED w danych są – ale nikt za nie nie odpowiada</h2>
+  <div class="cols-3" style="margin:10px 0 22px">
+    <div><div class="stat">18 297</div><p>AED w Polsce w OpenStreetMap – wpisują je wolontariusze, bez właściciela danych</p></div>
+    <div><div class="stat stat--amber">3 219</div><p>z 18 347 znanych AED ma datę sprawdzenia z ostatnich 12 miesięcy</p></div>
+    <div><div class="stat stat--amber">351</div><p>z 2 479 gmin nie ma w danych ani jednego AED</p></div>
   </div>
-  <p style="margin-top:30px">Samorządy, które już publikują AED w dane.gov.pl, robią to każdy w innym układzie.</p>
-  <p class="src">Źródło: docs/tech/LICZBY.md (OpenStreetMap, PRG – GUGiK, dane.gov.pl; 21.11.2026)</p>
+  <ul>
+    <li>Kilka samorządów publikuje już AED w dane.gov.pl (Krosno, Przemyśl, Marki, Warszawa) – <b>każdy w innym układzie kolumn</b>.</li>
+    <li>Mentorzy MC: „dane są rozproszone i niezweryfikowane – nikt nie bierze za nie odpowiedzialności”; „potrzebny jest dostawca, który weźmie odpowiedzialność za zbiór”.</li>
+  </ul>
+  <p style="font-size:22px;margin-top:8px"><b>Wniosek:</b> potrzebna jest lista, w której <b>każdy wiersz ma dostawcę</b> – a portal tylko łączy listy, niczego za nikogo nie poprawiając.</p>
+  <p class="src">Źródło liczb: <code>docs/tech/LICZBY.md</code> (eksport AED OpenStreetMap Polska, granice gmin PRG – GUGiK, zbiory dane.gov.pl; 21.11.2026)</p>
 </section>
 
-<!-- 3 · ok. 35 s -->
+<!-- 3 -->
 <section class="slide">
-  <p class="kicker">Rozwiązanie</p>
-  <h2>Publikuje ten, kto odpowiada. Portal łączy.</h2>
-  <div class="flow" style="margin-top:20px">
-    <div class="step" style="font-size:19px"><span class="n">1</span><b style="font-size:21px">Dostawca</b>wgrywa plik z 44 kolumnami w swoim zbiorze</div>
-    <div class="arrow">→</div>
-    <div class="step" style="font-size:19px"><span class="n">2</span><b style="font-size:21px">„Zawiera wykaz AED”</b>jedno pole przy zasobie</div>
-    <div class="arrow">→</div>
-    <div class="step" style="font-size:19px"><span class="n">3</span><b style="font-size:21px">Portal sprawdza</b>kolumny, współrzędne, TERYT</div>
-    <div class="arrow">→</div>
-    <div class="step" style="font-size:19px"><span class="n">4</span><b style="font-size:21px">Co noc</b>„Wykaz AED – wykaz zbiorczy”</div>
-    <div class="arrow">→</div>
-    <div class="step" style="font-size:19px"><span class="n">5</span><b style="font-size:21px">API i mapa</b><code>/aed-aggregated</code></div>
+  <p class="kicker">Jak podeszliśmy do zadania</p>
+  <h2>Od zasad portalu do zmiany w jego kodzie – 6 kroków</h2>
+  <div class="cols">
+    <ol style="padding-left:24px">
+      <li><b>Zasady dane.gov.pl.</b> Standard techniczny, instrukcja XML harvestera (COI), DCAT-AP-PL – na nich oparliśmy format i walidację.</li>
+      <li><b>Wzorcowy zakres danych.</b> 44 pola AED (24 wymagane), m.in. godziny w zapisie maszynowym, szafka zamknięta i instrukcja dostępu, data weryfikacji – jeden plik, z którego powstają XLSX, słownik, JSON Schema, CSVW.</li>
+      <li><b>Prawdziwe dane.</b> Wczytaliśmy całą Polskę z OpenStreetMap i zbiory samorządów z dane.gov.pl – i policzyliśmy, jak stare są dane.</li>
+    </ol>
+    <ol start="4" style="padding-left:24px">
+      <li><b>Model ról.</b> Po rozmowie z mentorami: publikuje dostawca, który odpowiada; portal łączy, nie poprawia; zgłoszenia mieszkańców wracają do dostawcy (<code>docs/MODEL_ROL.md</code>).</li>
+      <li><b>Kod portalu.</b> Zaimportowaliśmy kod dane.gov.pl jako pierwszy commit i dobudowaliśmy „Wykaz AED” <b>dokładnie wzorem istniejącego wykazu DGA</b> – zamiast pisać osobny system.</li>
+      <li><b>Strona odczytu i akcja.</b> Mapa danych AED czyta wykaz zbiorczy; akcja „AED w danych” zaprasza instytucje tam, gdzie mapa pokazuje luki.</li>
+    </ol>
   </div>
-  <p style="margin-top:18px">W każdym wierszu: <b>nazwa dostawcy i link do źródła</b>. Wiersze różnych dostawców nie są scalane – możliwy duplikat jest tylko oznaczany.</p>
+  <p class="src">Szczegóły decyzji: <code>docs/MODEL_ROL.md</code>, <code>portal/README.md</code>, <code>docs/tech/COMPLIANCE.md</code></p>
 </section>
 
 <!-- 4 -->
 <section class="slide">
-  <p class="kicker">Dowód 1 · zmiana w portalu dane.gov.pl (uruchomiony lokalnie) · zasilenie</p>
-  <h2>Dostawca zaznacza „Zawiera wykaz AED” – portal sprawdza plik</h2>
-  <img src="../zrzuty/02_portal_pole_kadr.png" alt="Panel portalu dane.gov.pl: pole Zawiera wykaz AED zaznaczone na Tak" style="width:100%;border:1px solid #C9D3CC;border-radius:6px;display:block">
-  <p style="font-size:18px;margin:10px 0 6px">Plik z błędami nie przechodzi – błędy wiersz po wierszu:</p>
-  <img src="../zrzuty/03_portal_walidacja_kadr.png" alt="Panel portalu: lista błędów pliku – zamienione współrzędne, brak kontaktu, zły TERYT" style="width:100%;border:1px solid #C9D3CC;border-radius:6px;display:block">
-  <p class="src">Automatycznie: harvester XML z elementem <code>containsAedList</code> – te same reguły · kod: <code>portal/backend/mcod/resources/aed_*.py</code></p>
+  <p class="kicker">Rozwiązanie</p>
+  <h2>Jak powstaje Wykaz AED – przepływ w portalu</h2>
+  <div class="flow">
+    <div class="step"><span class="n">1</span><b>Dostawca publikuje</b>gmina, szpital, firma, fundacja – plik CSV/XLSX z 44 kolumnami w swoim zbiorze</div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="n">2</span><b>„Zawiera wykaz AED”</b>pole przy zasobie w panelu; w XML harvestera: <code>containsAedList</code></div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="n">3</span><b>Portal sprawdza</b>kolumny, pola wymagane, współrzędne w Polsce, TERYT, jeden wykaz na instytucję</div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="n">4</span><b>Docelowo co noc o 3:40</b>zadanie łączy wykazy w „Wykaz AED – wykaz zbiorczy” (CSV + XLSX); na serwerze dane.gov.pl jeszcze go nie ma</div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="n">5</span><b>API i mapa</b><code>GET /aed-aggregated</code> → Mapa danych AED i każda inna aplikacja</div>
+  </div>
+  <div class="cols">
+    <div class="box"><h3>Bez scalania wierszy</h3><p class="small">Każdy wiersz wykazu zbiorczego ma nazwę dostawcy, typ instytucji, link do zasobu źródłowego i datę aktualizacji. Dwa AED różnych dostawców bliżej niż 25 m dostają tylko oznaczenie „Możliwy duplikat” – decydują dostawcy.</p></div>
+    <div class="box"><h3>Ten sam mechanizm co DGA</h3><p class="small">Portal ma już wykaz chronionych danych: pole <code>contains_protected_data</code>, walidację, zadanie <code>create_main_dga_resource_task</code> i <code>/dga-aggregated</code>. Wykaz AED powtarza każdy z tych elementów – zmiana w portalu, nie osobny system.</p></div>
+  </div>
+  <p class="src">Kod: <code>portal/backend/mcod/resources/</code> · opis i mapa „DGA → AED” z numerami linii: <code>portal/README.md</code></p>
 </section>
 
 <!-- 5 -->
 <section class="slide">
-  <p class="kicker">Dowód 2 · zmiana w portalu dane.gov.pl · wykaz zbiorczy</p>
-  <h2>Portal składa wykazy w „Wykaz AED – wykaz zbiorczy”</h2>
-  <img src="../zrzuty/04_portal_wykazy_kadr.png" alt="Panel portalu: wykaz zbiorczy (CSV, XLSX) i wykazy dwóch instytucji" style="width:100%;max-height:300px;object-fit:contain;object-position:left top;border:1px solid #C9D3CC;border-radius:6px;display:block;margin-top:6px">
-  <img src="../zrzuty/06_portal_api_kadr.png" alt="Odpowiedź API /aed-aggregated z linkami do plików wykazu zbiorczego" style="width:100%;border:1px solid #C9D3CC;border-radius:6px;display:block;margin-top:10px">
-  <p style="font-size:20px;margin-top:14px">W każdym wierszu nazwa dostawcy i link do jego zasobu. Bez scalania – AED różnych dostawców bliżej niż 25 m mają tylko oznaczenie „Możliwy duplikat”. Ten sam mechanizm co wykaz chronionych danych (DGA): pole przy zasobie, walidacja, zadanie, <code>/aed-aggregated</code>.</p>
+  <p class="kicker">Dowód 1 · zgodność z zasadami portalu</p>
+  <h2>Zmiana w kodzie dane.gov.pl, nie obok niego</h2>
+  <div class="cols">
+    <div>
+      <p class="codehead">git log --oneline -- portal/   (od najstarszego)</p>
+      <div class="code"><span class="k">b229557</span> Import: kod źródłowy portalu dane.gov.pl
+        (mcod-backend 2.62.3) – <span class="s">bez zmian</span>
+<span class="k">1464bf3</span> Wykaz AED: model – Resource.contains_aed_list
+<span class="k">068b654</span> Wykaz AED: aed_constants.py – 44 kolumny
+<span class="k">48fb8da</span> Wykaz AED: walidacja pliku
+<span class="k">3184384</span> Wykaz AED: pole w formularzu panelu
+<span class="k">9bb5d27</span> Wykaz AED: XML – containsAedList (XSD 1.14)
+<span class="k">e5f4f91</span> Wykaz AED: create_main_aed_resource_task
+<span class="k">5a214fd</span> Wykaz AED: GET /aed-aggregated
+<span class="k">67ce118</span> Wykaz AED: testy (wzorem testów DGA)
+<span class="c">… + README, środowisko lokalne, poprawki</span></div>
+      <p class="cap">Pierwszy commit to oryginalny kod portalu; każdy następny to nasz przyrost (zalecenie mentora MC).</p>
+    </div>
+    <div>
+      <table>
+        <tr><th>Element</th><th>DGA (oryginał portalu)</th><th>Wykaz AED (nasz przyrost)</th></tr>
+        <tr><td>Pole zasobu</td><td><code>contains_protected_data</code></td><td><code>contains_aed_list</code></td></tr>
+        <tr><td>Kolumny</td><td><code>DGA_COLUMNS</code></td><td><code>AED_COLUMNS</code> (44)</td></tr>
+        <tr><td>Walidacja</td><td><code>validate_dga_file_columns</code></td><td><code>validate_aed_file</code></td></tr>
+        <tr><td>Wykaz zbiorczy</td><td><code>AggregatedDGAInfo</code></td><td><code>AggregatedAEDInfo</code></td></tr>
+        <tr><td>Zadanie nocne</td><td><code>create_main_dga_resource_task</code></td><td><code>create_main_aed_resource_task</code></td></tr>
+        <tr><td>API</td><td><code>/dga-aggregated</code></td><td><code>/aed-aggregated</code></td></tr>
+      </table>
+      <p class="cap">Pełna tabela z numerami linii: <code>portal/README.md</code>, „Gdzie wzór DGA, gdzie Wykaz AED”.</p>
+    </div>
+  </div>
+  <p class="src">Sprawdź: <code>git log --oneline -- portal/</code> · <code>git diff b229557 HEAD -- portal/backend</code> · pochodzenie kodu: <code>portal/IMPORT.md</code></p>
 </section>
 
 <!-- 6 -->
 <section class="slide">
-  <p class="kicker">Dowód 3 · Mapa danych AED – przykładowy odbiorca wykazu · misja-aed.onrender.com</p>
-  <h2>Najbliższe AED – na komputerze i telefonie</h2>
-  <div style="display:grid;grid-template-columns:3.2fr 1fr;gap:20px;align-items:start;margin-top:6px">
-    <img src="../zrzuty/r02_znajdz_aed_krosno.png" alt="Znajdź AED: lista i mapa AED w gminie Krosno" style="width:100%;max-height:470px;object-fit:cover;object-position:top;border:1px solid #C9D3CC;border-radius:6px;display:block">
-    <img src="../zrzuty/r07_telefon.png" alt="Widok na telefonie 390 px" style="width:100%;max-height:470px;object-fit:cover;object-position:top;border:1px solid #C9D3CC;border-radius:6px;display:block">
-  </div>
-  <p class="src">„Znajdź AED” → Krosno: lista i mapa, godziny, dostęp, „Nawiguj” · 18 371 AED (wspólna lista + warstwa OpenStreetMap „Do sprawdzenia”)</p>
+  <p class="kicker">Dowód 2 · uruchomiony portal · zasilanie ręczne</p>
+  <h2>Dostawca zaznacza „Zawiera wykaz AED” – portal sprawdza plik</h2>
+  <p class="codehead" style="margin-top:4px">Panel dane.gov.pl: nowe pole przy zasobie (wzorem „Contains protected data list” – DGA) · <code>forms.py</code></p>
+  <img src="../zrzuty/02_portal_pole_kadr.png" alt="Panel portalu: pole Contains AED list zaznaczone na Tak, z opisem wykazu AED" style="width:100%;border:1px solid #C9D3CC;border-radius:6px">
+  <p class="codehead" style="margin-top:14px">Plik z błędami nie przechodzi – błędy wiersz po wierszu · <code>aed_utils.py</code></p>
+  <img src="../zrzuty/03_portal_walidacja_kadr.png" alt="Panel portalu: 3 z 3 wierszy nie spełnia wzorca AED – zamienione współrzędne, brak kontaktu, zły TERYT, zły słownik dostępu" style="width:100%;border:1px solid #C9D3CC;border-radius:6px">
+  <p class="src">Portal dane.gov.pl z naszą zmianą uruchomiony lokalnie 22.11.2026 (panel, API, Celery, Elasticsearch) · testy Wykazu AED: 28/28 · etykiety po angielsku = lokalna instalacja bez skompilowanych tłumaczeń</p>
 </section>
 
 <!-- 7 -->
 <section class="slide">
-  <p class="kicker">Dowód 4 · karta AED · misja-aed.onrender.com</p>
-  <h2>Przy każdym AED: kto odpowiada za dane i skąd pochodzą</h2>
-  <img src="../zrzuty/r04_karta_zrodlo_danych.png" alt="Karta AED: dostawca Urząd Miasta Krosna, zbiór w dane.gov.pl, data danych, zasady korzystania" style="width:100%;max-height:480px;object-fit:cover;object-position:bottom;border:1px solid #C9D3CC;border-radius:6px;display:block">
+  <p class="kicker">Dowód 3 · uruchomiony portal · wykaz zbiorczy i API</p>
+  <h2>Co noc jeden „Wykaz AED – wykaz zbiorczy” i <code style="font-size:32px">/aed-aggregated</code></h2>
+  <div class="cols" style="grid-template-columns:3fr 2fr;gap:22px">
+    <div>
+      <img src="../zrzuty/04_portal_wykazy_kadr.png" alt="Lista zasobów w panelu portalu: Wykaz AED – wykaz zbiorczy (CSV, XLSX) i wykazy dwóch instytucji, opublikowane" style="width:100%;border:1px solid #C9D3CC;border-radius:6px">
+    </div>
+    <div>
+      <p class="small" style="margin-top:0">Zadanie <code>create_main_aed_resource_task</code> (3:40, kroki jak <code>create_main_dga_resource_task</code>) zebrało wykazy 2 instytucji w <b>zasób portalu</b> w zbiorze Ministerstwa Cyfryzacji: CSV + XLSX, stały schemat tabeli, znak umowny „-”.</p>
+      <p class="small">Każdy wiersz: nazwa dostawcy i link do jego zasobu; AED 9 m od siebie u różnych dostawców – „Możliwy duplikat”, bez scalania.</p>
+      <p class="small">Zasilanie automatyczne: element <code>containsAedList</code> w XML harvestera (propozycja XSD 1.14) – kod i test jednostkowy.</p>
+    </div>
+  </div>
+  <p class="codehead" style="margin-top:12px">GET /aed-aggregated – odpowiedź API uruchomionego portalu</p>
+  <img src="../zrzuty/06_portal_api_kadr.png" alt="Odpowiedź API /aed-aggregated z linkami do plików CSV i XLSX wykazu zbiorczego" style="width:100%;border:1px solid #C9D3CC;border-radius:6px">
 </section>
 
 <!-- 8 -->
 <section class="slide">
-  <p class="kicker">Dowód 5 · dla instytucji · misja-aed.onrender.com</p>
-  <h2>Instytucja dostaje instrukcję publikacji w dane.gov.pl</h2>
-  <img src="../zrzuty/r05_dla_instytucji.png" alt="Strona Dla instytucji: jak opublikować wykaz AED w dane.gov.pl krok po kroku, szablon" style="width:100%;max-height:480px;object-fit:cover;object-position:top;border:1px solid #C9D3CC;border-radius:6px;display:block">
+  <p class="kicker">Dowód 4 · wzorcowy zakres danych</p>
+  <h2>44 pola – jeden wzór dla wszystkich dostawców</h2>
+  <div class="cols-46">
+    <div>
+      <div class="cols-3" style="gap:10px;margin-bottom:14px">
+        <div class="box" style="text-align:center"><div class="stat" style="font-size:44px">24</div><p class="small">wymagane</p></div>
+        <div class="box" style="text-align:center"><div class="stat" style="font-size:44px">15</div><p class="small">zalecane</p></div>
+        <div class="box" style="text-align:center"><div class="stat" style="font-size:44px">5</div><p class="small">opcjonalne</p></div>
+      </div>
+      <ul class="small">
+        <li>Pola, których brakuje dziś w bazach, a decydują o ratunku: <b>godziny dostępności</b> (zapis maszynowy → „otwarte teraz”), <b>szafka zamknięta + instrukcja dostępu</b>, <b>data i metoda weryfikacji</b>.</li>
+        <li>Jedna definicja → XLSX, słownik danych CSV, JSON Schema, metadane CSVW.</li>
+        <li>Te same 44 kolumny sprawdza portal (<code>aed_constants.py</code>).</li>
+      </ul>
+    </div>
+    <div>
+      <p class="codehead">deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx – arkusz „Zakres danych” (fragment)</p>
+      <table>
+        <tr><th>Lp.</th><th>Nazwa pola</th><th>Etykieta</th><th>Typ / format</th><th>Obowiązk.</th></tr>
+        <tr><td>1</td><td><code>id_aed</code></td><td>Identyfikator AED</td><td>tekst · AED-PL-…</td><td>wymagane</td></tr>
+        <tr><td>3</td><td><code>nazwa_obiektu</code></td><td>Nazwa obiektu</td><td>tekst · maks. 200</td><td>wymagane</td></tr>
+        <tr><td>18</td><td><code>szerokosc_geograficzna</code></td><td>Szerokość geograficzna</td><td>liczba · 49–54,9</td><td>wymagane</td></tr>
+        <tr><td>20</td><td><code>dostep</code></td><td>Dostępność dla osób postronnych</td><td>słownik</td><td>wymagane</td></tr>
+        <tr><td>21</td><td><code>godziny_dostepnosci</code></td><td>Godziny dostępności</td><td>opening_hours</td><td>wymagane</td></tr>
+        <tr><td>23</td><td><code>szafka_zamknieta</code></td><td>Szafka zamknięta</td><td>true / false</td><td>wymagane</td></tr>
+        <tr><td>24</td><td><code>instrukcja_dostepu</code></td><td>Instrukcja dostępu</td><td>tekst · maks. 250</td><td>zalecane</td></tr>
+        <tr><td>39</td><td><code>data_weryfikacji</code></td><td>Data weryfikacji</td><td>yyyy-mm-dd</td><td>wymagane</td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="src">Pliki: <code>deliverables/zakres_danych/</code>, <code>docs/schema/</code> · przykładowy pakiet dostawcy (CSV + XML zgodny z XSD 1.13): <code>deliverables/pakiet_dostawcy_przyklad/</code></p>
 </section>
 
 <!-- 9 -->
 <section class="slide">
-  <p class="kicker">Akcja dla dostawców danych · misja-aed.onrender.com/akcja</p>
-  <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:26px;align-items:center;margin-top:10px">
-    <div>
-      <img src="../../brand/logo/png/aed-w-danych_pionowe_kolor.png" alt="Logo AED w danych" style="width:100%;max-width:340px">
-      <p style="font-size:22px">Masz AED? Udostępnij je na dane.gov.pl. Każda komórka serca to jeden wiersz danych – jeden defibrylator. Logo (SVG, PNG, JPG, PDF) i księga znaku: <code>brand/</code></p>
-    </div>
-    <img src="../zrzuty/r06_akcja.png" alt="Strona akcji AED w danych w prototypie" style="width:100%;max-height:470px;object-fit:cover;object-position:top;border:1px solid #C9D3CC;border-radius:6px;display:block">
+  <p class="kicker">Dowód 5 · Mapa danych AED – strona odczytu wykazu</p>
+  <h2>Mieszkaniec widzi najbliższe AED i kto za nie odpowiada</h2>
+  <div style="display:grid;grid-template-columns:5fr 5fr 2fr;gap:18px;align-items:start">
+    <div><img class="shot" src="../zrzuty/07_mapa_kadr.png" alt=""><p class="cap">„Znajdź AED” – gmina Krosno: lista i mapa, godziny, szafka, Nawiguj.</p></div>
+    <div><img class="shot" src="../zrzuty/08_karta_zrodlo.png" alt=""><p class="cap">Karta AED: dostawca <b>Urząd Miasta Krosna</b>, zbiór w dane.gov.pl, data danych, „zbiór przejściowy”.</p></div>
+    <div><img class="shot" src="../zrzuty/10_telefon.png" alt=""><p class="cap">Telefon (390 px).</p></div>
   </div>
+  <ul class="small" style="margin-top:10px">
+    <li>Oznaczenia: <span class="tag tag--grey">Do sprawdzenia</span> punkt z OpenStreetMap, poza wykazem · <span class="tag tag--amber">Prototyp – nieopublikowane w dane.gov.pl</span> AED dodane w aplikacji.</li>
+    <li>Dostępność: axe-core na 15 ekranach – 0 naruszeń WCAG 2.2 A/AA; bez przewijania w poziomie od 320 px; pełna obsługa klawiaturą (<code>docs/a11y/raport.md</code>).</li>
+  </ul>
+  <p class="src">Kod aplikacji: <code>src/ui/</code> (React) i <code>src/api/</code> (FastAPI) · testy aplikacji: <b>114 passed</b> (<code>pytest</code>) · online: <code>misja-aed.onrender.com</code></p>
 </section>
 
 <!-- 10 -->
 <section class="slide">
-  <p class="kicker">Kroki użytkowników · ograniczenia</p>
-  <div class="cols" style="margin-top:6px">
+  <p class="kicker">Akcja promocyjna dla dostawców danych</p>
+  <h2>„AED w danych” · Dane prosto z serca</h2>
+  <div class="cols-46">
     <div>
-      <h2 style="font-size:30px">Kto co robi</h2>
-      <p style="font-size:19px"><b>Instytucja:</b> szablon → plik → panel dane.gov.pl → „Zawiera wykaz AED” → poprawki z komunikatu → wiersze w wykazie zbiorczym.<br><b>Mieszkaniec:</b> Znajdź AED → najbliższe → karta z dostawcą → Nawiguj.<br><b>Ministerstwo Cyfryzacji:</b> nie zmienia danych; prowadzi wzorzec, wykaz zbiorczy i akcję.<br><b>Aplikacje i służby:</b> <code>GET /aed-aggregated</code> → CSV/XLSX.</p>
+      <img src="../../brand/logo/png/aed-w-danych_pionowe_kolor.png" alt="Logo AED w danych" style="width:100%;max-width:420px;display:block;margin:0 auto">
     </div>
     <div>
-      <h2 style="font-size:30px">Ograniczenia</h2>
-      <p style="font-size:19px">Zmiana w portalu działa na lokalnej kopii dane.gov.pl, nie na serwerze produkcyjnym. Dostawcy w prototypie są testowi, obok 3 prawdziwych zbiorów samorządów. Edycja AED przez administratora aplikacji to tryb pokazowy – docelowo dane zmienia tylko dostawca. Logowanie testowe (docelowo login.gov.pl).<br><b>AI:</b> Claude – kod, testy, teksty; decyzje – zespół (<code>docs/AI_USAGE.md</code>).</p>
+      <p style="font-size:24px"><b>Masz AED? Udostępnij je na dane.gov.pl</b> · #AEDwDanych</p>
+      <ul>
+        <li><b>Znak:</b> serce z komórek arkusza danych – każda komórka to jeden wiersz, czyli jeden defibrylator; bursztynowa komórka w środku to „Twoje AED”, którego jeszcze brakuje.</li>
+        <li><b>Do kogo:</b> instytucje, które mają AED, a nie mają wykazu w dane.gov.pl – najpierw gminy, w których mapa pokazuje luki.</li>
+        <li><b>Księga znaku (9 stron):</b> koncepcja, wersje, kolory z kontrastem WCAG, pole ochronne, minimalna wielkość, niedozwolone użycia; na ostatniej stronie każdy wariant logo do pobrania (SVG, PNG, JPG, PDF).</li>
+        <li>Logo służy akcji – nie jest marką aplikacji ani tej prezentacji.</li>
+      </ul>
     </div>
   </div>
-  <p class="src">Zespół MKS · github.com/Serafin21/misja-aed · prototyp: misja-aed.onrender.com · INSTRUKCJA_DLA_JURY.md</p>
+  <p class="src">Pliki: <code>brand/ksiega_znaku.pdf</code>, <code>brand/logo/{svg,png,jpg,pdf}/</code> (48 plików), <code>brand/haslo.txt</code></p>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <p class="kicker">Opis funkcjonalności · kroki użytkowników</p>
+  <h2>Kto co robi</h2>
+  <div class="cols">
+    <div class="box"><h3>Dostawca (gmina, szpital, firma, fundacja)</h3>
+      <ol class="small"><li>Pobiera szablon (44 kolumny) ze strony „Dla instytucji”.</li><li>W panelu dane.gov.pl: swój zbiór → <b>Dodaj zasób</b> → plik.</li><li>Zaznacza <b>„Zawiera wykaz AED” = Tak</b> → Zapisz.</li><li>Poprawia wiersze z komunikatu walidacji.</li><li>Następnego dnia jego AED są w wykazie zbiorczym i na mapie. Poprawka = nowa wersja pliku.</li></ol></div>
+    <div class="box"><h3>Mieszkaniec</h3>
+      <ol class="small"><li>„Znajdź AED” → adres albo „Moja lokalizacja”.</li><li>Najbliższe AED otwarte teraz, z odległością.</li><li>Karta: jak się dostać, szafka, dostawca i źródło danych.</li><li>„Nawiguj” – trasa pieszo.</li><li>„Zgłoś problem z tym AED” – zgłoszenie trafia do dostawcy, dane się nie zmieniają.</li></ol></div>
+    <div class="box"><h3>Ministerstwo Cyfryzacji</h3>
+      <p class="small">Nie zmienia danych dostawców. Prowadzi wzorzec i zbiór „Wykaz AED – wykaz zbiorczy”, patrzy na luki w gminach i kieruje tam akcję „AED w danych”.</p></div>
+    <div class="box"><h3>Programista / służby</h3>
+      <p class="small"><code>GET /aed-aggregated</code> → link do CSV albo XLSX wykazu zbiorczego; każdy wiersz z dostawcą i linkiem do źródła.</p></div>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <p class="kicker">Ograniczenia · zakres AI · co dalej</p>
+  <h2>Co jeszcze nie jest gotowe</h2>
+  <div class="cols">
+    <div>
+      <h3>Ograniczenia prototypu</h3>
+      <ul class="small">
+        <li>Portal z Wykazem AED uruchomiliśmy lokalnie (panel, API, Celery); publicznej strony dane.gov.pl, która pokazuje wykaz jako tabelę, nie uruchamialiśmy (osobne repozytorium). Harvester XML z <code>containsAedList</code> – kod i test jednostkowy, bez przebiegu na uruchomionym portalu.</li>
+        <li>Aplikacja w prototypie czyta zbiory fikcyjnych dostawców i 3 prawdziwe zbiory samorządów sprzed wzorca (Krosno, Przemyśl, Marki – 50 AED); wykaz zbiorczy portalu czyta po ustawieniu <code>PORTAL_API</code>.</li>
+        <li>Edycja AED przez administratora aplikacji to <b>tryb pokazowy prototypu, docelowo wyłączony</b> – nie zmienia wykazu zbiorczego.</li>
+        <li>Zgłoszenia mieszkańców symulowane w aplikacji (docelowo komentarze do zasobu w portalu); logowanie testowe (docelowo login.gov.pl i 2FA).</li>
+        <li>XSD 1.14 to propozycja; terminy i próg 25 m – do potwierdzenia z MC.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Zakres użycia AI (§2 ust. 8 regulaminu)</h3>
+      <p class="small">Claude i Claude Code: generowanie kodu, testów i tekstów, wersja wektorowa logo i księga znaku według koncepcji zespołu. Zespół: wybór i analiza problemu, model ról, wzorzec danych, koncepcja znaku, nazwa i hasło, decyzje i przegląd. Szczegóły: <code>docs/AI_USAGE.md</code>.</p>
+      <h3 style="margin-top:16px">Co dalej</h3>
+      <ul class="small">
+        <li>Przegląd przyrostu w kodzie z zespołem dane.gov.pl.</li>
+        <li>Pilotaż z jedną gminą jako pierwszym dostawcą wykazu.</li>
+        <li>Akcja „AED w danych” w gminach bez AED w danych.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="src">Zespół MKS · repozytorium github.com/Serafin21/misja-aed · <code>INSTRUKCJA_DLA_JURY.md</code> · <code>misja-aed.onrender.com</code></p>
 </section>
 
 </body>
