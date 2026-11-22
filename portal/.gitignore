@@ -19,3 +19,4 @@ frontend/.angular/
 volumes/
 backend/mcod/settings/local.py
 local/proxy-ca.crt
+local/es-plugins/

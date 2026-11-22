@@ -1,0 +1,38 @@
+# Środowisko lokalne portalu w sesji z proxy HTTPS (CR-TL-9). Używa obrazów zbudowanych z local/Dockerfile.* zamiast
+# budowania ich przez docker compose. Uruchomienie (z katalogu portal/backend):
+#   docker compose -f docker-compose.local.yml -f ../local/compose.local.yml up -d mcod-local-admin mcod-local-api
+services:
+  mcod-local-admin:
+    image: mcod-app:local
+    pull_policy: never
+  mcod-local-api:
+    image: mcod-app:local
+    pull_policy: never
+  mcod-local-cms:
+    image: mcod-app:local
+    pull_policy: never
+  mcod-local-celery:
+    image: mcod-app:local
+    pull_policy: never
+  mcod-local-run:
+    image: mcod-app:local
+    pull_policy: never
+  mcod-db:
+    image: postgresql:17-trixie-mcod
+    pull_policy: never
+  mcod-elasticsearch:
+    pull_policy: never
+    # kontener sesji nie pozwala blokować pamięci (rlimit memlock) – lokalnie bez memory_lock
+    ulimits: !reset {}
+    environment:
+      - discovery.type=single-node
+      - node.name=mcod-elasticsearch
+      - bootstrap.memory_lock=false
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1024m -Xmx1024m
+  mcod-rdfdb:
+    pull_policy: never
+  mcod-redis:
+    pull_policy: never
+  mcod-rabbitmq:
+    pull_policy: never
