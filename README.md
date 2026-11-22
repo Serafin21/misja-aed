@@ -1,5 +1,7 @@
 # Wykaz AED w dane.gov.pl + Mapa danych AED
 
+> **Pierwszy raz? Nie programujesz?** Instrukcja krok po kroku dla Windows – instalacja, uruchomienie i sprawdzenie najważniejszych funkcji: [`INSTRUKCJA_URUCHOMIENIA.md`](INSTRUKCJA_URUCHOMIENIA.md).
+
 Zespół **MKS**, HackNation 2026, zadanie Ministerstwa Cyfryzacji „Misja AED – dane na ratunek”. **Jury: zacznij od [`INSTRUKCJA_DLA_JURY.md`](INSTRUKCJA_DLA_JURY.md).**
 
 Rozwiązanie to **Wykaz AED w portalu dane.gov.pl** + **Mapa danych AED jako strona odczytu** + **akcja „AED w danych” dla dostawców**:
