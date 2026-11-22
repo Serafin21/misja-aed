@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { probeApi } from './api/client';
 import { useMockMode } from './lib/useMockMode';
-import { APP_NAME, APP_TAGLINE, BRAND_NAME } from './components/Brand';
+import { APP_NAME, BRAND_NAME } from './components/Brand';
 import { ExternalLink, Icon } from './components/ui';
 import { About, AccessibilityStatement, Contact, Cookies, Licenses, Privacy } from './pages/Info';
 import { AedCard } from './pages/AedCard';
@@ -120,9 +120,9 @@ export function App() {
       <a className="skip-link" href="#main">Przejdź do treści głównej</a>
       <header className="site-header">
         <div className="container site-header__inner">
-          <Link to="/" className="brand" aria-label={`${APP_NAME} – strona główna`}>
-            <span className="brand__mark brand__mark--app"><Icon name="pin" /></span>
-            <span>{APP_NAME}<span className="brand__slogan" aria-hidden="true">{APP_TAGLINE}</span></span>
+          <Link to="/" className="brand brand--logo">
+            <img className="brand__logo" src={`${import.meta.env.BASE_URL}akcja/logo/svg/aed-w-danych_poziome_kolor.svg`} alt={`${BRAND_NAME} – Dane prosto z serca`} width={686} height={200} />
+            <span className="visually-hidden"> – strona główna</span>
           </Link>
           <button id="menu-btn" type="button" className="menu-btn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu((m) => !m)}>
             {menu ? 'Zamknij' : 'Menu'}

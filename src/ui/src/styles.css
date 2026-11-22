@@ -607,6 +607,13 @@ thead th { background: var(--color-surface); }
 .e2__geo:empty { display: none; }
 .e2__geo { margin: var(--space-s) 0 0; }
 /* Home: small link to the campaign brand book */
+.tiles--two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+.tiles--two .tile { padding: var(--space-l, 2rem); }
+.tiles--two .tile__title { font-size: 1.6rem; }
+.home-title { margin-top: var(--space-l, 2rem); }
+.brand--logo { padding: 6px 0; }
+.brand__logo { display: block; height: 80px; width: auto; }
+@media (max-width: 600px) { .brand__logo { height: 56px; } }
 .brandbook-link { margin-top: var(--space-l, 2rem); font-size: 1rem; }
 /* Responsive fix (320 px): the single-column E2 grid grew to the fieldset's min-content width (368 px) */
 @media (max-width: 1099px) { .e2 { grid-template-columns: minmax(0, 1fr); } }
