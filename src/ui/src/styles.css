@@ -639,3 +639,10 @@ fieldset.mode-switch, .e2__filters fieldset { min-width: 0; }
 .photo-field > * { min-width: 0; max-width: 100%; }
 .photo-field input[type="file"] { max-width: 100%; }
 .admin-section { min-width: 0; overflow-x: auto; position: relative; } /* relative: hidden screen-reader labels stay inside */
+
+/* „Dla instytucji” – typical portal validation errors: message on top (wraps), fix below */
+.portal-errors { margin: 0 0 var(--space); display: grid; gap: var(--space-s); }
+.portal-errors__item { padding: var(--space-s) var(--space); border-left: 4px solid var(--color-border-input); background: var(--color-surface); }
+.portal-errors dt { margin: 0 0 4px; }
+.portal-errors dt code { white-space: normal; word-break: normal; overflow-wrap: break-word; font-size: .95rem; }
+.portal-errors dd { margin: 0; }

@@ -1,7 +1,7 @@
 // E5 – Dla instytucji. Start: two big choices – "Mam listę AED w pliku" / "Wpiszę AED ręcznie".
 // File: template → drop zone with progress → only unrecognised columns → results in 3 groups → publish ready ones.
 // Manual: the same 4-step wizard as E4 + institution data, a list, one publication at the end. Draft saved on the device.
-import { Fragment, useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react';
 import {
   approveImport, getSession, confirmMapping, createAed, decideDuplicates, fixImportRows, HttpError, isMockMode, NotSupported, templateUrl, uploadFile,
   type ImportInfo,
@@ -45,8 +45,8 @@ function WykazAedGuide() {
         <li><strong>Aktualizacja:</strong> dodajcie nową wersję pliku w tym samym zasobie. Instytucja ma jeden wykaz AED.</li>
       </ol>
       <h3>Typowe błędy walidacji i jak je poprawić</h3>
-      <dl className="facts">
-        {PORTAL_ERRORS.map((e) => (<Fragment key={e.msg}><dt><code>{e.msg}</code></dt><dd>{e.fix}</dd></Fragment>))}
+      <dl className="portal-errors">
+        {PORTAL_ERRORS.map((e) => (<div key={e.msg} className="portal-errors__item"><dt><code>{e.msg}</code></dt><dd>{e.fix}</dd></div>))}
       </dl>
       <p>Chcesz dołączyć? Zobacz <Link to="/akcja">akcję „AED w danych”</Link> – materiały i odznaka dla instytucji, które opublikowały wykaz.</p>
     </section>
