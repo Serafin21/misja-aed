@@ -8,7 +8,9 @@ COPY src/ui/ ./
 RUN VITE_USE_MOCKS=0 npm run build
 
 FROM python:3.12-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TZ=Europe/Warsaw AED_DB=/data/aed.sqlite3 AED_UI_DIR=/app/ui
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TZ=Europe/Warsaw AED_DB=/data/aed.sqlite3 AED_UI_DIR=/app/ui \
+    MALLOC_ARENA_MAX=2 AED_ODSWIEZANIE=wylaczone
+# 512 MB instance: fewer malloc arenas; no nightly refresh in the process (data is reseeded on every start anyway)
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
