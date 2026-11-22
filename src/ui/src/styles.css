@@ -632,3 +632,10 @@ fieldset.mode-switch, .e2__filters fieldset { min-width: 0; }
 
 /* narrow phones: app name + menu button on one line */
 @media (max-width: 420px) { .menu-btn { margin-left: auto; padding: 0 10px; } .brand { font-size: .95rem; } }
+
+/* WCAG 1.4.10 (no horizontal page scroll at 320 px): the photo field and wide admin tables stay inside the screen;
+   a wide table scrolls inside its own section, not the whole page */
+.photo-field { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.photo-field > * { min-width: 0; max-width: 100%; }
+.photo-field input[type="file"] { max-width: 100%; }
+.admin-section { min-width: 0; overflow-x: auto; position: relative; } /* relative: hidden screen-reader labels stay inside */
