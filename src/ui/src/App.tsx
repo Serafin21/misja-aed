@@ -20,7 +20,7 @@ import { Zgloszenia } from './pages/Zgloszenia';
 import { Link, matchPath, navigate, useLocation, usePageTitle } from './router';
 
 // Top menu (owner's decision 22.11): guest – Znajdź AED, Pierwsza pomoc, O projekcie, "Zaloguj się, aby dodać AED";
-// institution – the same three + "Zgłoszenia AED"; administrator – ONLY "Zgłoszenia AED" and "Panel administratora".
+// institution – the same three + "Zgłoszenia AED"; administrator – ONLY "Zgłoszenia AED" and "Panel moderacji prototypu".
 // Logging out and changing the password are at the top of those pages.
 const NAV = [
   { to: '/znajdz', label: 'Znajdź AED' },
@@ -30,13 +30,13 @@ const NAV = [
 const ROLE_NAV: Record<string, { to: string; label: string }[]> = {
   gosc: [{ to: '/logowanie', label: 'Zaloguj się, aby dodać AED' }],
   dysponent: [{ to: '/zgloszenia-aed', label: 'Zgłoszenia AED' }],
-  administrator: [{ to: '/zgloszenia-aed', label: 'Zgłoszenia AED' }, { to: '/panel', label: 'Panel administratora' }],
+  administrator: [{ to: '/zgloszenia-aed', label: 'Zgłoszenia AED' }, { to: '/panel', label: 'Panel moderacji prototypu' }],
 };
 
 // Breadcrumb labels for pages outside the menu
 const PAGE_LABELS: Record<string, string> = {
   '/mapa': 'Mapa i lista AED', '/dane': 'Eksport listy', '/zrodla': 'Dostawcy', '/akcja': 'Akcja „AED w danych”',
-  '/panel': 'Panel administratora', '/logowanie': 'Logowanie', '/zglos': 'Zgłoś problem z AED',
+  '/panel': 'Panel moderacji prototypu', '/logowanie': 'Logowanie', '/zglos': 'Zgłoś problem z AED',
   '/dysponenci': 'Dla instytucji', '/zgloszenia-aed': 'Zgłoszenia AED', '/wniosek-o-konto': 'Wniosek o konto',
 };
 

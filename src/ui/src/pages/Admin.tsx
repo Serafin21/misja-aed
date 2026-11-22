@@ -1,4 +1,4 @@
-// Panel administratora (/panel) – owner's decision 22.11 (MODEL_ROL v1.4): the administrator manages institutions and
+// Panel moderacji prototypu (/panel, CR-TL-9; dawniej „Panel administratora”) – owner's decision 22.11 (MODEL_ROL v1.4): the administrator manages institutions and
 // their accounts (data, login, password), every AED (edit, delete, assign to an institution), the aggregation of providers'
 // datasets, gaps, residents' reports without an institution, reminders, the event log and data refresh.
 // Approvals (new AED, changes, account requests) are on the page "Zgłoszenia AED".
@@ -20,10 +20,10 @@ const n = (x: number | undefined) => (x ?? 0).toLocaleString('pl-PL');
 const when = (t: string | null | undefined) => (t ? t.replace('T', ', ') : '—');
 
 export function Admin() {
-  usePageTitle('Panel administratora');
+  usePageTitle('Panel moderacji prototypu');
   return (
     <>
-      <h1 id="page-title">Panel administratora</h1>
+      <h1 id="page-title">Panel moderacji prototypu</h1>
       <RequireLogin role="administrator">
         <SessionBar />
         <p className="lead">Instytucje i ich konta, wszystkie AED (edycja, usuwanie, przypisanie do instytucji) i narzędzia list. Nowe AED, zmiany i wnioski o konto zatwierdzasz w <Link to="/zgloszenia-aed">Zgłoszenia AED</Link>.</p>
@@ -448,7 +448,7 @@ const EDIT_FIELDS: [keyof Aed, string, 'text' | 'area' | 'bool' | 'num' | 'selec
   ['szerokosc_geograficzna', 'Szerokość geograficzna', 'num'], ['dlugosc_geograficzna', 'Długość geograficzna', 'num'],
   ['dysponent_nazwa', 'Dysponent (nazwa w danych)', 'text'], ['kontakt_telefon', 'Telefon kontaktowy', 'text'], ['uwagi', 'Uwagi', 'area'],
 ];
-const WARSTWA: Record<AedAdmin['warstwa'], string> = { lista: 'zbiór instytucji', pomocnicza: 'do sprawdzenia (OSM)', aplikacja: 'dodane w aplikacji' };
+const WARSTWA: Record<AedAdmin['warstwa'], string> = { lista: 'zbiór instytucji', pomocnicza: 'do sprawdzenia (OSM)', aplikacja: 'dodane w prototypie (nieopublikowane w dane.gov.pl)' };
 
 function AllAed() {
   const [q, setQ] = useState('');
