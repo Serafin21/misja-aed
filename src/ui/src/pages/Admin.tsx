@@ -4,7 +4,7 @@
 // Approvals (new AED, changes, account requests) are on the page "Zgłoszenia AED".
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  adminAedAssign, adminAedDelete, adminAedEdit, adminAedList, aggregationReport, createAccount, deleteAccount, eventLog, getAed,
+  adminAedAssign, adminAedDelete, adminAedEdit, adminAedList, aggregationReport, createAccount, deleteAccount, viewPassword, eventLog, getAed,
   lateDatasets, listAccounts, listGaps, refreshNow, refreshStatus, runAggregation, sendReminders, updateAccount,
   type AedAdmin, type Konto, type RaportZbioru, type StanOdswiezania,
 } from '../api/client';
@@ -226,7 +226,8 @@ function Accounts() {
   const empty = { rola: 'dysponent' as 'dysponent' | 'administrator', login: '', haslo: '', dysponent_nazwa: '', dostawca_podstawa: '' as PodstawaPublikacji | '', email: '', telefon: '', regon: '' };
   const [form, setForm] = useState(empty);
   const [creating, setCreating] = useState(false);
-  const [secret, setSecret] = useState<{ login: string; haslo: string } | null>(null);
+  const [secret, setSecret] = useState<{ login: string; haslo: string; info: string } | null>(null);
+  const [shown, setShown] = useState<Record<string, string>>({});
   const [err, setErr] = useState<Error | null>(null);
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
@@ -239,13 +240,14 @@ function Accounts() {
     try {
       const inst = form.rola === 'dysponent';
       if (inst && !form.dostawca_podstawa) throw new Error('Wybierz podstawę publikacji.');
-      if (form.haslo && form.haslo.length < 8) throw new Error('Hasło musi mieć co najmniej 8 znaków (albo zostaw puste – wygenerujemy je).');
       const r = await createAccount({ login: form.login.trim(), rola: form.rola, ...(form.haslo ? { haslo: form.haslo } : {}),
         dysponent_nazwa: inst ? form.dysponent_nazwa.trim() : (form.dysponent_nazwa.trim() || 'Ministerstwo Cyfryzacji'),
         ...(inst ? { dostawca_podstawa: form.dostawca_podstawa as PodstawaPublikacji } : {}), ...(form.email.trim() ? { email: form.email.trim() } : {}) });
       const extra = { ...(form.telefon.trim() ? { telefon: form.telefon.trim() } : {}), ...(form.regon.trim() ? { regon: form.regon.trim() } : {}) };
       if (Object.keys(extra).length) await updateAccount(r.data.login, extra);
-      setSecret({ login: r.data.login, haslo: r.haslo_jednorazowe });
+      setSecret({ login: r.data.login, haslo: r.haslo_jednorazowe,
+        info: !r.haslo_wygenerowane ? 'Konto założone z hasłem, które wpisałeś.'
+          : form.haslo ? 'Wpisane hasło miało mniej niż 8 znaków – komputer wygenerował nowe.' : 'Hasło wygenerował komputer.' });
       setTimeout(() => document.getElementById('acc-secret')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
       setForm(empty); setCreating(false); st.reload();
     } catch (ex) { setErr(ex as Error); } finally { setBusy(false); }
@@ -302,7 +304,8 @@ function Accounts() {
             <dt>Login</dt><dd><span className="secret">{secret.login}</span></dd>
             <dt>Hasło</dt><dd><span className="secret">{secret.haslo}</span></dd>
           </dl>
-          <p className="hint">Zapisz hasło teraz – później nie da się go odczytać. Jeśli zginie, ustawisz nowe przyciskiem „Edytuj” przy koncie. Instytucja może je zmienić po zalogowaniu („Zmień hasło”).</p>
+          <p><strong>{secret.info}</strong></p>
+          <p className="hint">Login i hasło każdego konta możesz zawsze podejrzeć w tabeli poniżej (przycisk „Pokaż hasło”). Instytucja może zmienić hasło po zalogowaniu („Zmień hasło”).</p>
           <p className="form-actions">
             <button type="button" className="btn btn--secondary" onClick={() => navigator.clipboard?.writeText(`Login: ${secret.login}\nHasło: ${secret.haslo}`)}>Kopiuj login i hasło</button>
             <button type="button" className="btn btn--tertiary" onClick={() => setSecret(null)}>Gotowe – ukryj</button>
@@ -328,7 +331,7 @@ function Accounts() {
               <input id="acc-login" required minLength={3} maxLength={60} autoCapitalize="none" spellCheck={false}
                 value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} placeholder="np. UM Krosno albo aed@krosno.pl" /></div>
             <div className="field"><label htmlFor="acc-pass">Hasło (nieobowiązkowe)</label>
-              <p id="acc-pass-hint" className="hint">Wpisz hasło albo zostaw puste – wygenerujemy je i pokażemy po założeniu konta.</p>
+              <p id="acc-pass-hint" className="hint">Co najmniej 8 znaków. <strong>Jeśli zostawisz puste albo wpiszesz krótsze, komputer wygeneruje hasło sam</strong> i pokaże je po założeniu konta.</p>
               <input id="acc-pass" type="text" autoComplete="off" aria-describedby="acc-pass-hint" value={form.haslo} onChange={(e) => setForm({ ...form, haslo: e.target.value })} /></div>
             <div className="field"><label htmlFor="acc-regon">REGON (nieobowiązkowy)</label>
               <input id="acc-regon" inputMode="numeric" value={form.regon} onChange={(e) => setForm({ ...form, regon: e.target.value })} /></div>
@@ -363,12 +366,21 @@ function Accounts() {
       {st.error && <ErrorBox error={st.error} onRetry={st.reload} />}
       {st.data && (rows.length === 0 ? <p>Brak kont dla tych warunków.</p> : (
         <table className="admin-table">
-          <thead><tr><th scope="col">Instytucja / osoba</th><th scope="col">Login</th><th scope="col">Kontakt</th><th scope="col">AED</th><th scope="col">Stan</th><th scope="col">Działania</th></tr></thead>
+          <thead><tr><th scope="col">Instytucja / osoba</th><th scope="col">Login i hasło</th><th scope="col">Kontakt</th><th scope="col">AED</th><th scope="col">Stan</th><th scope="col">Działania</th></tr></thead>
           <tbody>
             {rows.map((k) => (
               <tr key={k.login}>
                 <td>{k.dysponent_nazwa}<div className="hint">{k.rola === 'administrator' ? 'administrator' : 'instytucja'}{k.regon ? ` · REGON ${k.regon}` : ''}{k.dostawca_podstawa ? ` · ${PODSTAWA_LABEL[k.dostawca_podstawa]}` : ''}</div></td>
-                <td><code>{k.login}</code>{k.utworzono && <div className="hint">od {when(k.utworzono)}</div>}</td>
+                <td><code>{k.login}</code>
+                  <div className="pw-view">
+                    {shown[k.login] !== undefined
+                      ? <><span className="secret">{shown[k.login] || '—'}</span>
+                        <button type="button" className="btn btn--tertiary btn--small" onClick={() => setShown((x) => { const y = { ...x }; delete y[k.login]; return y; })}>Ukryj</button></>
+                      : <button type="button" className="btn btn--tertiary btn--small" onClick={async () => {
+                        try { const v = await viewPassword(k.login); setShown((x) => ({ ...x, [k.login]: v.haslo ?? '' })); if (!v.haslo && v.uwaga) setInfo(`${k.login}: ${v.uwaga}`); }
+                        catch (ex) { setErr(ex as Error); } }}>Pokaż hasło<span className="visually-hidden"> konta {k.login}</span></button>}
+                  </div>
+                  {k.utworzono && <div className="hint">od {when(k.utworzono)}</div>}</td>
                 <td>{k.email ?? '—'}<div className="hint">{k.telefon ?? ''}</div></td>
                 <td>{k.rola === 'administrator' ? '—' : n(k.liczba_aed)}</td>
                 <td>{k.oczekuje ? 'czeka na zatwierdzenie' : k.aktywne ? 'aktywne' : 'zablokowane'}</td>

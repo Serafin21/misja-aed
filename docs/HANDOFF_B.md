@@ -378,3 +378,9 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Czas: nd 00:50
 - Zrobione: zakładanie konta w panelu – login bez ograniczeń „małe litery/kropki” (dowolny, np. „UM Krosno” albo e-mail; serwer zamienia na małe litery), **pole „Hasło (nieobowiązkowe)”** – administrator wpisuje hasło albo zostawia puste i dostaje wygenerowane. Po założeniu wyraźna ramka „Login / Hasło” (przewija się do niej) z przyciskiem „Kopiuj login i hasło”. Wniosek o konto – ta sama, luźniejsza reguła loginu.
 - Sprawdzone: konto „UM Krosno” z hasłem wpisanym przez administratora loguje się i od razu widzi 21 AED Krosna.
+
+## HANDOFF #34
+
+- Czas: nd 01:10
+- Zrobione: panel → „Instytucje i konta”: kolumna **„Login i hasło”** z przyciskiem „Pokaż hasło” / „Ukryj” przy każdym koncie (`GET /konta/{login}/haslo`); przy zakładaniu konta jasna informacja: „Co najmniej 8 znaków. Jeśli zostawisz puste albo wpiszesz krótsze, komputer wygeneruje hasło sam”; ramka po założeniu mówi, czy hasło jest wpisane, czy wygenerowane. Formularz AED (`components/AedForm.tsx`): **pinezka ustawia się sama** po wpisaniu miejscowości, ulicy i numeru (po wyjściu z pola) i przed wysłaniem, kod pocztowy uzupełnia się z adresu; przy samej ulicy – komunikat „przesuń pinezkę na budynek”.
+- Sprawdzone: konto z hasłem „abc” → wygenerowane i widoczne w tabeli; instytucja: „Kraków, ul. Floriańska 30” → pinezka i kod 31-021; „Warszawa, al. Jerozolimskie 100” wysłane bez klikania mapy.

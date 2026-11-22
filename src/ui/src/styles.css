@@ -615,3 +615,4 @@ fieldset.mode-switch, .e2__filters fieldset { min-width: 0; }
 .account-secret__data { display: grid; grid-template-columns: max-content 1fr; gap: 4px var(--space-m); font-size: 1.15rem; margin: var(--space-s) 0; }
 .account-secret__data dt { font-weight: var(--font-weight-bold); }
 .account-secret__data dd { margin: 0; }
+.pw-view { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }

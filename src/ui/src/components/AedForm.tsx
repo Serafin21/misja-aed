@@ -115,18 +115,31 @@ export function AedForm({ mode, initial, idAed, submissionId, hasPhoto = false, 
   const set = (p: Partial<Draft>) => setD((x) => ({ ...x, ...p }));
   const photoRequired = mode === 'nowe' || (mode === 'zmiana' && !hasPhoto);
 
-  async function findAddress() {
-    setMsg('');
-    if (!d.miejscowosc.trim() || !d.numer_budynku.trim()) { setMsg('Wpisz najpierw miejscowość i numer budynku.'); return; }
-    setMsg('Szukam adresu…');
+  // address → pin. Runs by itself when the address is complete (leaving the field) and before sending; the button does
+  // the same. Accepts "ul. Floriańska 3", "al. Jerozolimskie 100" (the server tries the official street names).
+  const [geoKey, setGeoKey] = useState(initial && initial.lat !== null ? `${initial.miejscowosc}|${initial.ulica}|${initial.numer_budynku}` : '');
+  async function findAddress(auto = false): Promise<{ lat: number; lon: number; kod?: string } | null> {
+    const key = `${d.miejscowosc.trim()}|${d.ulica.trim()}|${d.numer_budynku.trim()}`;
+    if (!d.miejscowosc.trim() || !d.numer_budynku.trim()) { if (!auto) setMsg('Wpisz najpierw miejscowość i numer budynku.'); return null; }
+    if (auto && key === geoKey && d.lat !== null) return { lat: d.lat, lon: d.lon! };
+    setMsg('Szukam adresu na mapie…');
     try {
-      const hits = await geocodeAddress(`${d.miejscowosc.trim()}, ${d.ulica.trim() ? `${d.ulica.trim()} ` : ''}${d.numer_budynku.trim()}`);
-      const hit = hits.find((h) => h.typ === 'adres') ?? hits.find((h) => h.typ === 'ulica') ?? hits.find((h) => h.typ === 'miejscowosc');
-      if (!hit) { setMsg('Nie znaleziono tego adresu. Sprawdź pisownię albo kliknij miejsce na mapie.'); return; }
-      set({ lat: hit.lat, lon: hit.lon, ...(hit.kod_pocztowy && !d.kod_pocztowy ? { kod_pocztowy: hit.kod_pocztowy } : {}) });
-      setMsg(hit.typ === 'adres' ? `Znaleziono: ${hit.nazwa}. Sprawdź pinezkę – możesz ją przesunąć.` : 'Znaleziono tylko ulicę lub miejscowość – kliknij na mapie dokładne miejsce budynku.');
-    } catch (ex) { setMsg((ex as Error).message); }
+      const q = `${d.miejscowosc.trim()}, ${d.ulica.trim() ? `${d.ulica.trim()} ` : ''}${d.numer_budynku.trim()}`;
+      let hits = await geocodeAddress(q);
+      if (!hits.length && d.ulica.trim()) hits = await geocodeAddress(`${d.miejscowosc.trim()}, ${d.ulica.trim()}`);
+      if (!hits.length) hits = await geocodeAddress(d.miejscowosc.trim());
+      const hit = hits.find((h) => h.typ === 'adres') ?? hits.find((h) => h.typ === 'ulica') ?? hits.find((h) => h.typ === 'miejscowosc' || h.typ === 'gmina');
+      if (!hit) { setMsg('Nie znaleźliśmy tego adresu. Sprawdź pisownię albo kliknij miejsce AED na mapie.'); return null; }
+      const kod = hit.kod_pocztowy && !d.kod_pocztowy.trim() ? hit.kod_pocztowy : undefined;
+      set({ lat: hit.lat, lon: hit.lon, ...(kod ? { kod_pocztowy: kod } : {}) });
+      setGeoKey(key);
+      setErrors((e) => { const x = { ...e }; delete x.szerokosc; if (kod) delete x.kod_pocztowy; return x; });
+      setMsg(hit.typ === 'adres' ? `Znaleziono: ${hit.nazwa}. Pinezka stoi na tym adresie – możesz ją przesunąć.`
+        : `Znaleźliśmy ${hit.typ === 'ulica' ? `ulicę (${hit.nazwa})` : `miejscowość (${hit.nazwa})`}, ale nie ten numer – przesuń pinezkę dokładnie na budynek.`);
+      return { lat: hit.lat, lon: hit.lon, kod };
+    } catch (ex) { setMsg((ex as Error).message); return null; }
   }
+  const autoFind = () => { if (d.miejscowosc.trim() && d.numer_budynku.trim()) void findAddress(true); };
 
   function locate() {
     if (!('geolocation' in navigator)) { setMsg('Ta przeglądarka nie podaje lokalizacji. Wpisz adres albo kliknij mapę.'); return; }
@@ -146,15 +159,20 @@ export function AedForm({ mode, initial, idAed, submissionId, hasPhoto = false, 
 
   async function send(ev: FormEvent) {
     ev.preventDefault(); setFail(null);
-    const e = validate(d, photoRequired);
+    let cur = d;
+    if (d.lat === null || `${d.miejscowosc.trim()}|${d.ulica.trim()}|${d.numer_budynku.trim()}` !== geoKey) {
+      const g = await findAddress(true); // the address was typed but the pin not placed yet
+      if (g) cur = { ...d, lat: g.lat, lon: g.lon, ...(g.kod ? { kod_pocztowy: g.kod } : {}) };
+    }
+    const e = validate(cur, photoRequired);
     setErrors(e); setFocus((f) => f + 1);
     if (Object.keys(e).length) return;
     const body: ZgloszenieAedIn = {
       typ: mode === 'nowe' ? 'nowe' : 'zmiana', id_aed: mode === 'nowe' ? null : idAed ?? null, ...(org ? { organizacja: org } : {}),
-      nazwa_obiektu: d.nazwa_obiektu.trim(), ulica: d.ulica.trim() || null, numer_budynku: d.numer_budynku.trim(), kod_pocztowy: d.kod_pocztowy.trim(),
-      miejscowosc: d.miejscowosc.trim(), szerokosc: d.lat!, dlugosc: d.lon!, opis_lokalizacji: d.opis_lokalizacji.trim(), wewnatrz_budynku: d.wewnatrz === 'tak',
-      dostep: d.dostep as ZgloszenieAedIn['dostep'], dostepny_24h: d.calodobowo === 'tak', godziny: d.calodobowo === 'nie' ? d.godziny.trim() : null,
-      szafka_zamknieta: d.szafka === 'tak', instrukcja_dostepu: d.szafka === 'tak' ? d.instrukcja_dostepu.trim() : null, zdjecie: d.zdjecie,
+      nazwa_obiektu: cur.nazwa_obiektu.trim(), ulica: cur.ulica.trim() || null, numer_budynku: cur.numer_budynku.trim(), kod_pocztowy: cur.kod_pocztowy.trim(),
+      miejscowosc: cur.miejscowosc.trim(), szerokosc: cur.lat!, dlugosc: cur.lon!, opis_lokalizacji: cur.opis_lokalizacji.trim(), wewnatrz_budynku: cur.wewnatrz === 'tak',
+      dostep: cur.dostep as ZgloszenieAedIn['dostep'], dostepny_24h: cur.calodobowo === 'tak', godziny: cur.calodobowo === 'nie' ? cur.godziny.trim() : null,
+      szafka_zamknieta: cur.szafka === 'tak', instrukcja_dostepu: cur.szafka === 'tak' ? cur.instrukcja_dostepu.trim() : null, zdjecie: cur.zdjecie,
     };
     if (mode === 'poprawka' && !idAed) body.typ = 'nowe';
     setBusy(true);
@@ -167,11 +185,11 @@ export function AedForm({ mode, initial, idAed, submissionId, hasPhoto = false, 
     } finally { setBusy(false); }
   }
 
-  const text = (k: keyof Draft, id: string, label: string, o: { hint?: string; req?: boolean; mode?: 'numeric'; area?: boolean; max?: number } = {}) => {
+  const text = (k: keyof Draft, id: string, label: string, o: { hint?: string; req?: boolean; mode?: 'numeric'; area?: boolean; max?: number; geo?: boolean } = {}) => {
     const er = errors[k as string];
     const desc = [o.hint ? `${id}-hint` : '', er ? `${id}-err` : ''].filter(Boolean).join(' ') || undefined;
     const common = { id, value: String(d[k] ?? ''), maxLength: o.max, 'aria-invalid': !!er, 'aria-describedby': desc, required: o.req !== false,
-      onChange: (e: { target: { value: string } }) => set({ [k]: e.target.value } as Partial<Draft>) };
+      onChange: (e: { target: { value: string } }) => set({ [k]: e.target.value } as Partial<Draft>), onBlur: o.geo ? autoFind : undefined };
     return (
       <div className="field">
         <label htmlFor={id}>{label}{o.req !== false && <Req />}</label>
@@ -203,19 +221,19 @@ export function AedForm({ mode, initial, idAed, submissionId, hasPhoto = false, 
       <h3>1. Adres</h3>
       {text('nazwa_obiektu', 'za-nazwa', 'Nazwa budynku lub miejsca', { hint: 'Np. Szkoła Podstawowa nr 5, Urząd Gminy, Hala sportowa.', max: 200 })}
       <div className="filters__grid">
-        {text('miejscowosc', 'za-miejscowosc', 'Miejscowość', { max: 100 })}
-        {text('ulica', 'za-ulica', 'Ulica', { hint: 'Puste, jeśli w miejscowości nie ma ulic.', req: false, max: 120 })}
-        {text('numer_budynku', 'za-numer', 'Numer budynku', { max: 20 })}
+        {text('miejscowosc', 'za-miejscowosc', 'Miejscowość', { max: 100, geo: true })}
+        {text('ulica', 'za-ulica', 'Ulica', { hint: 'Np. „Floriańska” albo „ul. Floriańska”. Puste, jeśli w miejscowości nie ma ulic.', req: false, max: 120, geo: true })}
+        {text('numer_budynku', 'za-numer', 'Numer budynku', { max: 20, geo: true })}
         {text('kod_pocztowy', 'za-kod', 'Kod pocztowy', { hint: 'W formie 00-000.', mode: 'numeric', max: 6 })}
       </div>
       <p className="form-actions">
-        <button id="za-szukaj" type="button" className="btn btn--secondary" onClick={findAddress}>Znajdź adres na mapie</button>
+        <button id="za-szukaj" type="button" className="btn btn--secondary" onClick={() => void findAddress()}>Znajdź adres na mapie</button>
         <button type="button" className="btn btn--secondary" onClick={locate}><Icon name="locate" />Moja lokalizacja</button>
       </p>
-      <p role="status" className="hint">{msg}</p>
+      <p role="status" className="hint">{msg || 'Pinezka ustawi się sama po wpisaniu miejscowości, ulicy i numeru. Możesz ją przesunąć, klikając mapę.'}</p>
       <MapView items={[]} picked={d.lat !== null && d.lon !== null ? { lat: d.lat, lon: d.lon } : null}
         goTo={d.lat !== null && d.lon !== null ? { key: `${d.lat},${d.lon}`, lat: d.lat, lon: d.lon, zoom: 18 } : null}
-        onPick={(p) => { set({ lat: p.lat, lon: p.lon }); setMsg('Przesunięto pinezkę w wybrane miejsce.'); }}
+        onPick={(p) => { set({ lat: p.lat, lon: p.lon }); setGeoKey(`${d.miejscowosc.trim()}|${d.ulica.trim()}|${d.numer_budynku.trim()}`); setMsg('Przesunięto pinezkę w wybrane miejsce.'); }}
         label="Mapa: pinezka pokazuje położenie AED. Kliknij albo przeciągnij, aby ją przesunąć." height={300} cluster={false} />
       {errors.szerokosc && <p className="field-error">{errors.szerokosc}</p>}
 
