@@ -156,3 +156,21 @@ def test_podglad_hasla_i_haslo_za_krotkie(client):
     r = client.post("/api/v1/konta", headers=adm, json={"login": "szkola5", "haslo": "Dobre-haslo-9", "dysponent_nazwa": "Szkoła 5",
                                                         "dostawca_podstawa": "wlasciciel"})
     assert r.json()["haslo_wygenerowane"] is False and r.json()["haslo_jednorazowe"] == "Dobre-haslo-9"
+
+
+def test_zatwierdzanie_z_listy(client):
+    adm = _h(client, "admin", "admin123")
+    client.post("/api/v1/konta/wnioski", json={"nazwa_instytucji": "Fundacja X", "regon": "999000077", "podstawa": "weryfikujacy",
+                                               "email_sluzbowy": "a@x.example", "telefon": "+48 120 000 002", "login": "fundacja.x", "haslo": "Haslo-12345"})
+    k = next(k for k in client.get("/api/v1/konta", headers=adm).json()["data"] if k["login"] == "fundacja.x")
+    assert k["oczekuje"] and k["wniosek_id"]
+    assert client.post(f"/api/v1/konta/wnioski/{k['wniosek_id']}/decyzja", headers=adm, json={"decyzja": "zatwierdz"}).status_code == 200
+    k = next(k for k in client.get("/api/v1/konta", headers=adm).json()["data"] if k["login"] == "fundacja.x")
+    assert k["aktywne"] and k["wniosek_id"] is None
+    inst = _instytucja(client, adm)
+    aid = "AED-PL-B939F7EBA4"
+    a = client.get(f"/api/v1/aed/{aid}").json()["data"]["attributes"]
+    zid = client.post("/api/v1/zgloszenia-aed", headers=inst, json=_aed(typ="zmiana", id_aed=aid, szerokosc=a["szerokosc_geograficzna"],
+                                                                         dlugosc=a["dlugosc_geograficzna"])).json()["id"]
+    rows = client.get("/api/v1/admin/aed?oczekujace=true", headers=adm).json()["data"]
+    assert [r["id_aed"] for r in rows] == [aid] and rows[0]["zgloszenie"]["id"] == zid

@@ -955,6 +955,7 @@ def _konto_out(a: dict) -> dict:
     return {k: a.get(k) for k in ("login", "rola", "dysponent_nazwa", "email", "aktywne", "utworzono", "utworzyl", "regon", "telefon")} | \
         {"aktywne": bool(a.get("aktywne")), "dostawca_podstawa": a.get("podstawa"),
          "oczekuje": not a.get("aktywne") and str(a.get("utworzyl") or "").startswith("wniosek:"),
+         "wniosek_id": str(a.get("utworzyl"))[8:] if str(a.get("utworzyl") or "").startswith("wniosek:") and not a.get("aktywne") else None,
          "liczba_aed": sum(1 for i in st.records if _same(st.organizacja(i), a.get("dysponent_nazwa")))}
 
 
@@ -1843,16 +1844,23 @@ def admin_aed_submission_decide(zid: str, body: DecyzjaZglAedIn, role: str = Dep
 
 # ---------- administrator: every AED (owner's decision 22.11: the administrator may edit, delete and assign any AED) ----------
 @app.get(f"{API}/admin/aed", tags=["administrator"], summary="Wszystkie AED (lista i warstwa pomocnicza) z wyszukiwaniem")
-def admin_aed_list(q: Optional[str] = None, organizacja: Optional[str] = None,
+def admin_aed_list(q: Optional[str] = None, organizacja: Optional[str] = None, oczekujace: bool = Query(False, description="tylko AED ze zmianą czekającą na zatwierdzenie"),
                    warstwa_: Optional[str] = Query("wszystkie", alias="warstwa", description="wszystkie | lista | pomocnicza | aplikacja"),
                    page: int = Query(1, ge=1), per_page: int = Query(50, ge=1, le=500), role: str = Depends(require("administrator"))):
     st = get_store()
     edited = {r["id_aed"] for r in st.conn.execute("SELECT id_aed FROM edycje")}
+    pending = {}  # AED with a change waiting for approval → its submission (decide from the list)
+    for r in st.conn.execute("SELECT data FROM zgloszenia_aed WHERE status='oczekuje'"):
+        z = db.loads(r["data"])
+        if z.get("id_aed"):
+            pending[z["id_aed"]] = {"id": z["id"], "nadawca": z.get("organizacja"), "utworzono": z.get("utworzono")}
     qn = (q or "").strip().lower()
     out = []
     for i, r in st.records.items():
         org = st.organizacja(i)
         if warstwa_ == "aplikacja" and i not in st.aplikacja:
+            continue
+        if oczekujace and i not in pending:
             continue
         if warstwa_ in ("lista", "pomocnicza") and warstwa(r) != warstwa_:
             continue
@@ -1865,7 +1873,7 @@ def admin_aed_list(q: Optional[str] = None, organizacja: Optional[str] = None,
     total = len(out)
     rows = [{"id_aed": i, "nazwa_obiektu": r.get("nazwa_obiektu"), "adres": " ".join(str(x) for x in (r.get("ulica"), r.get("numer_budynku")) if x),
              "miejscowosc": r.get("miejscowosc"), "gmina": r.get("gmina"), "warstwa": "aplikacja" if i in st.aplikacja else warstwa(r),
-             "organizacja": org, "edytowane": i in edited, "data_weryfikacji": r.get("data_weryfikacji"),
+             "organizacja": org, "edytowane": i in edited, "data_weryfikacji": r.get("data_weryfikacji"), "zgloszenie": pending.get(i),
              "szerokosc": r["szerokosc_geograficzna"], "dlugosc": r["dlugosc_geograficzna"]}
             for _, i, r, org in out[(page - 1) * per_page: page * per_page]]
     return {"data": rows, "meta": {"count": total, "page": page, "per_page": per_page}}
