@@ -437,3 +437,7 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Poprawki w instrukcji: dokładne komunikaty, „Wyloguj” jest na stronie „Zgłoszenia AED” (nie w menu), po zalogowaniu otwiera się od razu „Zgłoszenia AED”, w 8.4 pola Rodzaj instytucji i zasady + „Sprawdź plik”, krok dopasowania kolumn pojawia się tylko przy nierozpoznanych kolumnach, przy poprawce trzeba ponownie dołączyć zdjęcie, uwaga o innym loginie przy drugim przejściu.
 - Uwaga dla TL: przy duplikatach komunikat „Wybór „To inne AED” zadziała po aktualizacji serwera” – brak obsługi po stronie API (strefa A). W bazie u B zostały dane testowe: konto `szkola1` i AED „Szkoła Podstawowa nr 1”, Floriańska 3, Kraków.
 - Użycie AI: Claude (Opus 5.5) przeklikał ścieżkę i poprawił instrukcję; człowiek B zlecił test.
+
+## HANDOFF #39 (portal uruchomiony)
+
+- Zrzuty z uruchomionego portalu dane.gov.pl w `pitch/zrzuty/01–06` i `12` (opis: `pitch/zrzuty/README.md`). Prezentacja (`pitch/prezentacja.md`, slajdy 3–7 i 10), `pitch/opis_projektu.md` i `README.md` – bez „portalu nie uruchomiliśmy”; testy Wykazu AED 28/28; znak umowny „-” na slajdzie 4.

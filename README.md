@@ -103,7 +103,7 @@ Wykaz AED powtarza mechanizm, który portal już ma – wykaz chronionych danych
 
 ## Co w prototypie jest symulacją
 
-- Portalu dane.gov.pl z Wykazem AED nie uruchomiliśmy w całości w środowisku hackathonu (blokada pobierania wtyczek Elasticsearch); kroki na zwykłym komputerze: `portal/README.md`. Testy Wykazu AED bez bazy: 23 passed.
+- Portal dane.gov.pl z Wykazem AED uruchomiliśmy lokalnie (panel, API, Celery, Elasticsearch) i przeszliśmy na nim całą ścieżkę: wykaz instytucji → walidacja → „Wykaz AED – wykaz zbiorczy” → `/aed-aggregated` → mapa (zrzuty `pitch/zrzuty/01–06`, kroki `portal/README.md`). Dane w portalu to 2 instytucje testowe. Testy Wykazu AED: 28/28 (25 bez bazy, 3 z bazą).
 - Bez `PORTAL_API` mapa czyta pakiety fikcyjnych dostawców z `data/dostawcy/` (kształt odpowiedzi API 1.4) i 3 prawdziwe zbiory samorządów opublikowane przed wzorcem (Krosno, Przemyśl, Marki – zbiory przejściowe).
 - Edycja AED przez administratora i zatwierdzanie zgłoszeń od razu na mapę – tryb pokazowy prototypu, docelowo wyłączony (`docs/MODEL_ROL.md`, „Zmiany v2.1”).
 - Zgłoszenia mieszkańców i przypomnienia o aktualizacji są symulowane w aplikacji; docelowo komentarze do zbiorów i powiadomienia dane.gov.pl.
