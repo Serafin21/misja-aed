@@ -341,7 +341,7 @@ export const searchDgp = (q: string, importuj: boolean) =>
 export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; dostawca_podstawa?: PodstawaPublikacji | null; email: string | null; telefon?: string | null; regon?: string | null; aktywne: boolean; oczekuje?: boolean; utworzono: string | null; utworzyl: string | null; liczba_aed: number }
 export const listAccounts = () => http<{ data: Konto[] }>(`/konta`).then((r) => r.data);
 export const createAccount = (b: { login: string; dysponent_nazwa: string; dostawca_podstawa?: PodstawaPublikacji; email?: string; rola?: Role; haslo?: string }) =>
-  http<{ data: Konto; haslo_jednorazowe: string }>(`/konta`, json('POST', b));
+  http<{ data: Konto; haslo_jednorazowe: string; haslo_wygenerowane?: boolean; meta?: { komunikat: string } }>(`/konta`, json('POST', b));
 export const resetPassword = (login: string) => http<{ data: Konto; haslo_jednorazowe: string }>(`/konta/${encodeURIComponent(login)}/reset-hasla`, json('POST'));
 export const setAccountActive = (login: string, aktywne: boolean) => http<{ data: Konto }>(`/konta/${encodeURIComponent(login)}`, json('PATCH', { aktywne }));
 export const changeMyPassword = (stare: string, nowe: string) => http<{ ok: boolean }>(`/konta/ja/haslo`, json('POST', { stare, nowe }));
@@ -479,5 +479,7 @@ export const adminAedAssign = (id: string, organizacja: string | null) =>
   http<{ data: { organizacja: string | null } }>(`/admin/aed/${encodeURIComponent(id)}/przypisanie`, json('PUT', { organizacja }));
 export const updateAccount = (login: string, ch: Partial<{ aktywne: boolean; dysponent_nazwa: string; email: string; telefon: string; regon: string;
   dostawca_podstawa: PodstawaPublikacji; nowy_login: string; haslo: string }>) => http<{ data: Konto }>(`/konta/${encodeURIComponent(login)}`, json('PATCH', ch));
+export const viewPassword = (login: string) =>
+  http<{ data: { login: string; haslo: string | null; uwaga: string | null } }>(`/konta/${encodeURIComponent(login)}/haslo`).then((r) => r.data);
 export const deleteAccount = (login: string) => http<{ ok: boolean }>(`/konta/${encodeURIComponent(login)}`, json('DELETE'));
 
