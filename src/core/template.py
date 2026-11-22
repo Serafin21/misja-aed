@@ -58,6 +58,7 @@ def template_xlsx() -> bytes:
     info["A1"].font = Font(bold=True, size=14)
     rows = ["Wypełnij arkusz „dane”: jeden wiersz = jedno urządzenie. Zielone kolumny są wymagane.",
             "Wartości logiczne: true / false. Daty: rrrr-mm-dd. Współrzędne: WGS 84, kropka dziesiętna.",
+            "Bez pustych komórek (zasady dane.gov.pl): brak wartości oznacz znakiem umownym „-” i zaznacz go przy zasobie.",
             "Godziny dostępności w składni opening_hours, np. 24/7 albo Mo-Fr 08:00-16:00; Sa 09:00-13:00.",
             "Plik wgraj w panelu dysponenta – system sprawdzi go i pokaże raport błędów."]
     for i, t in enumerate(rows, start=3):

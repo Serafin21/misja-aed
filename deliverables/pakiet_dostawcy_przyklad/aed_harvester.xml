@@ -27,6 +27,7 @@
         <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
         <hasResearchData>false</hasResearchData>
         <containsProtectedData>false</containsProtectedData>
+        <specialSigns><specialSign>-</specialSign></specialSigns>
         <regions><terytIdent>1465011</terytIdent></regions>
       </resource>
     </resources>

@@ -63,3 +63,18 @@ def test_znak_umowny_z_portalu_to_brak_wartosci(client, monkeypatch):
     attrs = a["attributes"]
     assert attrs["pietro"] is None and attrs["numer_lokalu"] is None and attrs["kontakt_telefon"] is None and attrs["instrukcja_dostepu"] is None
     assert a["meta"]["mozliwe_duplikaty"] == []
+
+
+def test_pakiet_dla_instytucji_bez_pustych_komorek():
+    """Plik do publikacji: zasady dane.gov.pl – puste komórki jako znak umowny „-” (inaczej ogólna walidacja portalu
+    odrzuca kolumny liczbowe i daty); XML deklaruje ten znak umowny; „-” czytany z powrotem jako brak wartości."""
+    import zipfile
+    rec = {f: None for f in schema.field_order()} | {"id_aed": "AED-PL-0000000001", "nazwa_obiektu": "Szkoła", "pietro": None,
+                                                     "szerokosc_geograficzna": 52.1, "dlugosc_geograficzna": 21.0, "teryt_terc": "1465011"}
+    z = zipfile.ZipFile(io.BytesIO(dostawcy.pakiet({"nazwa": "Szkoła Testowa"}, [rec])))
+    data = z.read(next(n for n in z.namelist() if n.startswith("aed-") and n.endswith(".csv")))
+    header, rows = dostawcy._csv_rows(data)
+    raw = list(csv.DictReader(io.StringIO(data.decode("utf-8-sig"))))[0]
+    assert all(v.strip() for v in raw.values()) and raw["pietro"] == "-"
+    assert rows[0]["pietro"] == "" and rows[0]["nazwa_obiektu"] == "Szkoła"
+    assert b"<specialSign>-</specialSign>" in z.read("aed_harvester.xml")

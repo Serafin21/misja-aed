@@ -173,7 +173,9 @@ def _remote(online: bool) -> tuple[list[dict], list[dict]]:
 def _csv_rows(data: bytes) -> tuple[list[str], list[dict]]:
     text = data.decode("utf-8-sig")
     r = csv.DictReader(io.StringIO(text))
-    return [h.strip() for h in (r.fieldnames or [])], list(r)
+    # znak umowny „-” (zasady dane.gov.pl) = brak wartości
+    rows = [{k: ("" if isinstance(v, str) and v.strip() in PORTAL_MISSING_SIGNS else v) for k, v in row.items()} for row in r]
+    return [h.strip() for h in (r.fieldnames or [])], rows
 
 
 def _w_formacie_wzorca(s: dict, header: list[str]) -> bool:
@@ -472,9 +474,16 @@ def uzupelnij(rec: dict) -> dict:
     return r
 
 
+ZNAK_UMOWNY_BRAK = "-"  # zasady dane.gov.pl: bez pustych komórek; „-” = „Zjawisko nie wystąpiło.” (znak umowny zasobu)
+
+
 def _csv(records: list[dict]) -> bytes:
+    """CSV wykazu AED do publikacji w dane.gov.pl: puste komórki jako znak umowny „-” – ogólna walidacja danych
+    portalu uznaje pustą komórkę w kolumnie liczbowej lub daty za błąd (sprawdzone na uruchomionym portalu)."""
     from .publish import to_csv
-    return to_csv(sorted(records, key=lambda r: r["id_aed"]), schema.field_order())
+    rows = [{k: (ZNAK_UMOWNY_BRAK if v is None or (isinstance(v, str) and not v.strip()) else v) for k, v in r.items()}
+            for r in sorted(records, key=lambda r: r["id_aed"])]
+    return to_csv(rows, schema.field_order())
 
 
 def harvester_xml(org: dict, records: list[dict], csv_url: str, slownik_url: str) -> bytes:
@@ -522,6 +531,7 @@ def harvester_xml(org: dict, records: list[dict], csv_url: str, slownik_url: str
         <hasHighValueDataFromEuropeanCommissionList>false</hasHighValueDataFromEuropeanCommissionList>
         <hasResearchData>false</hasResearchData>
         <containsProtectedData>false</containsProtectedData>
+        <specialSigns><specialSign>-</specialSign></specialSigns>
         <regions>{regions or '<terytIdent>00</terytIdent>'}</regions>
       </resource>
     </resources>
@@ -549,14 +559,16 @@ Waszej organizacji – dzięki temu wiadomo, kto odpowiada za dane (jakość, ak
 1. Konto dostawcy: jeśli Wasza instytucja nie ma konta na dane.gov.pl, załóżcie je według procedury
    portalu (docelowo logowanie przez login.gov.pl).
 2. Publikacja – jeden z dwóch sposobów:
-   a) dodajcie zbiór na dane.gov.pl i wgrajcie plik aed.csv jako zasób; w opisie podajcie dane z metadane.json,
-      a w słowach kluczowych koniecznie „wspolna-lista-aed”;
+   a) dodajcie zbiór na dane.gov.pl i wgrajcie plik aed.csv jako zasób; w opisie podajcie dane z metadane.json;
+      przy zasobie zaznaczcie „Zawiera wykaz AED: Tak” oraz znak umowny „- (kreska) – Zjawisko nie wystąpiło”
+      (w pliku puste pola mają już „-”: zasady dane.gov.pl nie dopuszczają pustych komórek w tabeli);
    b) albo umieśćcie aed.csv pod stałym adresem https (np. na stronie instytucji), wpiszcie ten adres
       w aed_harvester.xml (element <url> zasobu – teraz: {csv_url}) i podajcie adres pliku XML w portalu
-      – portal będzie pobierał go cyklicznie.
+      – portal będzie pobierał go cyklicznie (znak umowny „-” jest już w XML; po wdrożeniu „Wykazu AED”
+      w portalu dopiszcie w zasobie <containsAedList>true</containsAedList> – schemat 1.14).
 3. Słownik pól (slownik_danych.csv) dołączcie jako materiał uzupełniający (w XML jest już w <supplements>).
-4. Po publikacji zbiór trafi na wspólną listę AED przy najbliższej agregacji (raz na dobę), o ile przejdzie
-   walidację. Raport walidacji i zgłoszenia mieszkańców zobaczycie w kreatorze („Moje AED”).
+4. Portal sprawdzi plik przy zapisie (kolumny wzorca, pola wymagane, współrzędne, TERYT) i co noc dołączy
+   Wasze wiersze do „Wykaz AED – wykaz zbiorczy” – z nazwą Waszej instytucji i linkiem do Waszego zasobu. Raport walidacji i zgłoszenia mieszkańców zobaczycie w kreatorze („Moje AED”).
 5. Utrzymanie: aktualizujcie ten sam zbiór (nie zakładajcie nowego), zmianę stanu urządzenia wprowadzajcie
    w ciągu 7 dni, a każde urządzenie sprawdzajcie na miejscu co najmniej raz na 12 miesięcy.
 
