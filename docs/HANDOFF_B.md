@@ -412,3 +412,16 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Zrobione: **koniec podglądu haseł** – w panelu nie ma „Pokaż hasło”; w kolumnie konta stan: „prosi o nowe hasło (data)”, „hasło jednorazowe do …” / „wygasło”, „hasło ustawione przez instytucję (niewidoczne)”; zakładka „Proszą o nowe hasło”; przycisk **„Wydaj hasło jednorazowe”** (potwierdzenie, ramka z hasłem pokazana raz + ważność). Logowanie: **„Nie pamiętam hasła”** (login albo służbowy e-mail → prośba do administratora). Po zalogowaniu hasłem jednorazowym aplikacja pokazuje tylko ekran **„Ustaw własne hasło”**; po zmianie – nowy token (stare sesje wylogowane) i przejście do „Zgłoszenia AED”.
 - Sprawdzone (Playwright): admin zakłada konto → hasło jednorazowe w ramce raz → instytucja loguje się nim → wymuszona zmiana → „Nie pamiętam hasła” → u admina plakietka i „Wydaj hasło jednorazowe” → stare hasło nie działa, nowe jednorazowe wymusza zmianę; brak błędów JS.
 - Uzupełnienie (CR-TL-11): `docs/JURY_QA.md` – pytanie 17 „Czy administrator widzi hasła…” (odpowiedź: administrator nie widzi haseł; odzyskanie – hasło jednorazowe).
+
+## HANDOFF #39 – prezentacje i instrukcja dla laika
+
+- Czas: nd 07:20
+- Zrobione:
+  - **`pitch/prezentacja.pdf`** – szczegółowa, **12 slajdów, 0,87 MB** (≤ 10 MB): tytuł → problem (LICZBY.md: 18 297 OSM, 18%, 351/2 479) → „jak podeszliśmy” (6 kroków) → przepływ Wykazu AED → **dowody**: (5) przyrost w kodzie portalu – `git log -- portal/` + tabela DGA→AED, (6) pole „Zawiera wykaz AED” (`forms.py:269`) + komunikaty walidacji (teksty dokładnie z `aed_utils.py` i tłumaczenia PL), (7) zadanie 3:40 + `/aed-aggregated` (`tasks/aed.py`, `celeryapp.py`, `routes.py`), (8) wzorcowy zakres XLSX (fragment arkusza), (9) Mapa danych AED (zrzuty 07, 08) → akcja z logo → kroki użytkowników (dostawca, mieszkaniec, MC, programista) → ograniczenia + AI + dalej. Dowody portalu to **kod portalu** (podpisane uczciwie; panel nie wystartował – ramka „Uczciwie” na slajdzie 6).
+  - **`pitch/prezentacja_krotka.pdf`** – poglądowa na ok. 3 min, **7 slajdów, 0,77 MB**.
+  - Źródła: `pitch/slajdy/prezentacja.html`, `prezentacja_krotka.html`, `styl.css`, `build_pdf.mjs` (Playwright/Chromium → PDF 1280×720).
+  - **`INSTRUKCJA_URUCHOMIENIA.md`** – dla osoby bez Gita i programowania (Windows, cmd): instalacja Git/Python/Node, pobranie, serwer, dane, strona, sprawdzenie 10 funkcji z oczekiwanym wynikiem, kod portalu, typowe błędy; link w README.
+- Zrzuty: 07_mapa i 08_karta są **sprzed zmiany nagłówka** (pinezka, „Mapa AED”), na 07 mapa bez podkładu – do podmiany, gdy człowiek B przyśle nowe (przeglądarka Claude robi zrzuty tylko do 800 px). 01–06 (panel portalu) brak – zastąpione kodem.
+- Do TL: (1) scalić b/ux-docs do main (PDF przed 10:00); (2) **niespójność wzorca**: XLSX v0.9 ma `teryt_terc` „^\d{6}$”, zalecane, a portal (`aed_utils.py`) wymaga 7 cyfr i traktuje pole jako wymagane – do ujednolicenia w XLSX albo w portalu (nie pokazuję tego wiersza na slajdzie).
+- Liczby: tylko LICZBY.md; testy: 112 passed (HANDOFF A), portal 23 passed bez bazy (portal/README.md) – nie uruchamiałem ich w tej sesji.
+- Użycie AI (jedna linia): treść i układ slajdów, PDF i instrukcja z Claude (Model B) na podstawie repo; decyzje i narracja – zespół/TL.
