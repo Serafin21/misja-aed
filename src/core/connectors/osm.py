@@ -48,8 +48,14 @@ _DESC = re.compile(r"^(aed|defibrylator)\b.*\b(na|w|we|przy|obok|pod|nad)\s|zamo
 PLACEHOLDER_NAMES = ("Defibrylator AED",)
 
 
+# A generic word is not a name of the place ("AED", "Defibrylator AED", "Defibrillator")
+_GENERIC = re.compile(r"(?i)[\s\-.]*(aed|defibrylator|defibrillator|automatyczny defibrylator( zewnętrzny)?)"
+                      r"([\s\-]*(aed|\(aed\)|\d+))?[\s.]*")
+
+
 def looks_like_description(v: str | None) -> bool:
-    return bool(v) and (len(v) > NAME_MAX or v[:1].islower() or bool(_DESC.search(v)))
+    """True when the text is not a usable name: a description of the location or a generic word like "AED"."""
+    return bool(v) and (len(v) > NAME_MAX or v[:1].islower() or bool(_DESC.search(v)) or bool(_GENERIC.fullmatch(v)))
 
 
 def _name(p: dict) -> str | None:
@@ -71,7 +77,7 @@ def clean_name(rec: dict) -> None:
         rec["nazwa_obiektu"] = None
 
 
-NAMES_MIGRATION = "nazwy_osm_v2"
+NAMES_MIGRATION = "nazwy_osm_v3"
 
 
 def migrate_names(conn) -> int:

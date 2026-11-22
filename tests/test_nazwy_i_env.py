@@ -15,6 +15,9 @@ def test_nazwa_tylko_z_tagu_name():
     assert _name({"name": "na wyposażeniu samochodu ratowniczo-gaśniczego"}) is None
     assert _name({"name": "- AED zamontowane w holu"}) is None
     assert _name({"name": "112"}) is None
+    for generic in ("AED", "Defibrillator", "Defibrylator AED", "defibrylator", "AED 12"):
+        assert _name({"name": generic}) is None, generic
+    assert _name({"name": "AED Arena"}) == "AED Arena" and _name({"name": "Szkoła nr 5 – AED"}) == "Szkoła nr 5 – AED"
     assert _name({"name": "MOSiR w Pile - Recepcja"}) == "MOSiR w Pile - Recepcja"
 
 
