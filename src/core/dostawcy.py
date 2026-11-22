@@ -285,6 +285,23 @@ def _portal_get(url: str, timeout: int = 30) -> bytes:
         return r.read()
 
 
+# CR-TL-14: the portal's aggregated list has readable Polish headers and a narrower set of columns (like the DGA list);
+# the full 44 fields stay in the providers' resources. Older lists used the template field names – both are read.
+PORTAL_MAIN_HEADERS = {
+    "Identyfikator AED": "id_aed", "Nazwa obiektu": "nazwa_obiektu", "Miejscowość": "miejscowosc", "Ulica": "ulica",
+    "Numer budynku": "numer_budynku", "Opis lokalizacji": "opis_lokalizacji", "Dostęp": "dostep",
+    "Godziny dostępności": "godziny_dostepnosci", "Szerokość geograficzna": "szerokosc_geograficzna",
+    "Długość geograficzna": "dlugosc_geograficzna", "Data weryfikacji": "data_weryfikacji",
+}
+
+
+def _from_main_headers(row: dict) -> dict:
+    out = {PORTAL_MAIN_HEADERS.get(k, k): v for k, v in row.items()}
+    if "Godziny dostępności" in row and (out.get("godziny_dostepnosci") or "").strip() == "24/7":
+        out["godziny_dostepnosci"], out["dostepny_24h"] = None, "true"
+    return out
+
+
 def agreguj_z_portalu(store: Store, api: str) -> dict:
     """When PORTAL_API is set (the local dane.gov.pl portal with the AED list increment, portal/README.md), the common list
     is the portal's "Wykaz AED – wykaz zbiorczy": GET {PORTAL_API}/aed-aggregated → csv_url → rows of all providers.
@@ -303,6 +320,7 @@ def agreguj_z_portalu(store: Store, api: str) -> dict:
         # zasady dane.gov.pl: pusta komórka = znak umowny „-” (portal wpisuje go w wykazie zbiorczym) – czytamy jako brak
         row = {k: (None if isinstance(v, str) and v.strip() in PORTAL_MISSING_SIGNS else v) for k, v in row.items()}
         provider = (row.get("Nazwa dostawcy") or "").strip()
+        row = _from_main_headers(row)
         rec = _typed({f: row.get(f) for f in schema.field_order()})
         if not provider or not rec.get("id_aed") or rec.get("szerokosc_geograficzna") is None:
             continue
