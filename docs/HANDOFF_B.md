@@ -425,3 +425,8 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Do TL: (1) scalić b/ux-docs do main (PDF przed 10:00); (2) **niespójność wzorca**: XLSX v0.9 ma `teryt_terc` „^\d{6}$”, zalecane, a portal (`aed_utils.py`) wymaga 7 cyfr i traktuje pole jako wymagane – do ujednolicenia w XLSX albo w portalu (nie pokazuję tego wiersza na slajdzie).
 - Liczby: tylko LICZBY.md; testy: 112 passed (HANDOFF A), portal 23 passed bez bazy (portal/README.md) – nie uruchamiałem ich w tej sesji.
 - Użycie AI (jedna linia): treść i układ slajdów, PDF i instrukcja z Claude (Model B) na podstawie repo; decyzje i narracja – zespół/TL.
+
+## #40 – Instrukcja: najpierw dostawca i administrator; prezentacje: logo + hasło, bez procentów (22.11, ok. 7:00)
+- `INSTRUKCJA_URUCHOMIENIA.md`: nowa część 8 „Najważniejsze: dostawca zgłasza AED, administrator sprawdza” (8.1 wniosek o konto → 8.2 zatwierdzenie przez admina → 8.3 formularz „Zgłoś nowe AED” → 8.4 wgranie pliku z listą AED → 8.5 decyzja admina → 8.6 poprawka i zatwierdzenie). Reszta funkcji przeniesiona do części 9 „Pozostałe funkcje”; dalsze części przenumerowane (10–12), spis treści zaktualizowany. Etykiety sprawdzone w kodzie `src/ui`.
+- Prezentacje (`pitch/prezentacja.pdf`, `pitch/prezentacja_krotka.pdf`): na slajdzie 1 logo akcji (poziome, negatyw) i hasło „Dane prosto z serca”; usunięte procenty (wagi kryteriów w nagłówkach, „18%” zastąpione liczbą 3 219 z 18 347).
+- Użycie AI: Claude (Opus 5.5) przebudował instrukcję i slajdy; człowiek B zlecił zmiany i sprawdza wynik.
