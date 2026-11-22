@@ -34,7 +34,8 @@ Danych o AED nie brakuje, brakuje odpowiedzialności: w OpenStreetMap jest 18 29
 4. **Wzorcowy zakres danych AED**: 44 pola (XLSX), słownik danych, JSON Schema, CSVW, słowniki wartości.
 5. **Akcja „AED w danych”**: hasło „Dane prosto z serca”, wezwanie „Masz AED? Udostępnij je na dane.gov.pl”, logotyp (SVG, PNG, JPG, PDF) i księga znaku.
 6. **Model ról** (`docs/MODEL_ROL.md` v2.1): publikuje dostawca, administrator nie zmienia danych dostawców, zgłoszenia wracają do dostawcy, mapa = wykaz zbiorczy. Funkcje edycji AED przez administratora w aplikacji to **tryb pokazowy prototypu, docelowo wyłączony** (MODEL_ROL, „Zmiany v2.1”).
-7. **Testy**: aplikacja – 107 testów `pytest` (role, walidacja, agregacja, eksport); portal – 23 testy Wykazu AED bez bazy (`portal/local/run_aed_tests.sh`).
+7. **Referencyjny zakres źródeł** (pkt 2 zadania): każde źródło ma ten sam zakres referencyjny – wzorzec 44 pól (portal odrzuca wykaz bez kolumn wzorca i bez pól wymaganych); w wykazie zbiorczym każdy wiersz wskazuje swoje źródło (dostawca, typ instytucji, link do zasobu, data aktualizacji); eksport aplikacji `deliverables/dataset/zrodla.csv` opisuje każde źródło: format, licencja, częstotliwość aktualizacji, liczba rekordów, pokrycie pól wymaganych i zalecanych (%), obszar.
+8. **Testy**: aplikacja – 107 testów `pytest` (role, walidacja, agregacja, eksport); portal – 23 testy Wykazu AED bez bazy (`portal/local/run_aed_tests.sh`).
 
 Ograniczenia: portalu nie uruchomiliśmy w całości w środowisku hackathonu (blokada pobierania wtyczek Elasticsearch) – kroki uruchomienia na zwykłym komputerze są w `portal/README.md`, 3 testy z bazą czekają na pełne środowisko; dostawcy w prototypie są fikcyjni, obok 3 prawdziwych zbiorów samorządów opublikowanych przed wzorcem (Krosno, Przemyśl, Marki – 50 AED); logowanie kontami testowymi (docelowo login.gov.pl i 2FA); zgłoszenia mieszkańców symulowane w aplikacji (docelowo komentarze do zasobu w dane.gov.pl).
 
@@ -49,4 +50,5 @@ https://github.com/Serafin21/misja-aed/blob/main/pitch/prezentacja.pdf
 - Kod portalu i przyrost „Wykaz AED”: `portal/` (`portal/README.md`, `git log -- portal/`)
 - Logotyp i księga znaku akcji „AED w danych”: `brand/`
 - Wzorcowy zakres danych (XLSX), przykładowy pakiet dostawcy, eksport listy: `deliverables/`
-- Model ról: `docs/MODEL_ROL.md`; zakres użycia AI: `docs/AI_USAGE.md`
+- Model ról: `docs/MODEL_ROL.md`; zakres użycia AI (§2 ust. 8 regulaminu): `docs/AI_USAGE.md`
+- Prawa autorskie (§4 regulaminu): autorskim rozwiązaniem zespołu jest wszystko poza katalogiem `portal/backend` w commicie `b229557` – to oryginalny kod portalu dane.gov.pl (Ministerstwo Cyfryzacji), dołączony bez zmian, żeby pokazać nasz przyrost; pochodzenie i suma kontrolna: `portal/IMPORT.md`. Zależności: wyłącznie licencje MIT, BSD, Apache-2.0, ISC, PSF (sprawdzenie: `python -m scripts.check_licenses`, `cd src/ui && npm run licenses`); krój IBM Plex Sans – SIL OFL 1.1; dane OpenStreetMap (ODbL) tylko w osobnej warstwie, poza wykazem i eksportem.
