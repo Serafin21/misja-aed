@@ -52,7 +52,7 @@ Zasada: **publikuje dostawca, który odpowiada za dane. Portal scala wykazy wiel
 5. `curl -k https://api.mcod.local/aed-aggregated` → linki do plików wykazu zbiorczego.
 6. W `.env` aplikacji ustaw `PORTAL_API=https://api.mcod.local` i uruchom aplikację ponownie – Mapa danych AED czyta wykaz zbiorczy.
 
-**Testy:** aplikacja – `pip install -r requirements.txt` i `pytest` (107 testów); portal – `portal/local/run_aed_tests.sh` (23 testy Wykazu AED bez bazy) albo pełne testy z `portal/README.md`.
+**Testy:** aplikacja – `pip install -r requirements.txt` i `pytest` (114 testów); portal – `portal/local/run_aed_tests.sh` (25 testów Wykazu AED bez bazy) i 3 testy z bazą w uruchomionym portalu (`portal/README.md`); razem 28/28. Zrzuty z uruchomionego portalu: `pitch/zrzuty/01–06`.
 
 ## D. Czego nie oceniać jako rozwiązania – tryb pokazowy prototypu
 
