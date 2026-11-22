@@ -17,5 +17,7 @@ export enum RouterEndpoints {
   NEWS = 'news',
   DGA = 'dga',
   DGA_AGGREGATED = 'dga-aggregated',
+  AED = 'aed',
+  AED_AGGREGATED = 'aed-aggregated',
   BROKEN_LINKS = 'brokenlinks-info',
 }
