@@ -71,29 +71,59 @@ docker compose -f docker-compose.local.yml run mcod-local-run pytest mcod/resour
 ```
 
 Bez pełnego środowiska (bez baz) testy, które nie dotykają bazy, uruchamia `local/run_aed_tests.sh` w samym obrazie
-aplikacji portalu – wynik w sesji: **23 passed**; 3 testy z bazą (`django_db`) wymagają pełnego środowiska.
+aplikacji portalu. Wynik: **25 passed** bez bazy + **3 passed** z bazą (`django_db`, w uruchomionym portalu) = 28/28.
 
-### Co udało się uruchomić w sesji zespołu (limit 90 minut z CR-TL-9)
+### Uruchomienie w sesji zespołu (22.11, rano) – portal działa
 
-| Krok | Wynik |
-|---|---|
-| Obraz aplikacji portalu (`backend/docker/app/Dockerfile`) | ✅ zbudowany jako `mcod-app:local` – w środowisku z proxy HTTPS przez [`local/Dockerfile.app`](local/Dockerfile.app) (certyfikat proxy, apt przez https, katalog `logs` przed `compilemessages`) |
-| `compilemessages` z naszymi tłumaczeniami PL | ✅ w obrazie |
-| Testy `test_aed.py` bez bazy (`local/run_aed_tests.sh`) | ✅ 23 passed |
-| Obraz Elasticsearch 6.8.23 | ⚠️ pobrany z Docker Hub, ale `docker/elasticsearch/Dockerfile` instaluje wtyczki `analysis-stempel` i `analysis-icu` z `artifacts.elastic.co` – **zablokowane** przez sieć sesji |
-| Obraz `rdfdb` (Apache Jena Fuseki, Alpine) | ❌ `apk` bez certyfikatu proxy – nie zbudowany |
-| `init_mcod_db`, indeksy ES, panel w przeglądarce | ❌ nie uruchomione – zależą od dwóch kroków wyżej |
+Pełny portal (Postgres, Elasticsearch z wtyczkami `analysis-stempel` i `analysis-icu`, Redis, RabbitMQ, Fuseki, Celery,
+panel `mcod-local-admin`, API `mcod-local-api`) uruchomiliśmy w sesji z proxy HTTPS. Pliki pomocnicze w [`local/`](local/):
+`Dockerfile.app` (obraz aplikacji z certyfikatem proxy), `Dockerfile.es` (wtyczki ES instalowane z plików pobranych
+wcześniej z artifacts.elastic.co), `Dockerfile.rdfdb` (Fuseki z certyfikatem proxy), `compose.local.yml` (gotowe obrazy,
+Elasticsearch bez `memory_lock`). Z katalogu `portal/backend`:
 
-Na zwykłym komputerze (bez proxy) te blokady nie występują – wystarczą kroki z sekcji wyżej. Zrzutów ekranu panelu
-w tej wersji nie ma, bo panel nie wystartował w sesji; opis kroków dostawcy poniżej odpowiada kodowi formularza
-(`mcod/resources/forms.py`, `mcod/resources/admin.py`).
+```bash
+docker compose -f docker-compose.local.yml -f ../local/compose.local.yml up -d mcod-db mcod-redis mcod-rabbitmq mcod-elasticsearch mcod-rdfdb mcod-smtp
+```
+
+```bash
+docker compose -f docker-compose.local.yml -f ../local/compose.local.yml run --rm mcod-local-run python manage.py init_mcod_db
+```
+
+```bash
+docker compose -f docker-compose.local.yml -f ../local/compose.local.yml up -d --no-deps mcod-local-admin mcod-local-api mcod-local-celery
+```
+
+W `.env`: `MAIN_AED_DATASET_OWNER_ORGANIZATION_PK` = id instytucji „Ministerstwo Cyfryzacji” w lokalnej bazie (na
+produkcji to ta sama instytucja co dla DGA, `MAIN_DGA_DATASET_OWNER_ORGANIZATION_PK`, domyślnie 333).
+
+| Krok (na uruchomionym portalu) | Wynik | Zrzut |
+|---|---|---|
+| Migracje `resources/0075`, `0076` przy `init_mcod_db` | ✅ | – |
+| Panel: zasób z „Zawiera wykaz AED: Tak” i znakiem umownym „-” | ✅ zapisany, walidacje portalu zielone | `pitch/zrzuty/02_portal_panel_zawiera_wykaz_aed.png` |
+| Panel: plik z błędami | ✅ odrzucony, błędy wiersz po wierszu | `pitch/zrzuty/03_portal_walidacja_bledy.png` |
+| Zadanie `create_main_aed_resource_task` (przez Celery) | ✅ „Wykaz AED – wykaz zbiorczy” w zbiorze MC, CSV + XLSX, 6 wierszy od 2 instytucji, „Możliwy duplikat” dla AED 9 m od siebie, bez scalania | `pitch/zrzuty/04_portal_wykazy_aed_w_panelu.png`, `05_portal_wykaz_zbiorczy_csv.png` |
+| `GET /aed-aggregated` | ✅ `csv_url`, `xlsx_url` | `pitch/zrzuty/06_portal_api_aed_aggregated.png` |
+| Mapa danych AED z `PORTAL_API` = API portalu | ✅ 6 AED z dostawcą i linkiem do zasobu | `pitch/zrzuty/12_mapa_karta_z_wykazu_portalu.png` |
+
+**Co wykryło uruchomienie (poprawione w commicie „Wykaz AED: zgodność z ogólną walidacją danych portalu”):**
+ogólna walidacja danych portalu (goodtables) uznaje pustą komórkę w kolumnie liczbowej lub daty za błąd – zgodnie z
+zasadami dane.gov.pl brak wartości oznacza się **znakiem umownym** („-” = „Zjawisko nie wystąpiło.”) przypisanym do
+zasobu; typy kolumn portal zgaduje „po większości” (numer budynku „5A” wśród liczb = błąd). Dlatego: walidacja wykazu
+AED czyta „-” jak brak wartości; wykaz zbiorczy wpisuje „-” w puste komórki, ma przypisany znak umowny i stały schemat
+danych (`tabular_data_schema`: współrzędne – liczby, reszta – tekst); pliki, które Mapa danych AED przygotowuje
+instytucjom, mają „-” zamiast pustych pól i `<specialSigns>` w XML. Do tego: kroki 1–2 zadania są zapamiętywane między
+ponowieniami (jak w DGA), a plik XLSX wykazu zbiorczego ma format i bezpośredni link w `/aed-aggregated`.
+
+Etykiety pól w zrzutach są po angielsku („Contains AED list”) – lokalna instalacja bez skompilowanych tłumaczeń;
+tak samo wyglądają oryginalne pola portalu. Polskie tłumaczenie naszego pola jest w `translations/system/pl/…/django.po`.
 
 ## Ścieżka dostawcy w panelu
 
 1. Zaloguj się do panelu (https://admin.mcod.local) kontem instytucji (albo `admin@mcod.local`).
 2. **Zbiory danych** → swój zbiór (np. „Defibrylatory AED w Gminie Przykładowo”) → **Dodaj zasób**.
 3. Wgraj plik CSV/XLSX z 44 kolumnami wzorca AED v0.9 (szablon: `deliverables/zakres_danych/` w repozytorium projektu).
-4. W sekcji danych zasobu ustaw **„Zasób zawiera wykaz AED” = Tak** (pod opcją „Zasób zawiera wykaz chronionych danych”).
+4. W sekcji danych zasobu ustaw **„Zasób zawiera wykaz AED” = Tak** (pod opcją „Zasób zawiera wykaz chronionych danych”)
+   i w „Znaki umowne” wybierz **„- (kreska) – Zjawisko nie wystąpiło”** – w pliku puste pola mają „-” (zasady dane.gov.pl).
 5. **Zapisz.** Jeśli plik nie pasuje do wzorca, formularz pokaże listę błędów (brakujące kolumny, numery wierszy z
    pustym polem wymaganym, współrzędne poza Polską, zły TERYT, drugi wykaz AED tej samej instytucji) – nic się nie
    zapisze, dopóki plik nie będzie poprawny.
@@ -159,6 +189,9 @@ plik **CSV** (do map i aplikacji); TERYT czytany jako tekst (nie traci zera na p
 | `eb7f4fc` | Środowisko lokalne: Dockerfile obrazu aplikacji za proxy HTTPS |
 | `5a214fd` | Wykaz AED: `GET /aed-aggregated` (g) |
 | `67ce118` | Wykaz AED: testy w stylu testów DGA (h) |
+| `ea98e60` | Wykaz AED: etykieta pola bez `.capitalize()` (zlecenie TL) |
+| `c529ad7` | Środowisko lokalne: pełny portal w sesji z proxy (ES, Fuseki, compose) |
+| `09b601b` | Wykaz AED: zgodność z ogólną walidacją danych portalu – znak umowny „-”, schemat wykazu zbiorczego, ponowienia zadania, XLSX w `/aed-aggregated` (sprawdzone na uruchomionym portalu) |
 
 ## Rejestr wykazów (propozycja, punkt „i” – bez kodu)
 

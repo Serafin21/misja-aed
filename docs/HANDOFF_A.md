@@ -1,5 +1,14 @@
 # HANDOFF – Model A
 
+## 2026-11-22 – HANDOFF #18: portal dane.gov.pl uruchomiony w sesji – „Wykaz AED” sprawdzony na żywo
+
+- **Portal działa w sesji:** Postgres, Elasticsearch (wtyczki z plików – host `artifacts.elastic.co` dopuszczony w środowisku), Fuseki, Redis, RabbitMQ, Celery, panel i API (`portal/local/Dockerfile.es`, `Dockerfile.rdfdb`, `compose.local.yml`; kroki: `portal/README.md`, „Uruchomienie w sesji zespołu”). `init_mcod_db` z migracjami 0075/0076, indeksy ES.
+- **Przeszło na żywo:** zasób „Zawiera wykaz AED: Tak” w panelu; plik z błędami odrzucony z listą błędów; nocne zadanie przez Celery → „Wykaz AED – wykaz zbiorczy” (zbiór MC, CSV + XLSX, 6 wierszy od 2 instytucji, „Możliwy duplikat” 9 m, bez scalania); `GET /aed-aggregated`; Mapa danych AED z `PORTAL_API` = API portalu pokazuje te 6 AED z dostawcą i linkiem. Zrzuty: `pitch/zrzuty/01–06, 12`.
+- **Błędy wykryte dopiero na portalu i poprawione (`09b601b`):** (1) ogólna walidacja danych portalu odrzucała wykazy z pustymi komórkami w kolumnach liczb/dat – zasady dane.gov.pl: **znak umowny „-”** przypisany do zasobu; walidacja AED czyta „-” jak brak, wykaz zbiorczy wpisuje „-” i ma przypisany znak umowny; (2) typy kolumn zgadywane „po większości” („5A” wśród liczb = błąd) → wykaz zbiorczy ma stały `tabular_data_schema`; (3) każde ponowienie zadania tworzyło kolejny zasób → kroki 1–2 zapamiętane jak w DGA (`cache_memoize`); (4) drugi plik (XLSX) bez formatu wywracał listę zasobów w panelu i miał link „…/None” w `/aed-aggregated` → format i bezpośredni link.
+- **Aplikacja (`98fe180`, `0251ac8`):** pakiet dla instytucji – „-” zamiast pustych pól, `<specialSigns>` w XML (XSD OK), instrukcja z „Zawiera wykaz AED” i znakiem umownym; zasada w arkuszu „Zasady formatu” wzorca xlsx; `PORTAL_API` i odczyt plików dostawców czytają „-” jako brak.
+- **Testy:** aplikacja 114 passed; portal 25 bez bazy + **3 z bazą passed** (28/28).
+- **Ograniczenie, które zostaje:** etykiety pól panelu po angielsku w lokalnej instalacji (brak skompilowanych tłumaczeń – kompilacja psuła logowanie przez tłumaczone wartości wyboru); dane pokazowe w portalu = 2 instytucje testowe.
+
 ## 2026-11-23 – HANDOFF #17: CR-TL-11 – administrator nie widzi haseł, odzyskanie dostępu
 
 - **Usunięte:** `GET /konta/{login}/haslo`, `src/api/sejf.py`, kolumna `konta.haslo_podglad` (stare bazy: `ALTER TABLE … DROP COLUMN` + `VACUUM` przy starcie, `src/core/db.py`), wszystkie wywołania szyfrowania. Hasło tylko jako PBKDF2-SHA256 z solą.
