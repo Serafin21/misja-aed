@@ -424,6 +424,8 @@ thead th { background: var(--color-surface); }
 /* ---------- model ról: helper layer "Do sprawdzenia" (OSM), role menu ---------- */
 .aed-pin--pomocnicza { filter: grayscale(1); opacity: .7; }
 .aed-pin--pomocnicza:hover, .aed-pin--pomocnicza:focus-visible { opacity: 1; }
+.badge--proto { background: #FFF4DD; color: #5C3D00; border-color: #B9791A; }
+.badge--legend { font-size: .85rem; padding: 0 6px; }
 .badge--helper { background: var(--color-surface-strong); color: var(--color-text); border-color: var(--color-border-input); }
 .map-popup__helper { color: var(--color-text-secondary); }
 .main-nav__role a { font-weight: var(--font-weight-bold); }
@@ -522,9 +524,9 @@ thead th { background: var(--color-surface); }
 .finder { display: grid; gap: var(--space); }
 .finder__list-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--space-s); }
 .finder__list-head h2 { margin: 0; font-size: 1.3rem; }
-.finder__sort { display: flex; align-items: center; gap: var(--space-s); }
+.finder__sort { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-s); min-width: 0; max-width: 100%; }
 .finder__sort label { font-size: 1rem; color: var(--color-text-secondary); }
-.finder__sort select { min-height: 40px; width: auto; }
+.finder__sort select { min-height: 40px; width: auto; max-width: 100%; }
 .finder__count { margin: var(--space-s) 0 var(--space-m); color: var(--color-text-secondary); font-size: 1rem; }
 @media (min-width: 900px) {
   .finder { grid-template-columns: minmax(340px, 0.9fr) minmax(0, 1.5fr); align-items: start; }

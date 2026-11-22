@@ -1,3 +1,5 @@
+> **Wersja 2.1 (22.11.2026, TL – rozstrzygnięcie po uwagach mentorów; sekcja „Zmiany v2.1” na końcu). Obowiązuje zasada: administrator nie zmienia danych dostawców, zgłoszenia wracają do dostawcy, a wspólna lista na mapie pochodzi wyłącznie z wykazu zbiorczego portalu (`GET /aed-aggregated`). Funkcje z v1.4 (edycja, usuwanie i przypisywanie AED przez administratora, zatwierdzone zgłoszenia od razu na mapie) to „tryb pokazowy prototypu, docelowo wyłączony” – nie są częścią proponowanego rozwiązania.**
+>
 > Źródło: dokument zespołu „Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności” (21.11.2026). Wiążący dla CONTRACT.md od wersji 2.0 (obecnie CONTRACT v3.0). Stan wdrożenia w prototypie: sekcja „Wdrożenie” na końcu. **Wersja 2.0** (22.11.2026, CR-TL-9 – sekcja „Zmiany v2.0” na końcu): wspólna lista = **„Wykaz AED – wykaz zbiorczy”**, który buduje portal dane.gov.pl tak jak wykaz chronionych danych (DGA); każdy wiersz ma dostawcę i link do zasobu; odpowiedzialność i edycja – u dostawcy w panelu dane.gov.pl. Wersja 1.4 (decyzja właściciela projektu, sekcja „Zmiany v1.4”) obowiązuje dla prototypu aplikacji tam, gdzie nie jest sprzeczna z v2.0. Wersja 1.3 (CR-TL-8): zaufane konta instytucji, kryteria K13–K16.
 
 # Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności
@@ -254,7 +256,7 @@ Do czasu odpowiedzi MC zespół stosuje założenia robocze z tabeli.
 
 | Nr  | Pytanie do MC                                                                          | Założenie robocze                                                                                |
 |-----|----------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| Q1  | Czy wspólna lista ma być funkcją portalu, czy usługą zewnętrzną korzystającą z API?    | usługa na API 1.4, napisana tak, by dało się ją przenieść do portalu                             |
+| Q1  | Czy wspólna lista ma być funkcją portalu, czy usługą zewnętrzną korzystającą z API?    | od v2.0: **funkcja portalu** – „Wykaz AED – wykaz zbiorczy” wzorem wykazu DGA (`portal/`); aplikacja tylko czyta `/aed-aggregated` |
 | Q2  | Jak oznaczać zbiory należące do listy?                                                 | słowo kluczowe „wspolna-lista-aed” i wersja wzorca w słowniku pól                                |
 | Q3  | Czy przewiduje się uproszczoną rejestrację małych podmiotów prywatnych jako dostawców? | standardowa procedura portalu; kreator przygotowuje komplet plików                               |
 | Q4  | Czy zgłoszenia mieszkańców mogą płynąć przez komentarze do zbiorów i zasobów?          | tak; w prototypie symulacja                                                                      |
@@ -311,3 +313,28 @@ Pakiet plików do publikacji w dane.gov.pl (`POST /moje-aed/pakiet`) i agregacja
 | AED dodane w prototypie | „czeka na publikację w dane.gov.pl” | `status_publikacji = nieopublikowane_w_dane_gov_pl` z opisem „dodane w prototypie, nie pochodzą z wykazu w dane.gov.pl”; **nigdy** w wykazie zbiorczym ani w eksporcie aplikacji; instytucja publikuje je sama w swoim wykazie AED |
 | Aplikacja | czyta zbiory dostawców | gdy ustawiono `PORTAL_API` – czyta `GET {PORTAL_API}/aed-aggregated` i plik wykazu zbiorczego (`src/core/dostawcy.py`); bez niego – dotychczasowa ścieżka |
 | Nazwa panelu | „Panel administratora” | **„Panel moderacji prototypu”**; hasło konta `admin` tylko ze zmiennej `ADMIN_PASSWORD` (bez wartości domyślnej w kodzie; hasło demo w README) |
+
+## Zmiany v2.1 – rozstrzygnięcie konfliktu v1.4 z mentorami i CR-TL-9 (TL, 22.11.2026)
+
+**Konflikt.** v1.4 (decyzja właściciela projektu) dała administratorowi aplikacji prawo edycji, usuwania i przypisywania każdego AED, a zatwierdzone zgłoszenia pokazywała na mapie przed publikacją w dane.gov.pl. To przeczy uwagom mentorów (publikuje dostawca, który odpowiada; portal scala wykazy wielu dostawców w jedną listę wzorem istniejącego wykazu; nie przebudowujemy portalu tak, by publikował każdy) i CR-TL-9 (rdzeń = Wykaz AED w portalu, aplikacja = strona odczytu).
+
+**Rozstrzygnięcie – obowiązuje w rozwiązaniu, które zgłaszamy:**
+
+| Nr | Zasada | Gdzie w kodzie |
+|---|---|---|
+| R1 | **Administrator nie zmienia danych dostawców.** Prowadzi konta, wzorzec i akcję; nie dodaje, nie poprawia, nie usuwa i nie przypisuje wierszy wykazu. W portalu nie ma funkcji edycji cudzego wykazu – zmienia go tylko dostawca nową wersją zasobu w panelu dane.gov.pl. | `portal/backend/mcod/resources/` (`contains_aed_list`, walidacja przy zapisie zasobu) |
+| R2 | **Zgłoszenia wracają do dostawcy.** Zgłoszenie mieszkańca albo instytucji o AED z wykazu trafia do dostawcy tego wiersza (docelowo komentarze do zasobu w dane.gov.pl). Administrator nie zatwierdza zmian w cudzych danych; AED bez dostawcy → zaproszenie do publikacji (P7). | §5 P6, P7 |
+| R3 | **Mapa pokazuje wspólną listę wyłącznie z wykazu zbiorczego portalu.** Aplikacja „Mapa danych AED” czyta `GET /aed-aggregated` i plik wykazu zbiorczego (`PORTAL_API`); każdy wiersz ma dostawcę i link do zasobu źródłowego. | `src/core/dostawcy.py` (`agreguj_z_portalu`) |
+| R4 | **Rekord spoza wykazu nie udaje rekordu wykazu.** AED dodane w aplikacji mają etykietę „Prototyp – nieopublikowane w dane.gov.pl” (karta, lista, legenda) i nigdy nie trafiają do wykazu zbiorczego ani eksportu. Warstwa OpenStreetMap jest osobna („Do sprawdzenia”), docelowo tylko do mapy luk. | `meta.status_publikacji`, `src/core/publish.py` |
+
+**Tryb pokazowy prototypu, docelowo wyłączony.** Właściciel projektu zostawił w prototypie funkcje v1.4, żeby jury mogło przeklikać całą ścieżkę bez lokalnego portalu. **Nie są one częścią proponowanego rozwiązania** i w wersji docelowej są wyłączone:
+
+| Funkcja trybu pokazowego (v1.4) | Jak jest oznaczona w prototypie | Docelowo |
+|---|---|---|
+| Administrator edytuje, usuwa i przypisuje każde AED („Panel moderacji prototypu” → „Wszystkie AED”) | nazwa panelu; edycje w dzienniku; **nie zmieniają wykazu zbiorczego** | brak – zmienia tylko dostawca w panelu dane.gov.pl (R1) |
+| Administrator zatwierdza zgłoszenia nowych AED i zmian; zatwierdzone od razu na mapie | etykieta „Prototyp – nieopublikowane w dane.gov.pl” | zgłoszenie trafia do dostawcy; na mapę dopiero przez jego wykaz (R2, R3) |
+| Administrator podgląda hasła kont | – | brak; logowanie przez login.gov.pl i 2FA (§9) |
+| Mapa bez `PORTAL_API` czyta pakiety fikcyjnych dostawców i zbiory przejściowe | „dostawca fikcyjny – prototyp”, „Zbiór przejściowy” | tylko `/aed-aggregated` (R3) |
+
+Jury: ta tabela jest powtórzona w `INSTRUKCJA_DLA_JURY.md` (krok „Czego nie oceniać jako rozwiązania”) i w `SUBMISSION.md`. Kryteria K2 i K16 obowiązują w rozwiązaniu docelowym; w trybie pokazowym prototypu są świadomie zawieszone (testy v1.4: `tests/test_admin_edycja.py`).
+

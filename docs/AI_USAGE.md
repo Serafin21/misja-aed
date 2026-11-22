@@ -10,4 +10,6 @@
 | Kod frontendu | Claude Code (Model B) | generowanie kodu interfejsu, tekstów stron i testów dostępności | wymagania, przegląd na urządzeniach, decyzje o treści |
 | Nazwa, hasło, logotyp, księga znaku | Claude (Model B) | wersja wektorowa logo, warianty i księga znaku według koncepcji zespołu | koncepcja znaku, nazwa i hasło – własnoręcznie zespół; wybór wariantu |
 | Model ról i specyfikacja | Claude | redakcja specyfikacji docs/MODEL_ROL.md | decyzje zespołu: kto publikuje (właściciel, zarządca, podmiot weryfikujący), terminy, okres przejściowy |
+| Przyrost „Wykaz AED” w kodzie portalu dane.gov.pl (`portal/backend`, commity „Wykaz AED: …”) | Claude Code (Model A) | kod wzorem wykazu DGA (pole zasobu, walidacja, XML, zadanie nocne, `/aed-aggregated`), testy, `portal/README.md` | decyzja o rdzeniu rozwiązania (CR-TL-9, po uwagach mentorów), wybór wzoru DGA, przegląd kodu i testów |
+| Model ról v2.1, scalanie, teksty zgłoszenia | Claude Code (sesja TL) | redakcja MODEL_ROL v2.1, SUBMISSION, README, opisu, instrukcji dla jury, strony „Dla instytucji” i treści CMS `portal/cms/wykaz_aed.md` | rozstrzygnięcie konfliktu v1.4 z uwagami mentorów, decyzje o treści, akceptacja |
 | Prezentacja i opis | Claude | projekt slajdów i tekstów na podstawie repozytorium | treść merytoryczna, wybór i poprawki |

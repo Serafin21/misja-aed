@@ -3,6 +3,7 @@
 > Wspólny plik: edytuje tylko Team Leader. Zamrożenie: sob 15:00 (po konsultacji na stoisku danych). Zmiany wyłącznie przez CR (tabela na końcu).
 > **Od v2.0 obowiązuje model ról i odpowiedzialności: `docs/MODEL_ROL.md`.** Dane o AED publikuje wyłącznie właściciel urządzenia (dostawca) na własnym koncie w dane.gov.pl; wspólna lista łączy zbiory dostawców bez zmian; administrator (MC) nie wprowadza danych; OSM to tylko warstwa pomocnicza „Do sprawdzenia”.
 > **Od v3.0 (CR-TL-9, MODEL_ROL v2.0):** wspólna lista = **„Wykaz AED – wykaz zbiorczy”** budowany przez portal dane.gov.pl tak jak wykaz chronionych danych (DGA) – przyrost w `portal/` (`portal/README.md`); każdy wiersz ma dostawcę i link do zasobu źródłowego, za treść odpowiada dostawca, edytuje ją docelowo tylko dostawca w panelu dane.gov.pl. AED dodane w prototypie aplikacji nie trafiają do wykazu zbiorczego ani do eksportu.
+> **MODEL_ROL v2.1 (TL, po uwagach mentorów):** administrator nie zmienia danych dostawców, zgłoszenia wracają do dostawcy, mapa pokazuje wspólną listę wyłącznie z `/aed-aggregated`; funkcje v1.4 (edycja AED przez administratora, zatwierdzone zgłoszenia od razu na mapie) = tryb pokazowy prototypu, docelowo wyłączony.
 > Źródło prawdy dla danych: `docs/schema/` (JSON Schema, słownik danych, słowniki wartości, CSVW, przykład XML importu) i `deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx`. Wszystkie te pliki powstały z jednej definicji, więc są spójne.
 
 ## 1. Zasady

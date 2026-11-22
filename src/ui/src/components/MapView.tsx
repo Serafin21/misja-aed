@@ -9,7 +9,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import { getAed } from '../api/client';
 import type { AedPoint, AedView, Pokrycie, StanGminy } from '../api/types';
 import { dataLabel } from '../lib/dataState';
-import { address, availableNow } from '../lib/format';
+import { address, availableNow, aedName } from '../lib/format';
 import { navigate, toHref } from '../router';
 import { dataPinSvg, pinSvg, type PinKind } from './Brand';
 import type { MapMode } from './MapMode';
@@ -67,10 +67,10 @@ function markerIcon(a: AedView, mode: MapMode): L.DivIcon {
 }
 
 function markerName(a: AedView, mode: MapMode): string {
-  if (mode === 'dane') return `${a.nazwa_obiektu}, ${a.miejscowosc} – ${dataLabel(a).long}`;
+  if (mode === 'dane') return `${aedName(a.nazwa_obiektu)}, ${a.miejscowosc ?? ''} – ${dataLabel(a).long}`;
   const v = availableNow(a);
   const state = a.dostep === 'prywatny' ? 'tylko dla uprawnionych' : v === true ? 'dostępne teraz' : v === false ? 'teraz zamknięte' : 'godziny do sprawdzenia';
-  return `${a.nazwa_obiektu}, ${a.miejscowosc} – ${state}${a.szafka_zamknieta ? ', szafka zamknięta' : ''}`;
+  return `${aedName(a.nazwa_obiektu)}, ${a.miejscowosc ?? ''} – ${state}${a.szafka_zamknieta ? ', szafka zamknięta' : ''}`;
 }
 
 export function MapView({ items, user, focusId, onPick, picked, label, height = 420, cluster = true, mode = 'dostepnosc', coverage, fitCoverage = false, points, wheelZoom = true, fitKey: fitKeyProp, onView, goTo, highlight }: MapViewProps) {

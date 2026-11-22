@@ -1,10 +1,7 @@
-# Zgłoszenie HackTribe – kopiuj pola 1:1
-
-> Model ról: docs/MODEL_ROL.md (CR-TL-5). FINAL: niedziela 11:00 (cel 10:30).
-> Przed wysłaniem zamień każde TODO na treść (wyszukaj „TODO” w tym pliku). Pola „demo” i „prezentacja” w wersji wstępnej mogą zostać z dopiskiem „w wersji finalnej”.
+# Zgłoszenie HackTribe – MKS · Misja AED – dane na ratunek
 
 ## Nazwa projektu
-Mapa AED – wspólna lista AED w dane.gov.pl (akcja dla dostawców danych: „AED w danych”)
+Wykaz AED w dane.gov.pl – jedna lista AED od wielu dostawców (Mapa danych AED + akcja „AED w danych”)
 
 ## Nazwa zespołu
 MKS
@@ -18,21 +15,40 @@ MISJA AED – DANE NA RATUNEK
 ## Link do repozytorium
 https://github.com/Serafin21/misja-aed
 
+## Link do prototypu (klikalny, bez konfiguracji)
+PROTOTYP_URL
+
+## Instrukcja dla jury (kroki ponumerowane)
+https://github.com/Serafin21/misja-aed/blob/main/INSTRUKCJA_DLA_JURY.md
+
 ## Opis rozwiązania (3–4 zdania)
-Proponujemy model, w którym dane o każdym AED publikuje na dane.gov.pl jego właściciel, a portal łączy zbiory wielu dostawców we wspólną listę. Przygotowaliśmy wzorzec danych (44 pola) i kreator, który z formularza lub pliku tworzy komplet plików do publikacji na koncie dostawcy, w tym XML zgodny ze schematem harvestera dane.gov.pl 1.13. Wspólna lista nie jest nowym zbiorem: każdy rekord pokazuje dostawcę, link do zbioru i datę danych, a zgłoszenia mieszkańców trafiają do tego dostawcy. Akcja „AED w danych” zaprasza właścicieli AED do publikacji tam, gdzie mapa pokazuje luki.
+Rozwiązanie składa się z trzech części: **Wykazu AED w portalu dane.gov.pl**, **Mapy danych AED** jako strony odczytu i **akcji „AED w danych”** dla dostawców. Instytucja publikuje swój wykaz AED na własnym koncie w dane.gov.pl i zaznacza przy zasobie „Zawiera wykaz AED” (w XML: `containsAedList`); portal sprawdza kolumny wzorca i pola wymagane, a co noc składa „Wykaz AED – wykaz zbiorczy” z nazwą dostawcy i linkiem do źródła w każdym wierszu, udostępniany w API `/aed-aggregated`. To zmiana w kodzie portalu zrobiona wzorem istniejącego wykazu chronionych danych (DGA), a nie osobny system – publikuje tylko dostawca, który odpowiada za dane, a portal jedynie scala wykazy bez zmieniania wierszy. Mapa danych AED czyta wykaz zbiorczy i przy każdym AED pokazuje dostawcę i link do źródła.
 
 ## Podejście do problemu (3–4 zdania)
-Problemem nie jest brak danych, tylko brak odpowiedzialności: w OpenStreetMap jest ponad 18 tys. AED, ale tylko co szósty ma datę sprawdzenia z ostatniego roku i nikt za nie nie odpowiada. Zaczęliśmy od zasad portalu i jego kodu źródłowego, żeby użyć istniejących mechanizmów: kont dostawców, harvestera XML, komentarzy do zbiorów i przypomnień o aktualizacji. Role mają twarde granice: publikuje tylko podmiot, który za dane odpowiada – właściciel, zarządca z umową albo fundacja, która sprawdziła AED na miejscu – i zawsze po zalogowaniu, administrator łączy zbiory, ale nie wpisuje danych, a OSM służy wyłącznie do wskazywania luk.
+Danych o AED nie brakuje, brakuje odpowiedzialności: w OpenStreetMap jest 18 297 AED w Polsce, ale tylko 18% znanych AED ma datę sprawdzenia z ostatnich 12 miesięcy, a za żaden punkt nikt nie odpowiada (`docs/tech/LICZBY.md`). Zaczęliśmy od kodu źródłowego portalu dane.gov.pl i znaleźliśmy w nim gotowy wzór: wykaz chronionych danych (DGA), który portal już dziś składa z zasobów wielu instytucji w jeden wykaz zbiorczy. Ten sam mechanizm zastosowaliśmy do AED – bez przebudowy portalu i bez dawania prawa publikacji komukolwiek poza dostawcą. Zmiany w portalu: katalog `portal/` – pierwszy commit to oryginalny kod dane.gov.pl, każdy następny to nasz przyrost (`git log -- portal/`), więc jury przeczyta kod bez dostępu do zewnętrznych domen.
 
 ## Co zostało zrobione
-Model ról i odpowiedzialności (docs/MODEL_ROL.md). Wzorzec danych AED: 44 pola (XLSX), słownik danych, JSON Schema, metadane CSVW. Kreator dostawcy (Moje AED): formularz albo plik, sprawdzenie ze wzorcem i przycisk „Pobierz pliki do publikacji” – pakiet z CSV, XML harvestera 1.13 zgodnym z XSD, słownikiem i instrukcją publikacji na własnym koncie (nie ma przycisku „Opublikuj”). Agregacja wspólnej listy ze zbiorów dostawców w formacie odpowiedzi API 1.4 portalu: bez scalania rekordów, z oznaczeniem możliwych duplikatów i zbiorów po terminie. Role sprawdzane na serwerze (dysponent zmienia tylko swoje AED, administrator nie ma zapisu do danych), dziennik zdarzeń bez możliwości zmiany. Zgłoszenia mieszkańców trafiają do dostawcy, a AED bez dostawcy – do kolejki administratora jako zaproszenie do publikacji. Mapa i lista z dwoma trybami (dostępność teraz, aktualność danych), karta AED z dostawcą, zbiorem i datą danych, warstwa „Do sprawdzenia” z OpenStreetMap poza listą, mapa luk w gminach, pierwsza pomoc. Testy automatyczne kryteriów K1–K11 z modelu ról. Ograniczenia prototypu: dostawcy są fikcyjni (3), zgłoszenia i przypomnienia są symulowane w aplikacji (docelowo komentarze i powiadomienia portalu), logowanie kontami testowymi (docelowo login.gov.pl i 2FA), kafelki mapy z serwera OpenStreetMap.
+1. **Wykaz AED w portalu dane.gov.pl** (`portal/backend`, kod mcod 2.62.3 + przyrost „Wykaz AED: …”): pole zasobu `contains_aed_list` „Zawiera wykaz AED” (model, migracja, formularz panelu, serializery, filtr, Elasticsearch), walidacja pliku przy zapisie i przy harvestowaniu (44 kolumny wzorca, pola wymagane, współrzędne w Polsce, TERYT, słownik dostępu, jeden wykaz na instytucję), element `containsAedList` w XML (propozycja XSD 1.14), nocne zadanie `create_main_aed_resource_task` (3:40) tworzące „Wykaz AED – wykaz zbiorczy” CSV + XLSX bez scalania, z kolumną „Możliwy duplikat” (≤ 25 m, różni dostawcy), `GET /aed-aggregated`, testy (`mcod/resources/tests/test_aed.py`). Opis i tabela DGA → AED: `portal/README.md`; treść strony informacyjnej CMS: `portal/cms/wykaz_aed.md`.
+2. **Mapa danych AED** (strona odczytu): z ustawionym `PORTAL_API` czyta `/aed-aggregated` i plik wykazu zbiorczego; najbliższe AED, „otwarte teraz”, instrukcja przy zamkniętej szafce, karta z dostawcą i linkiem do źródła, warstwa OpenStreetMap osobno jako „Do sprawdzenia”. Rekordy dodane w aplikacji mają etykietę „Prototyp – nieopublikowane w dane.gov.pl” i nie trafiają do wykazu ani eksportu.
+3. **Dla instytucji**: instrukcja publikacji w panelu dane.gov.pl w krokach, szablon pliku (CSV, XLSX), typowe komunikaty walidacji portalu z poprawkami, kreator pliku i pakiet z XML harvestera.
+4. **Wzorcowy zakres danych AED**: 44 pola (XLSX), słownik danych, JSON Schema, CSVW, słowniki wartości.
+5. **Akcja „AED w danych”**: hasło „Dane prosto z serca”, wezwanie „Masz AED? Udostępnij je na dane.gov.pl”, logotyp (SVG, PNG, JPG, PDF) i księga znaku.
+6. **Model ról** (`docs/MODEL_ROL.md` v2.1): publikuje dostawca, administrator nie zmienia danych dostawców, zgłoszenia wracają do dostawcy, mapa = wykaz zbiorczy. Funkcje edycji AED przez administratora w aplikacji to **tryb pokazowy prototypu, docelowo wyłączony** (MODEL_ROL, „Zmiany v2.1”).
+7. **Referencyjny zakres źródeł** (pkt 2 zadania): każde źródło ma ten sam zakres referencyjny – wzorzec 44 pól (portal odrzuca wykaz bez kolumn wzorca i bez pól wymaganych); w wykazie zbiorczym każdy wiersz wskazuje swoje źródło (dostawca, typ instytucji, link do zasobu, data aktualizacji); eksport aplikacji `deliverables/dataset/zrodla.csv` opisuje każde źródło: format, licencja, częstotliwość aktualizacji, liczba rekordów, pokrycie pól wymaganych i zalecanych (%), obszar.
+8. **Testy**: aplikacja – 110 testów `pytest` (role, walidacja, agregacja, eksport); portal – 23 testy Wykazu AED bez bazy (`portal/local/run_aed_tests.sh`).
+
+Ograniczenia: portalu nie uruchomiliśmy w całości w środowisku hackathonu (blokada pobierania wtyczek Elasticsearch) – kroki uruchomienia na zwykłym komputerze są w `portal/README.md`, 3 testy z bazą czekają na pełne środowisko; dostawcy w prototypie są fikcyjni, obok 3 prawdziwych zbiorów samorządów opublikowanych przed wzorcem (Krosno, Przemyśl, Marki – 50 AED); logowanie kontami testowymi (docelowo login.gov.pl i 2FA); zgłoszenia mieszkańców symulowane w aplikacji (docelowo komentarze do zasobu w dane.gov.pl).
 
 ## Link do demo (do 2 min)
-Nagranie demo (do 2 min) – w wersji finalnej
+DEMO_URL
 
 ## Prezentacja (PDF do 10 MB)
-Prezentacja PDF – w wersji finalnej (min. 5 slajdów ze zrzutami ekranu, kroki użytkownika, ograniczenia)
+https://github.com/Serafin21/misja-aed/blob/main/pitch/prezentacja.pdf
 
 ## Dodatkowe materiały
-W repozytorium: model ról (docs/MODEL_ROL.md), przykładowy pakiet dostawcy (deliverables/pakiet_dostawcy_przyklad/), eksport wspólnej listy (deliverables/dataset/), wzorzec danych (deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx), logotyp i księga znaku akcji „AED w danych” (brand/ – materiały akcji dla dostawców, nie logo aplikacji).
-
+- Instrukcja dla jury: `INSTRUKCJA_DLA_JURY.md`
+- Kod portalu i przyrost „Wykaz AED”: `portal/` (`portal/README.md`, `git log -- portal/`)
+- Logotyp i księga znaku akcji „AED w danych”: `brand/`
+- Wzorcowy zakres danych (XLSX), przykładowy pakiet dostawcy, eksport listy: `deliverables/`
+- Model ról: `docs/MODEL_ROL.md`; zakres użycia AI (§2 ust. 8 regulaminu): `docs/AI_USAGE.md`
+- Prawa autorskie (§4 regulaminu): autorskim rozwiązaniem zespołu jest wszystko poza katalogiem `portal/backend` w commicie `b229557` – to oryginalny kod portalu dane.gov.pl (Ministerstwo Cyfryzacji), dołączony bez zmian, żeby pokazać nasz przyrost; pochodzenie i suma kontrolna: `portal/IMPORT.md`. Zależności: wyłącznie licencje MIT, BSD, Apache-2.0, ISC, PSF (sprawdzenie: `python -m scripts.check_licenses`, `cd src/ui && npm run licenses`); krój IBM Plex Sans – SIL OFL 1.1; dane OpenStreetMap (ODbL) tylko w osobnej warstwie, poza wykazem i eksportem.

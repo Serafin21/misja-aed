@@ -1,5 +1,6 @@
 // E4 – Zgłoś problem z AED (resident, from the AED card): goes to the provider of the record, or to the administrator for
 // helper-layer points. New AED are reported only by logged-in institutions (pages/ZglosAed.tsx, MODEL_ROL v1.3).
+import { aedName } from '../lib/format';
 import { useState, type FormEvent } from 'react';
 import { getAed, reportAed, type TypZgloszenia } from '../api/client';
 import { useAsync } from '../lib/useAsync';
@@ -77,7 +78,7 @@ function ProblemReport({ id }: { id: string }) {
   return (
     <>
       <h1 id="page-title">Zgłoś problem z AED</h1>
-      {a && <p className="lead">{a.nazwa_obiektu}{a.meta?.dostawca ? <> – zgłoszenie trafi do właściciela danych: <strong>{a.meta.dostawca}</strong>. To on decyduje o zmianie danych.</> : <> – to punkt „do sprawdzenia”, zgłoszenie trafi do administratora.</>}</p>}
+      {a && <p className="lead">{aedName(a.nazwa_obiektu)}{a.meta?.dostawca ? <> – zgłoszenie trafi do właściciela danych: <strong>{a.meta.dostawca}</strong>. To on decyduje o zmianie danych.</> : <> – to punkt „do sprawdzenia”, zgłoszenie trafi do administratora.</>}</p>}
       <form onSubmit={send} noValidate>
         <fieldset>
           <legend>Co jest nie tak?</legend>
