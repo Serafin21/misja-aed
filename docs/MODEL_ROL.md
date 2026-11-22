@@ -333,7 +333,7 @@ Pakiet plików do publikacji w dane.gov.pl (`POST /moje-aed/pakiet`) i agregacja
 |---|---|---|
 | Administrator edytuje, usuwa i przypisuje każde AED („Panel moderacji prototypu” → „Wszystkie AED”) | nazwa panelu; edycje w dzienniku; **nie zmieniają wykazu zbiorczego** | brak – zmienia tylko dostawca w panelu dane.gov.pl (R1) |
 | Administrator zatwierdza zgłoszenia nowych AED i zmian; zatwierdzone od razu na mapie | etykieta „Prototyp – nieopublikowane w dane.gov.pl” | zgłoszenie trafia do dostawcy; na mapę dopiero przez jego wykaz (R2, R3) |
-| Administrator podgląda hasła kont | – | brak; logowanie przez login.gov.pl i 2FA (§9) |
+| Logowanie kontami prototypu (hasło jednorazowe od administratora, od CR-TL-11 bez podglądu haseł) | – | login.gov.pl i 2FA (§9) |
 | Mapa bez `PORTAL_API` czyta pakiety fikcyjnych dostawców i zbiory przejściowe | „dostawca fikcyjny – prototyp”, „Zbiór przejściowy” | tylko `/aed-aggregated` (R3) |
 
 Jury: ta tabela jest powtórzona w `INSTRUKCJA_DLA_JURY.md` (krok „Czego nie oceniać jako rozwiązania”) i w `SUBMISSION.md`. Kryteria K2 i K16 obowiązują w rozwiązaniu docelowym; w trybie pokazowym prototypu są świadomie zawieszone (testy v1.4: `tests/test_admin_edycja.py`).

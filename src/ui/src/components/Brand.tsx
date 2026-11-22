@@ -10,7 +10,7 @@ export const BRAND_NAME = 'AED w danych';
 export const BRAND_SLOGAN = 'Dane prosto z serca';
 export const BRAND_CTA = 'Masz AED? Udostępnij je na dane.gov.pl';
 // The application has its own, neutral name (§10: "Rozdzielenie marek").
-export const APP_NAME = 'Mapa AED';
+export const APP_NAME = 'Mapa danych AED';
 export const APP_TAGLINE = 'wspólna lista AED z dane.gov.pl';
 
 // 5×5 grid of the pixel heart; 'a' = amber cell ("Twoje AED").

@@ -1,7 +1,7 @@
 // Login: demo accounts (dysponent / moderator) or an institution account created by a moderator (/panel).
 // After POST /auth/login every request carries Authorization: Bearer <token>.
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { changeMyPassword, getSession, login, logout, onSessionChange, type Role, type Session } from '../api/client';
+import { changeMyPassword, forgotPassword, getSession, login, logout, onSessionChange, type Role, type Session } from '../api/client';
 import { Link, navigate } from '../router';
 import { ErrorSummary, Req, RequiredNote, useValidation } from './form';
 
@@ -40,7 +40,55 @@ export function SessionBar() {
   );
 }
 
-function PasswordForm() {
+/** CR-TL-11: after logging in with a one-time password the institution must set its own before anything else. */
+export function ForcedPasswordChange() {
+  const s = useSession();
+  useEffect(() => { document.title = 'Ustaw własne hasło – Mapa AED'; }, []);
+  return (
+    <>
+      <h1 id="page-title">Ustaw własne hasło</h1>
+      <div className="callout" role="note">
+        <p className="callout__title">Zalogowano hasłem jednorazowym{s?.login ? <> (login <code>{s.login}</code>)</> : null}</p>
+        <p>Hasło jednorazowe dostałeś od administratora. Ustaw teraz własne – tylko Ty będziesz je znać. Nikt, także administrator, nie może go odczytać.</p>
+      </div>
+      <PasswordForm forced />
+      <p><button type="button" className="btn btn--tertiary" onClick={() => { logout(); navigate('/'); }}>Wyloguj</button></p>
+    </>
+  );
+}
+
+/** "Nie pamiętam hasła": the request goes to the administrator, who issues a one-time password (shown to him once). */
+function ForgotPassword() {
+  const [q, setQ] = useState('');
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function send(e: FormEvent) {
+    e.preventDefault(); setErr(''); setMsg('');
+    if (q.trim().length < 3) { setErr('Wpisz login albo służbowy e-mail konta.'); return; }
+    setBusy(true);
+    try { setMsg((await forgotPassword(q.trim())).meta.komunikat); setQ(''); }
+    catch (ex) { setErr((ex as Error).message || 'Nie udało się wysłać prośby.'); } finally { setBusy(false); }
+  }
+  return (
+    <details className="details">
+      <summary>Nie pamiętam hasła</summary>
+      <form onSubmit={send} noValidate>
+        <p>Hasła nie da się odczytać – nawet administrator go nie zna. Wyślij prośbę: administrator sprawdzi instytucję (telefon lub służbowy e-mail z konta) i przekaże Ci <strong>hasło jednorazowe</strong> ważne 72 godziny. Po zalogowaniu ustawisz własne.</p>
+        <div className="field">
+          <label htmlFor="fp-q">Login albo służbowy e-mail</label>
+          <input id="fp-q" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} value={q} onChange={(e) => setQ(e.target.value)}
+            aria-invalid={!!err} aria-describedby={err ? 'fp-err' : undefined} />
+          {err && <p id="fp-err" className="field-error" role="alert">{err}</p>}
+        </div>
+        <p className="form-actions"><button type="submit" className="btn btn--secondary" disabled={busy}>{busy ? 'Wysyłam…' : 'Wyślij prośbę o nowe hasło'}</button></p>
+        <p role="status" className="status-line">{msg}</p>
+      </form>
+    </details>
+  );
+}
+
+function PasswordForm({ forced = false }: { forced?: boolean }) {
   const [f, setF] = useState({ stare: '', nowe: '', nowe2: '' });
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -48,13 +96,17 @@ function PasswordForm() {
     e.preventDefault(); setMsg(''); setErr('');
     if (f.nowe.length < 10) { setErr('Nowe hasło musi mieć co najmniej 10 znaków.'); return; }
     if (f.nowe !== f.nowe2) { setErr('Nowe hasła się różnią.'); return; }
-    try { await changeMyPassword(f.stare, f.nowe); setMsg('Hasło zmienione.'); setF({ stare: '', nowe: '', nowe2: '' }); }
+    if (f.nowe === f.stare) { setErr('Nowe hasło musi być inne niż obecne.'); return; }
+    try {
+      await changeMyPassword(f.stare, f.nowe); setMsg('Hasło zmienione. Inne sesje na tym koncie zostały wylogowane.'); setF({ stare: '', nowe: '', nowe2: '' });
+      if (forced) { const ses = getSession(); if (ses) navigate(ROLE_HOME[ses.rola].to); }
+    }
     catch (ex) { setErr((ex as Error).message); }
   }
   return (
     <form className="panel password-form" onSubmit={save} aria-labelledby="h-pass" noValidate>
-      <h2 id="h-pass">Zmień hasło</h2>
-      {[['stare', 'Obecne hasło', 'current-password'], ['nowe', 'Nowe hasło (min. 10 znaków)', 'new-password'], ['nowe2', 'Powtórz nowe hasło', 'new-password']].map(([k, l, ac]) => (
+      <h2 id="h-pass">{forced ? 'Nowe hasło' : 'Zmień hasło'}</h2>
+      {[['stare', forced ? 'Hasło jednorazowe (od administratora)' : 'Obecne hasło', 'current-password'], ['nowe', 'Nowe hasło (min. 10 znaków)', 'new-password'], ['nowe2', 'Powtórz nowe hasło', 'new-password']].map(([k, l, ac]) => (
         <div className="field" key={k}>
           <label htmlFor={`pw-${k}`}>{l}</label>
           <input id={`pw-${k}`} type="password" autoComplete={ac} value={f[k as keyof typeof f]} onChange={(e) => setF({ ...f, [k]: e.target.value })} />
@@ -138,7 +190,7 @@ export function LoginPage() {
   const [haslo, setHaslo] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  useEffect(() => { document.title = 'Logowanie – Mapa AED'; }, []);
+  useEffect(() => { document.title = 'Logowanie – Mapa danych AED'; }, []);
   async function submit(e: FormEvent) {
     e.preventDefault(); setErr('');
     if (!name.trim() || !haslo) { setErr('Wpisz login i hasło.'); return; }
@@ -177,12 +229,13 @@ export function LoginPage() {
           {err && <p id="lp-err" className="field-error" role="alert">{err}</p>}
         </div>
         <p className="form-actions"><button type="submit" className="btn btn--primary" disabled={busy}>{busy ? 'Loguję…' : 'Zaloguj się'}</button></p>
-        <details className="details">
-          <summary>Konto do pokazu (prototyp)</summary>
-          <p>Administrator: login <code>admin</code>, hasło <code>admin123</code>. Konta instytucji zakłada administrator albo powstają z zatwierdzonego wniosku.</p>
-          <p className="hint">W wersji docelowej logowanie odbywa się przez login.gov.pl z drugim składnikiem (np. kod w telefonie).</p>
-        </details>
       </form>
+      <ForgotPassword />
+      <details className="details">
+        <summary>Konto do pokazu (prototyp)</summary>
+        <p>Administrator: login <code>admin</code>, hasło <code>admin123</code>. Konta instytucji zakłada administrator albo powstają z zatwierdzonego wniosku.</p>
+        <p className="hint">W wersji docelowej logowanie odbywa się przez login.gov.pl z drugim składnikiem (np. kod w telefonie).</p>
+      </details>
       <p>Twoja instytucja nie ma jeszcze konta? <Link to="/wniosek-o-konto">Złóż wniosek o konto</Link> – zacznie działać po sprawdzeniu przez administratora.</p>
     </>
   );

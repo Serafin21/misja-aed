@@ -26,7 +26,8 @@ class Unreachable extends Error {}
 // ---------- auth (CONTRACT: POST /auth/login → Bearer token) ----------
 /** docs/MODEL_ROL.md: dostawca (dysponent) and administrator (MC). */
 export type Role = 'dysponent' | 'administrator';
-export type Session = { token: string; rola: Role; login?: string; dysponent_nazwa?: string | null } | null;
+/** musi_zmienic_haslo: logged in with a one-time password – the app shows only "set your own password" (CR-TL-11). */
+export type Session = { token: string; rola: Role; login?: string; dysponent_nazwa?: string | null; musi_zmienic_haslo?: boolean } | null;
 const SESSION_KEY = 'aed.session';
 function readSession(): Session {
   try { const raw = sessionStorage.getItem(SESSION_KEY); return raw ? (JSON.parse(raw) as Session) : null; } catch { return null; }
@@ -56,6 +57,9 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   if (!isJson && (res.status === 404 || res.status >= 500 || res.ok)) throw new Unreachable(); // dev server / proxy without backend
   if (!res.ok) {
     const body = isJson ? ((await res.json()) as { error?: ApiError }) : null;
+    if (res.status === 403 && session && body?.error?.code === 'zmien_haslo' && !session.musi_zmienic_haslo) {
+      setSession({ ...session, musi_zmienic_haslo: true }); // one-time password: the app switches to "set your own password"
+    }
     if (res.status === 401 && session && !path.startsWith('/auth/')) {
       setSession(null); // token no longer valid (e.g. server restarted with a new AED_SECRET)
       throw new HttpError(401, { code: 'sesja_wygasla', message: 'Sesja wygasła. Zaloguj się ponownie.' });
@@ -318,7 +322,7 @@ export function decideReport(id: string, decyzja: 'przyjete' | 'odrzucone' | 'za
 /** Login: demo accounts (dysponent / moderator) or an institution account created by a moderator. */
 export function login(loginName: string, haslo: string): Promise<Session> {
   return withFallback(
-    () => http<{ token: string; rola: Role; login: string; dysponent_nazwa: string | null }>(`/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: loginName, haslo }) }),
+    () => http<{ token: string; rola: Role; login: string; dysponent_nazwa: string | null; musi_zmienic_haslo?: boolean }>(`/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: loginName, haslo }) }),
     () => mock.mockLogin(loginName, haslo),
   ).then((s) => { setSession(s); return s; });
 }
@@ -338,13 +342,23 @@ export interface ImportDgp { kod_zrodla: string; status: string; dodane?: number
 export const searchDgp = (q: string, importuj: boolean) =>
   http<{ data: ZbiorDgp[]; meta: { count: number; importy: ImportDgp[]; pominiete_niezwiazane?: number; bledy: string[] } }>(`/zrodla/dane-gov-pl/szukaj`, json('POST', { q, importuj }));
 
-export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; dostawca_podstawa?: PodstawaPublikacji | null; email: string | null; telefon?: string | null; regon?: string | null; aktywne: boolean; oczekuje?: boolean; wniosek_id?: string | null; utworzono: string | null; utworzyl: string | null; liczba_aed: number }
+export interface Konto { login: string; rola: Role; dysponent_nazwa: string | null; dostawca_podstawa?: PodstawaPublikacji | null; email: string | null; telefon?: string | null; regon?: string | null; aktywne: boolean; oczekuje?: boolean; wniosek_id?: string | null; utworzono: string | null; utworzyl: string | null; liczba_aed: number;
+  /** CR-TL-11: passwords are never returned – only whether a one-time password is pending and a "forgot password" request */
+  haslo_jednorazowe_do?: string | null; haslo_jednorazowe_wygaslo?: boolean; prosba_o_haslo?: string | null }
 export const listAccounts = () => http<{ data: Konto[] }>(`/konta`).then((r) => r.data);
 export const createAccount = (b: { login: string; dysponent_nazwa: string; dostawca_podstawa?: PodstawaPublikacji; email?: string; rola?: Role; haslo?: string }) =>
   http<{ data: Konto; haslo_jednorazowe: string; haslo_wygenerowane?: boolean; meta?: { komunikat: string } }>(`/konta`, json('POST', b));
-export const resetPassword = (login: string) => http<{ data: Konto; haslo_jednorazowe: string }>(`/konta/${encodeURIComponent(login)}/reset-hasla`, json('POST'));
+export const resetPassword = (login: string) => http<{ data: Konto; haslo_jednorazowe: string; haslo_jednorazowe_do?: string; meta?: { komunikat: string } }>(`/konta/${encodeURIComponent(login)}/reset-hasla`, json('POST'));
 export const setAccountActive = (login: string, aktywne: boolean) => http<{ data: Konto }>(`/konta/${encodeURIComponent(login)}`, json('PATCH', { aktywne }));
-export const changeMyPassword = (stare: string, nowe: string) => http<{ ok: boolean }>(`/konta/ja/haslo`, json('POST', { stare, nowe }));
+/** A new password ends every old session: the server returns a new token, which replaces the current one. */
+export const changeMyPassword = (stare: string, nowe: string) =>
+  http<{ ok: boolean; token: string }>(`/konta/ja/haslo`, json('POST', { stare, nowe })).then((r) => {
+    if (session && r.token) setSession({ ...session, token: r.token, musi_zmienic_haslo: false });
+    return r;
+  });
+/** "Nie pamiętam hasła": a request to the administrator (the same answer whether the account exists or not). */
+export const forgotPassword = (login_lub_email: string) =>
+  http<{ ok: boolean; meta: { komunikat: string } }>(`/auth/nie-pamietam-hasla`, json('POST', { login_lub_email }));
 
 type PointsFC = { features: { id: string; geometry: { coordinates: [number, number] }; properties: Omit<AedPoint, 'id_aed' | 'lat' | 'lon'> }[] };
 
@@ -480,7 +494,5 @@ export const adminAedAssign = (id: string, organizacja: string | null) =>
   http<{ data: { organizacja: string | null } }>(`/admin/aed/${encodeURIComponent(id)}/przypisanie`, json('PUT', { organizacja }));
 export const updateAccount = (login: string, ch: Partial<{ aktywne: boolean; dysponent_nazwa: string; email: string; telefon: string; regon: string;
   dostawca_podstawa: PodstawaPublikacji; nowy_login: string; haslo: string }>) => http<{ data: Konto }>(`/konta/${encodeURIComponent(login)}`, json('PATCH', ch));
-export const viewPassword = (login: string) =>
-  http<{ data: { login: string; haslo: string | null; uwaga: string | null } }>(`/konta/${encodeURIComponent(login)}/haslo`).then((r) => r.data);
 export const deleteAccount = (login: string) => http<{ ok: boolean }>(`/konta/${encodeURIComponent(login)}`, json('DELETE'));
 

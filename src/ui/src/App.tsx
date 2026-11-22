@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { probeApi } from './api/client';
 import { useMockMode } from './lib/useMockMode';
-import { APP_NAME, APP_TAGLINE, BRAND_NAME } from './components/Brand';
+import { APP_NAME, APP_TAGLINE, BRAND_NAME, LogoMark } from './components/Brand';
 import { ExternalLink, Icon } from './components/ui';
 import { About, AccessibilityStatement, Contact, Cookies, Licenses, Privacy } from './pages/Info';
 import { AedCard } from './pages/AedCard';
@@ -9,7 +9,7 @@ import { MapList } from './pages/MapList';
 import { Campaign } from './pages/Campaign';
 import { Dataset } from './pages/Dataset';
 import { Admin } from './pages/Admin';
-import { LoginPage, useSession } from './components/Auth';
+import { ForcedPasswordChange, LoginPage, useSession } from './components/Auth';
 import { Home } from './pages/Home';
 import { FirstAid } from './pages/FirstAid';
 import { Providers } from './pages/Providers';
@@ -121,7 +121,7 @@ export function App() {
       <header className="site-header">
         <div className="container site-header__inner">
           <Link to="/" className="brand" aria-label={`${APP_NAME} – strona główna`}>
-            <span className="brand__mark brand__mark--app"><Icon name="pin" /></span>
+            <span className="brand__mark"><LogoMark size={44} /></span>
             <span>{APP_NAME}<span className="brand__slogan" aria-hidden="true">{APP_TAGLINE}</span></span>
           </Link>
           <button id="menu-btn" type="button" className="menu-btn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu((m) => !m)}>
@@ -146,7 +146,7 @@ export function App() {
       )}
       <div className="container"><Breadcrumbs path={path} /></div>
       <main id="main" className="container" tabIndex={-1}>
-        <Routes />
+        {session?.musi_zmienic_haslo ? <ForcedPasswordChange /> : <Routes />}
       </main>
       <footer className="site-footer">
         <div className="container">
