@@ -4,13 +4,7 @@
 
 > Serwer zasypia po 15 minutach bez ruchu. Jeśli strona ładuje się dłużej, poczekaj do 2–3 minut i odśwież – serwer się budzi i wczytuje dane.
 
-**Film demo (do 2 min): `pitch/demo.mp4`** – najszybszy sposób, żeby zobaczyć całe rozwiązanie.
-
-## Co oceniacie
-
-1. **Wykaz AED w portalu dane.gov.pl** (rdzeń) – zmiana w kodzie portalu wzorem istniejącego wykazu chronionych danych (DGA): instytucja zaznacza przy swoim zasobie „Zawiera wykaz AED”, portal sprawdza plik i składa wykazy wszystkich dostawców w jeden „Wykaz AED – wykaz zbiorczy” (API `/aed-aggregated`). Każdy wiersz ma dostawcę, który za niego odpowiada; wiersze nie są scalane.
-2. **Mapa danych AED** – aplikacja, która czyta wykaz i pokazuje AED z dostawcą i źródłem danych.
-3. **Akcja „AED w danych”** – nazwa, hasło, logotyp i księga znaku dla dostawców danych.
+**Film demo (do 2 min): – najszybszy sposób, żeby zobaczyć całe rozwiązanie.
 
 ## Krok po kroku (ok. 10 minut)
 
