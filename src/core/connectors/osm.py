@@ -5,6 +5,8 @@ Contact details (phone, e-mail) from OSM are NOT imported – they may identify 
 """
 from __future__ import annotations
 
+import re
+
 import json
 
 from .. import dedup, hours, normalize as N, pipeline, quality, validate
@@ -36,6 +38,22 @@ def osm_id(props: dict, feature: dict) -> str:
     return str(feature.get("id"))
 
 
+NAME_MAX = 80  # longer "names" in OSM are descriptions ("Aby dostać się do budynku należy…")
+
+
+def _name(p: dict) -> str:
+    """Short name of the place. The description is NEVER used as a name (it goes to opis_lokalizacji); without a
+    name: the operator, the building / shop name, or "AED – street number, town"."""
+    for k in ("name", "name:pl", "operator", "brand", "addr:housename"):
+        v = N.text(p.get(k))
+        v = re.sub(r"^[\s\-–•*.,;:]+", "", v or "")  # "- AED zamontowane…" → "AED zamontowane…"
+        if v and len(v) <= NAME_MAX and not re.fullmatch(r"[\d\s+()/-]+", v):  # a phone number is not a name
+            return v
+    street = " ".join(x for x in (p.get("addr:street"), p.get("addr:housenumber")) if x)
+    where = ", ".join(x for x in (street, p.get("addr:city") or p.get("addr:place")) if x)
+    return f"AED – {where}" if where else "Defibrylator AED"
+
+
 def to_record(feature: dict) -> tuple[dict, list[dict]]:
     p = feature.get("properties") or {}
     lon, lat = feature["geometry"]["coordinates"][:2]
@@ -46,7 +64,7 @@ def to_record(feature: dict) -> tuple[dict, list[dict]]:
     rec.update({
         "id_aed": PLACEHOLDER_ID,
         "id_dysponenta_aed": p.get("ref"),
-        "nazwa_obiektu": N.text(p.get("name") or p.get("description") or p.get("operator")) or "Defibrylator AED",
+        "nazwa_obiektu": _name(p),
         "opis_lokalizacji": N.text(loc) or "Brak opisu w OpenStreetMap – sprawdź na miejscu",
         "szerokosc_geograficzna": round(float(lat), 6), "dlugosc_geograficzna": round(float(lon), 6),
         "miejscowosc": N.text(p.get("addr:city") or p.get("addr:place")),

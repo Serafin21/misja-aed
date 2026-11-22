@@ -1,5 +1,13 @@
 # HANDOFF – Model A
 
+## 2026-11-22 – HANDOFF #15: podgląd haseł, adresy w formularzu, nazwy z OSM
+
+- **Podgląd loginu i hasła (decyzja właściciela projektu):** `GET /konta/{login}/haslo` (administrator, wpis `konto:podglad_hasla` w dzienniku). Do logowania nadal tylko PBKDF2; obok zaszyfrowana kopia `konta.haslo_podglad` (`src/api/sejf.py`, klucz z `AED_SECRET`), zapisywana przy założeniu konta, wniosku, pracowniku, resecie, zmianie przez administratora i przez instytucję. Konta sprzed tej zmiany – `haslo: null` + `uwaga` (ustaw nowe). Wbudowane `admin` – hasło z `.env`.
+- `POST /konta`: hasło krótsze niż 8 znaków albo puste → **generowane** (bez błędu), w odpowiedzi `haslo_wygenerowane` i `meta.komunikat`.
+- **Geokodowanie adresów:** (1) błędy usługi GUGiK nie są już zapamiętywane jako „nie znaleziono” (wcześniej jeden zbyt wolny wynik blokował adres do restartu; limit czasu 8 s); (2) „ul.”, „al.”, „pl.”, „os.” – próbowane warianty bez przedrostka i z pełną nazwą („al. Jerozolimskie 100” → „Aleje Jerozolimskie 100”); (3) „Marki, Piłsudskiego 95” = „Aleja Marszałka Józefa Piłsudskiego 95” (ten sam numer i miejscowość, słowa ulicy w pełnej nazwie).
+- **Nazwy AED z OpenStreetMap:** gdy punkt nie miał `name`, nazwą był jego **opis** (592 punkty, np. „Aby dostać się do budynku należy użyć domofonu…”) – błąd po naszej stronie. Teraz: `name` / `operator` / `brand` (do 80 znaków, bez samych numerów telefonu, bez „- ” na początku), inaczej „AED – ulica numer, miasto” albo „Defibrylator AED”; opis zostaje w `opis_lokalizacji`. Działa po następnym odświeżeniu OSM (`seed` albo „Odśwież teraz”).
+- `pytest` 103.
+
 ## 2026-11-22 – HANDOFF #14: dowolniejszy login, hasło nadane przez administratora
 
 - Login: 3–60 znaków – litery (także wielkie i polskie), cyfry, `. _ - @ +` (e-mail też); wielkość liter bez znaczenia, spacje → kropki (`auth.normalize_login`, „UM Krosno” → `um.krosno`). Token koduje login (`quote`), więc polskie litery działają w nagłówku HTTP.

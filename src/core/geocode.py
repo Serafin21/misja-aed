@@ -21,7 +21,7 @@ from . import coverage
 
 UUG = "https://services.gugik.gov.pl/uug/"
 UA = "MisjaAED-prototyp/1.0"
-TIMEOUT_S = 4
+TIMEOUT_S = 8
 TYP_KOLEJNOSC = {"wojewodztwo": 0, "gmina": 1, "miejscowosc": 2, "ulica": 3, "adres": 4}
 RODZAJ_OPIS = {"miejska": "miasto", "wiejska": "gmina wiejska", "miejsko-wiejska": "gmina miejsko-wiejska"}
 
@@ -76,9 +76,14 @@ def _offline(q: str) -> list[dict]:
     return [dict(i) for _, i in hits]
 
 
-@lru_cache(maxsize=512)
+_UUG_CACHE: dict[str, tuple[str, tuple]] = {}
+
+
 def _uug(address: str) -> tuple[str, tuple]:
-    """GUGiK geocoder → (type, results). Empty on any error (offline)."""
+    """GUGiK geocoder → (type, results). Empty on any error (offline). Only answers are cached – a timeout is not
+    remembered as "nothing found" (it used to be: one slow answer made an address unfindable until a restart)."""
+    if address in _UUG_CACHE:
+        return _UUG_CACHE[address]
     url = UUG + "?" + urllib.parse.urlencode({"request": "GetAddress", "address": address, "srid": "4326"})
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
@@ -87,7 +92,11 @@ def _uug(address: str) -> tuple[str, tuple]:
     except Exception:
         return "", ()
     res = j.get("results") or {}
-    return j.get("type") or "", tuple(res[k] for k in sorted(res, key=lambda k: int(k)))
+    out = (j.get("type") or "", tuple(res[k] for k in sorted(res, key=lambda k: int(k))))
+    if len(_UUG_CACHE) > 2000:
+        _UUG_CACHE.clear()
+    _UUG_CACHE[address] = out
+    return out
 
 
 def _line_bbox(wkt: str | None) -> list[float] | None:
@@ -96,6 +105,16 @@ def _line_bbox(wkt: str | None) -> list[float] | None:
         return None
     xs, ys = nums[0::2], nums[1::2]
     return [round(min(xs), 5), round(min(ys), 5), round(max(xs), 5), round(max(ys), 5)]
+
+
+def _same_address(typed: str, r: dict) -> bool:
+    """"Marki, Piłsudskiego 95" vs "Aleja Marszałka Józefa Piłsudskiego 95": same number and the typed street words
+    are in the official street name → the same address, although the geocoder reports a lower accuracy."""
+    m = re.match(r"^\s*(?P<city>[^,]+),\s*(?P<street>.*\D)\s+(?P<nr>\d+\w?(/\d+\w?)?)\s*$", typed)
+    if not m or norm(str(r.get("number") or "")) != norm(m["nr"]) or norm(str(r.get("city") or "")) != norm(m["city"]):
+        return False
+    words = [w for w in norm(m["street"]).replace(".", " ").split() if len(w) > 2 and w not in ("ul", "al", "aleja", "aleje", "plac", "os")]
+    return bool(words) and all(w in norm(str(r.get("street") or "")) for w in words)
 
 
 def _remote(address: str, gminy_seen: set[str]) -> list[dict]:
@@ -117,7 +136,7 @@ def _remote(address: str, gminy_seen: set[str]) -> list[dict]:
             out.append({"typ": "ulica", "nazwa": f"{r.get('street')}, {r.get('city')}", "opis": "ulica",
                         "lat": lat, "lon": lon, "bbox": _line_bbox(r.get("geometry_wkt"))})
         elif typ == "address":
-            if str(r.get("accuracy")) not in ("1", "1.0"):
+            if str(r.get("accuracy")) not in ("1", "1.0") and not _same_address(address, r):
                 continue  # UUG adds similar addresses (other streets) – keep exact matches only
             street = f"{r.get('street')} {r.get('number')}" if r.get("street") else r.get("number")
             out.append({"typ": "adres", "nazwa": f"{street}, {r.get('city')}", "opis": f"adres, {r.get('code') or ''}".strip(", "),
@@ -126,8 +145,32 @@ def _remote(address: str, gminy_seen: set[str]) -> list[dict]:
     return out
 
 
+_PREFIX = re.compile(r"(?i)(^|,\s*)(ul\.?|ulica|al\.?|aleja|aleje|pl\.?|plac|os\.?|osiedle|skwer|rondo)\s+")
+
+
+def _variants(q: str) -> list[str]:
+    """People write "ul. Floriańska 3", "al. Jerozolimskie 100", "pl. Mariacki 5" – the geocoder knows streets by name
+    ("Floriańska", "Aleje Jerozolimskie", "plac Mariacki"). Try the text as typed, without the prefix and with the
+    prefix written out."""
+    out = [q]
+    m = _PREFIX.search(q)
+    if m:
+        word = m.group(2).lower().rstrip(".")
+        full = {"al": ["Aleje", "Aleja"], "aleja": ["Aleja"], "aleje": ["Aleje"], "pl": ["plac"], "plac": ["plac"], "os": ["osiedle"],
+                "osiedle": ["osiedle"], "skwer": ["skwer"], "rondo": ["rondo"]}.get(word, [])
+        out.append(_PREFIX.sub(lambda x: x.group(1), q, count=1))
+        out += [_PREFIX.sub(lambda x, w=w: f"{x.group(1)}{w} ", q, count=1) for w in full]
+    return list(dict.fromkeys(o.strip() for o in out if o.strip()))
+
+
 def search(q: str, limit: int = 8, blisko: tuple[float, float] | None = None, online: bool = True) -> list[dict]:
     q = (q or "").strip()
+    if online and _PREFIX.search(q):
+        # "ul. Floriańska 3" → "Floriańska 3", "al. X" → "Aleje X" / "Aleja X" …: an exact address wins, then a street
+        found = [r for r in (search(v, limit, blisko, online) for v in _variants(q)[1:]) if r]
+        best = next((r for r in found if any(i["typ"] == "adres" for i in r)), None) or next(iter(found), None)
+        if best:
+            return best
     if len(norm(q)) < 2:
         return []
     out: list[dict] = []
@@ -163,9 +206,13 @@ def search(q: str, limit: int = 8, blisko: tuple[float, float] | None = None, on
     return uniq[:limit]
 
 
-@lru_cache(maxsize=512)
+_REV_CACHE: dict[tuple, tuple] = {}
+
+
 def _uug_reverse(lat: float, lon: float) -> tuple:
-    """GUGiK reverse geocoder (GetAddressReverse, radius 100 m) → results; empty on any error."""
+    """GUGiK reverse geocoder (GetAddressReverse, radius 100 m) → results; empty on any error (errors are not cached)."""
+    if (lat, lon) in _REV_CACHE:
+        return _REV_CACHE[(lat, lon)]
     url = UUG + "?" + urllib.parse.urlencode({"request": "GetAddressReverse", "location": f"POINT({lon} {lat})", "srid": "4326"})
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
@@ -174,7 +221,9 @@ def _uug_reverse(lat: float, lon: float) -> tuple:
     except Exception:
         return ()
     res = j.get("results") or {}
-    return tuple(res[k] for k in sorted(res, key=lambda k: int(k)))
+    out = tuple(res[k] for k in sorted(res, key=lambda k: int(k)))
+    _REV_CACHE[(lat, lon)] = out
+    return out
 
 
 def reverse(lat: float, lon: float, online: bool = True) -> dict:

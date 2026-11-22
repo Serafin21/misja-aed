@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field, StrictBool
 from src.core import coverage, db, dedup, hours, importers, linked, mapping, pipeline, publish, schema, template, validate
 from src.core.store import TZ, get_store, now_min, today
 
-from . import auth
+from . import auth, sejf
 from .auth import check_login, require
 
 API = "/api/v1"
@@ -941,7 +941,7 @@ def confirm(id_aed: str, body: Potwierdzenie):
 # ---------- accounts: providers (and administrators), managed by an administrator ----------
 class KontoIn(BaseModel):
     login: str = Field(..., description="3–60 znaków: litery, cyfry, . _ - @ (wielkość liter bez znaczenia)")
-    haslo: Optional[str] = Field(None, min_length=8, max_length=200, description="hasło nadane przez administratora; puste = wygenerowane")
+    haslo: Optional[str] = Field(None, max_length=200, description="hasło nadane przez administratora (min. 8 znaków); puste albo krótsze = wygenerowane")
     dysponent_nazwa: str = Field(..., min_length=3, max_length=200, description="Instytucja – tak jak w polu dysponent_nazwa rekordów")
     email: Optional[str] = Field(None, max_length=200)
     rola: str = Field("dysponent", pattern="^(dysponent|administrator)$")
@@ -971,19 +971,22 @@ def account_create(body: KontoIn, role: str = Depends(require("administrator")))
         err(422, "walidacja", "Nieprawidłowy login.", {"login": auth.LOGIN_HINT})
     if auth.account(login):
         err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
-    haslo = body.haslo or auth.new_password()  # typed by the administrator, otherwise a readable one is generated
+    # the administrator may type the password; empty or shorter than 8 characters → a readable one is generated
+    wygenerowane = not (body.haslo and len(body.haslo) >= 8)
+    haslo = auth.new_password() if wygenerowane else body.haslo
     st = get_store()
     if body.rola == "dysponent" and not body.dostawca_podstawa:
         err(422, "walidacja", "Podaj podstawę publikacji.", {"dostawca_podstawa": "wlasciciel | zarzadca | weryfikujacy"})
-    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon) "
-                    "VALUES (?,?,?,?,1,?,?,?,?,?)",
+    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon, haslo_podglad) "
+                    "VALUES (?,?,?,?,1,?,?,?,?,?,?)",
                     (login, body.rola, body.dysponent_nazwa.strip(), auth.hash_password(haslo), now_min(), getattr(role, "login", str(role)),
-                     body.email, body.dostawca_podstawa if body.rola == "dysponent" else None, body.regon))
+                     body.email, body.dostawca_podstawa if body.rola == "dysponent" else None, body.regon, sejf.zaszyfruj(haslo)))
     st.conn.commit()
     from src.core import dziennik
     dziennik.zapisz(role, "konto:zalozenie", login, po=_konto_out(auth.account(login)))
-    return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo,
-            "meta": {"komunikat": "Przekaż login i hasło instytucji bezpiecznym kanałem. Hasła nie da się później odczytać – tylko zresetować."}}
+    return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo, "haslo_wygenerowane": wygenerowane,
+            "meta": {"komunikat": ("Hasło wygenerowane automatycznie" + (" – wpisane było krótsze niż 8 znaków." if body.haslo else ".") if wygenerowane
+                                   else "Konto założone z podanym hasłem.") + " Login i hasło zobaczysz zawsze w panelu (Instytucje i konta)."}}
 
 
 @app.post(f"{API}/konta/{{login}}/reset-hasla", tags=["auth"], summary="Nowe hasło dla konta instytucji (moderator)")
@@ -992,7 +995,7 @@ def account_reset(login: str, role: str = Depends(require("administrator"))):
         err(404, "nie_znaleziono", "Nie ma takiego konta.")
     haslo = auth.new_password()
     st = get_store()
-    st.conn.execute("UPDATE konta SET haslo=? WHERE login=?", (auth.hash_password(haslo), login))
+    st.conn.execute("UPDATE konta SET haslo=?, haslo_podglad=? WHERE login=?", (auth.hash_password(haslo), sejf.zaszyfruj(haslo), login))
     st.conn.commit()
     from src.core import dziennik
     dziennik.zapisz(role, "konto:reset_hasla", login)
@@ -1042,12 +1045,26 @@ def account_update(login: str, body: KontoZmianaIn, role: str = Depends(require(
         if k in ch:
             st.conn.execute(f"UPDATE konta SET {c}=? WHERE login=?", (int(ch[k]) if k == "aktywne" else ch[k], login))
     if "haslo" in ch:
-        st.conn.execute("UPDATE konta SET haslo=? WHERE login=?", (auth.hash_password(ch["haslo"]), login))
+        st.conn.execute("UPDATE konta SET haslo=?, haslo_podglad=? WHERE login=?", (auth.hash_password(ch["haslo"]), sejf.zaszyfruj(ch["haslo"]), login))
     st.conn.commit()
     st.load()
     op = "konto:blokada" if ch.get("aktywne") is False else "konto:odblokowanie" if ch.get("aktywne") is True and len(ch) == 1 else "konto:zmiana"
     dziennik.zapisz(role, op, login, przed=przed, po=_konto_out(auth.account(login)) | ({"haslo": "zmienione"} if "haslo" in ch else {}))
     return {"data": _konto_out(auth.account(login))}
+
+
+@app.get(f"{API}/konta/{{login}}/haslo", tags=["auth"], summary="Podgląd loginu i hasła konta (administrator) – zapisywany w dzienniku")
+def account_password_view(login: str, role: str = Depends(require("administrator"))):
+    from src.core import dziennik
+    if login == "admin":
+        return {"data": {"login": "admin", "haslo": auth.DEMO.get("admin"), "uwaga": "konto wbudowane – hasło w pliku .env (ADMIN_PASSWORD)"}}
+    a = auth.account(login)
+    if not a:
+        err(404, "nie_znaleziono", "Nie ma takiego konta.")
+    haslo = sejf.odszyfruj(a.get("haslo_podglad"))
+    dziennik.zapisz(role, "konto:podglad_hasla", login)
+    return {"data": {"login": login, "haslo": haslo,
+                     "uwaga": None if haslo else "Hasło ustawiono przed wprowadzeniem podglądu – ustaw nowe (Edytuj → Nowe hasło)."}}
 
 
 @app.delete(f"{API}/konta/{{login}}", tags=["auth"], summary="Usuń konto instytucji (administrator) – AED zostają na mapie")
@@ -1076,7 +1093,7 @@ def account_password(body: ZmianaHasla, role: str = Depends(require("dysponent",
     if not auth.verify_password(body.stare, a["haslo"]):
         err(422, "walidacja", "Obecne hasło jest nieprawidłowe.", {"stare": "Nieprawidłowe hasło."})
     st = get_store()
-    st.conn.execute("UPDATE konta SET haslo=? WHERE login=?", (auth.hash_password(body.nowe), a["login"]))
+    st.conn.execute("UPDATE konta SET haslo=?, haslo_podglad=? WHERE login=?", (auth.hash_password(body.nowe), sejf.zaszyfruj(body.nowe), a["login"]))
     st.conn.commit()
     from src.core import dziennik
     dziennik.zapisz(role, "konto:zmiana_hasla", a["login"])
@@ -1449,9 +1466,9 @@ def account_request(body: WniosekIn):
     w = {"id": wid, "status": "oczekuje", "nazwa_instytucji": body.nazwa_instytucji.strip(), "regon": body.regon,
          "podstawa": body.podstawa, "email_sluzbowy": body.email_sluzbowy.strip(), "telefon": body.telefon.strip(), "login": login,
          "utworzono": now_min(), "decyzja": None, "uzasadnienie": None, "kto": None, "kiedy": None}
-    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon, telefon) "
-                    "VALUES (?,?,?,?,0,?,?,?,?,?,?)", (login, "dysponent", w["nazwa_instytucji"], auth.hash_password(body.haslo), now_min(),
-                                                       f"wniosek:{wid}", w["email_sluzbowy"], body.podstawa, body.regon, w["telefon"]))
+    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon, telefon, haslo_podglad) "
+                    "VALUES (?,?,?,?,0,?,?,?,?,?,?,?)", (login, "dysponent", w["nazwa_instytucji"], auth.hash_password(body.haslo), now_min(),
+                                                         f"wniosek:{wid}", w["email_sluzbowy"], body.podstawa, body.regon, w["telefon"], sejf.zaszyfruj(body.haslo)))
     st.conn.execute("INSERT INTO wnioski VALUES (?,?,?,?)", (wid, "oczekuje", db.dumps(w), now_min()))
     st.conn.commit()
     dziennik.zapisz(f"wniosek:{login}", "konto:wniosek", wid, po=_wniosek_out(w))
@@ -1519,9 +1536,9 @@ def account_add_employee(body: PracownikIn, role: str = Depends(require("dyspone
         err(409, "konto_istnieje", "Takie konto już istnieje.", {"login": "Login zajęty."})
     haslo = auth.new_password()
     st = get_store()
-    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon, telefon) "
-                    "VALUES (?,?,?,?,1,?,?,?,?,?,?)", (login, "dysponent", me["dysponent_nazwa"], auth.hash_password(haslo), now_min(),
-                                                       me["login"], body.email, me.get("podstawa"), me.get("regon"), None))
+    st.conn.execute("INSERT INTO konta (login, rola, dysponent_nazwa, haslo, aktywne, utworzono, utworzyl, email, podstawa, regon, telefon, haslo_podglad) "
+                    "VALUES (?,?,?,?,1,?,?,?,?,?,?,?)", (login, "dysponent", me["dysponent_nazwa"], auth.hash_password(haslo), now_min(),
+                                                         me["login"], body.email, me.get("podstawa"), me.get("regon"), None, sejf.zaszyfruj(haslo)))
     st.conn.commit()
     dziennik.zapisz(role, "konto:pracownik", login, po=_konto_out(auth.account(login)))
     return {"data": _konto_out(auth.account(login)), "haslo_jednorazowe": haslo,

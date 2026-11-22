@@ -134,3 +134,25 @@ def test_login_dowolny_i_haslo_od_admina(client):
     assert r.status_code == 201 and len(r.json()["haslo_jednorazowe"]) >= 10
     assert _h(client, "AED@Szkola.example.pl", r.json()["haslo_jednorazowe"])
     assert client.post("/api/v1/konta", headers=adm, json={"login": "ab", "dysponent_nazwa": "Xyz", "dostawca_podstawa": "wlasciciel"}).status_code == 422
+
+
+def test_podglad_hasla_i_haslo_za_krotkie(client):
+    adm = _h(client, "admin", "admin123")
+    r = client.post("/api/v1/konta", headers=adm, json={"login": "UM Krosno", "haslo": "abc", "dysponent_nazwa": "Urząd Miasta Krosna",
+                                                        "dostawca_podstawa": "wlasciciel"})
+    assert r.status_code == 201 and r.json()["haslo_wygenerowane"] is True and r.json()["haslo_jednorazowe"] != "abc"
+    gen = r.json()["haslo_jednorazowe"]
+    v = client.get("/api/v1/konta/um.krosno/haslo", headers=adm).json()["data"]
+    assert v == {"login": "um.krosno", "haslo": gen, "uwaga": None}
+    # after the administrator sets a new one, and after the institution changes its own – the view follows
+    client.patch("/api/v1/konta/um.krosno", headers=adm, json={"haslo": "Nowe-haslo-1"})
+    assert client.get("/api/v1/konta/um.krosno/haslo", headers=adm).json()["data"]["haslo"] == "Nowe-haslo-1"
+    inst = _h(client, "um.krosno", "Nowe-haslo-1")
+    assert client.post("/api/v1/konta/ja/haslo", headers=inst, json={"stare": "Nowe-haslo-1", "nowe": "Moje-wlasne-123"}).status_code == 200
+    assert client.get("/api/v1/konta/um.krosno/haslo", headers=adm).json()["data"]["haslo"] == "Moje-wlasne-123"
+    assert client.get("/api/v1/konta/um.krosno/haslo", headers=inst).status_code == 403
+    assert client.get("/api/v1/konta/admin/haslo", headers=adm).json()["data"]["haslo"] == "admin123"
+    assert any(e["operacja"] == "konto:podglad_hasla" for e in client.get("/api/v1/dziennik", headers=adm).json()["data"])
+    r = client.post("/api/v1/konta", headers=adm, json={"login": "szkola5", "haslo": "Dobre-haslo-9", "dysponent_nazwa": "Szkoła 5",
+                                                        "dostawca_podstawa": "wlasciciel"})
+    assert r.json()["haslo_wygenerowane"] is False and r.json()["haslo_jednorazowe"] == "Dobre-haslo-9"
