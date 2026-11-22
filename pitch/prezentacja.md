@@ -38,8 +38,8 @@ Zespół MKS · HackNation 2026 · Misja AED – dane na ratunek
 
 To zmiana w kodzie portalu, nie osobny system. **Katalog `portal/` – pierwszy commit to oryginalny kod dane.gov.pl, każdy następny to nasz przyrost (`git log -- portal/`).**
 
-[ZRZUT 01_git_log_portal: `git log --oneline -- portal/` – import + commity „Wykaz AED: …”]
-[ZRZUT 02_dga_vs_aed: tabela DGA → AED z `portal/README.md`]
+[ZRZUT `pitch/zrzuty/01_portal_git_log.png`: `git log -- portal/` – import + commity „Wykaz AED: …”]
+[Tabela DGA → AED: `portal/README.md`]
 
 ---
 
@@ -48,8 +48,9 @@ To zmiana w kodzie portalu, nie osobny system. **Katalog `portal/` – pierwszy 
 - Pole „Zawiera wykaz AED” obok „Zawiera wykaz chronionych danych” (`mcod/resources/forms.py`).
 - Publikować mogą wszystkie typy instytucji; jedna instytucja = jeden wykaz.
 - Poprawka = nowa wersja pliku w tym samym zasobie. Nikt poza dostawcą nie zmienia jego wierszy.
+- Puste pole = znak umowny „-” zaznaczony przy zasobie (zasada portalu – sprawdzone na uruchomionym portalu).
 
-[ZRZUT 03_panel_zasob: panel – zasób z „Zawiera wykaz AED” = Tak]
+[ZRZUT `pitch/zrzuty/02_portal_panel_zawiera_wykaz_aed.png`: uruchomiony panel – zasób z „Zawiera wykaz AED” = Tak i znakiem umownym „-”]
 
 ---
 
@@ -62,9 +63,9 @@ Przykładowe komunikaty (`mcod/resources/aed_utils.py`):
 - „współrzędne … poza Polską (zamienione szerokość i długość?)”
 - „Instytucja ma już opublikowany wykaz AED … – portal przechowuje jeden wykaz AED na instytucję.”
 
-Testy: `mcod/resources/tests/test_aed.py` – 23 testy bez bazy przechodzą.
+Testy: `mcod/resources/tests/test_aed.py` – 28/28 (25 bez bazy, 3 z bazą w uruchomionym portalu).
 
-[ZRZUT 04_walidacja: komunikat walidacji w panelu albo wynik `portal/local/run_aed_tests.sh`]
+[ZRZUT `pitch/zrzuty/03_portal_walidacja_bledy.png`: uruchomiony panel odrzuca plik z błędami – lista błędów wiersz po wierszu]
 
 ---
 
@@ -75,8 +76,9 @@ Testy: `mcod/resources/tests/test_aed.py` – 23 testy bez bazy przechodzą.
 - `GET /aed-aggregated` → linki `csv_url`, `xlsx_url` – wzorem `/dga-aggregated`.
 - Formaty maszynowe wg Standardu technicznego; XML harvestera 1.13 + propozycja 1.14 z `containsAedList` (`portal/xsd/`).
 
-[ZRZUT 05_wykaz_zbiorczy: plik wykazu zbiorczego]
-[ZRZUT 06_aed_aggregated: odpowiedź `/aed-aggregated`]
+[ZRZUT `pitch/zrzuty/04_portal_wykazy_aed_w_panelu.png`: wykazy 2 instytucji + wykaz zbiorczy (CSV, XLSX), walidacje portalu zielone]
+[ZRZUT `pitch/zrzuty/05_portal_wykaz_zbiorczy_csv.png`: wiersze z dostawcą, linkiem i „Możliwy duplikat”]
+[ZRZUT `pitch/zrzuty/06_portal_api_aed_aggregated.png`: odpowiedź `/aed-aggregated`]
 
 ---
 
@@ -89,6 +91,7 @@ Testy: `mcod/resources/tests/test_aed.py` – 23 testy bez bazy przechodzą.
 
 [ZRZUT 07_mapa: Znajdź AED – lista i mapa]
 [ZRZUT 08_karta: karta AED – „Skąd są te dane i kto za nie odpowiada”]
+[ZRZUT `pitch/zrzuty/12_mapa_karta_z_wykazu_portalu.png`: karta AED, gdy mapa czyta wykaz z uruchomionego portalu (`PORTAL_API`)]
 
 ---
 
@@ -119,7 +122,7 @@ Testy: `mcod/resources/tests/test_aed.py` – 23 testy bez bazy przechodzą.
 ## Slajd 10 – Ograniczenia, zakres AI, dalej
 
 **Ograniczenia**
-- Portalu z Wykazem AED nie uruchomiliśmy w całości w środowisku hackathonu (blokada wtyczek Elasticsearch); 3 testy z bazą czekają na pełne środowisko.
+- Portal z Wykazem AED działa lokalnie na 2 instytucjach testowych; etykiety panelu po angielsku w lokalnej instalacji (bez skompilowanych tłumaczeń).
 - Edycja AED przez administratora aplikacji – tryb pokazowy prototypu, docelowo wyłączony.
 - Bez `PORTAL_API` mapa czyta fikcyjnych dostawców i 3 zbiory samorządów sprzed wzorca (Krosno, Przemyśl, Marki – 50 AED).
 - Zgłoszenia symulowane w aplikacji (docelowo komentarze do zasobu); logowanie testowe (docelowo login.gov.pl i 2FA).

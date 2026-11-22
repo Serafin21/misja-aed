@@ -46,7 +46,7 @@ Cel: WCAG 2.2 na poziomie AA. Aplikacja działa od 320 px szerokości. Mapa ma r
 
 ## Ograniczenia prototypu
 
-- Portalu z Wykazem AED nie uruchomiliśmy w całości w środowisku hackathonu (blokada pobierania wtyczek Elasticsearch); 23 testy Wykazu AED bez bazy przechodzą, 3 testy z bazą czekają na pełne środowisko; kroki na zwykłym komputerze: `portal/README.md`.
+- Portal z Wykazem AED działa lokalnie (uruchomiony w sesji zespołu, zrzuty `pitch/zrzuty/01–06`); dane w nim to 2 instytucje testowe. Testy Wykazu AED: 28/28 (25 bez bazy, 3 z bazą). Uruchomienie wykryło wymóg portalu, który testy pomijały – brak wartości w tabeli oznacza się znakiem umownym „-” – i jest już obsłużony.
 - Bez `PORTAL_API` mapa czyta pakiety fikcyjnych dostawców i 3 prawdziwe zbiory samorządów opublikowane przed wzorcem (Krosno, Przemyśl, Marki – 50 AED).
 - Edycja AED przez administratora aplikacji i zatwierdzanie zgłoszeń od razu na mapę – tryb pokazowy prototypu, docelowo wyłączony.
 - Zgłoszenia mieszkańców symulowane w aplikacji (docelowo komentarze do zasobu w dane.gov.pl); logowanie kontami testowymi (docelowo login.gov.pl i 2FA).

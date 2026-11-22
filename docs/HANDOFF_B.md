@@ -412,3 +412,32 @@ Uwagi do decyzji TL przed zamrożeniem o 15:00. Każda ma uzasadnienie z ekranu;
 - Zrobione: **koniec podglądu haseł** – w panelu nie ma „Pokaż hasło”; w kolumnie konta stan: „prosi o nowe hasło (data)”, „hasło jednorazowe do …” / „wygasło”, „hasło ustawione przez instytucję (niewidoczne)”; zakładka „Proszą o nowe hasło”; przycisk **„Wydaj hasło jednorazowe”** (potwierdzenie, ramka z hasłem pokazana raz + ważność). Logowanie: **„Nie pamiętam hasła”** (login albo służbowy e-mail → prośba do administratora). Po zalogowaniu hasłem jednorazowym aplikacja pokazuje tylko ekran **„Ustaw własne hasło”**; po zmianie – nowy token (stare sesje wylogowane) i przejście do „Zgłoszenia AED”.
 - Sprawdzone (Playwright): admin zakłada konto → hasło jednorazowe w ramce raz → instytucja loguje się nim → wymuszona zmiana → „Nie pamiętam hasła” → u admina plakietka i „Wydaj hasło jednorazowe” → stare hasło nie działa, nowe jednorazowe wymusza zmianę; brak błędów JS.
 - Uzupełnienie (CR-TL-11): `docs/JURY_QA.md` – pytanie 17 „Czy administrator widzi hasła…” (odpowiedź: administrator nie widzi haseł; odzyskanie – hasło jednorazowe).
+
+## HANDOFF #39 – prezentacje i instrukcja dla laika
+
+- Czas: nd 07:20
+- Zrobione:
+  - **`pitch/prezentacja.pdf`** – szczegółowa, **12 slajdów, 3,7 MB** (≤ 10 MB): tytuł → problem (LICZBY.md: 18 297 OSM, 18%, 351/2 479) → „jak podeszliśmy” (6 kroków) → przepływ Wykazu AED → **dowody**: (5) przyrost w kodzie portalu – `git log -- portal/` + tabela DGA→AED, (6) pole „Zawiera wykaz AED” (`forms.py:269`) + komunikaty walidacji (teksty dokładnie z `aed_utils.py` i tłumaczenia PL), (7) zadanie 3:40 + `/aed-aggregated` (`tasks/aed.py`, `celeryapp.py`, `routes.py`), (8) wzorcowy zakres XLSX (fragment arkusza), (9) Mapa danych AED (zrzuty 07, 08) → akcja z logo → kroki użytkowników (dostawca, mieszkaniec, MC, programista) → ograniczenia + AI + dalej. Dowody portalu to **kod portalu** (podpisane uczciwie; panel nie wystartował – ramka „Uczciwie” na slajdzie 6).
+  - **`pitch/prezentacja_krotka.pdf`** – poglądowa na ok. 3 min, **7 slajdów, 3,5 MB**.
+  - Źródła: `pitch/slajdy/prezentacja.html`, `prezentacja_krotka.html`, `styl.css`, `build_pdf.mjs` (Playwright/Chromium → PDF 1280×720).
+  - **`INSTRUKCJA_URUCHOMIENIA.md`** – dla osoby bez Gita i programowania (Windows, cmd): instalacja Git/Python/Node, pobranie, serwer, dane, strona, sprawdzenie 10 funkcji z oczekiwanym wynikiem, kod portalu, typowe błędy; link w README.
+- Zrzuty (aktualizacja 07:00): 07_mapa, 08_karta, 10_telefon, 11_paszport – nowe od człowieka B (nowy nagłówek, gmina Krosno, dostawca Urząd Miasta Krosna); na slajdach przycięte kadry 07_mapa_kadr i 08_karta_zrodlo. 09_dla_instytucji stary (nieużywany w PDF). 01–06 (panel portalu) brak – zastąpione kodem.
+- Do TL: (1) scalić b/ux-docs do main (PDF przed 10:00); (2) **niespójność wzorca**: XLSX v0.9 ma `teryt_terc` „^\d{6}$”, zalecane, a portal (`aed_utils.py`) wymaga 7 cyfr i traktuje pole jako wymagane – do ujednolicenia w XLSX albo w portalu (nie pokazuję tego wiersza na slajdzie).
+- Liczby: tylko LICZBY.md; testy: 112 passed (HANDOFF A), portal 23 passed bez bazy (portal/README.md) – nie uruchamiałem ich w tej sesji.
+- Użycie AI (jedna linia): treść i układ slajdów, PDF i instrukcja z Claude (Model B) na podstawie repo; decyzje i narracja – zespół/TL.
+
+## #40 – Instrukcja: najpierw dostawca i administrator; prezentacje: logo + hasło, bez procentów (22.11, ok. 7:00)
+- `INSTRUKCJA_URUCHOMIENIA.md`: nowa część 8 „Najważniejsze: dostawca zgłasza AED, administrator sprawdza” (8.1 wniosek o konto → 8.2 zatwierdzenie przez admina → 8.3 formularz „Zgłoś nowe AED” → 8.4 wgranie pliku z listą AED → 8.5 decyzja admina → 8.6 poprawka i zatwierdzenie). Reszta funkcji przeniesiona do części 9 „Pozostałe funkcje”; dalsze części przenumerowane (10–12), spis treści zaktualizowany. Etykiety sprawdzone w kodzie `src/ui`.
+- Prezentacje (`pitch/prezentacja.pdf`, `pitch/prezentacja_krotka.pdf`): na slajdzie 1 logo akcji (poziome, negatyw) i hasło „Dane prosto z serca”; usunięte procenty (wagi kryteriów w nagłówkach, „18%” zastąpione liczbą 3 219 z 18 347).
+- Użycie AI: Claude (Opus 5.5) przebudował instrukcję i slajdy; człowiek B zlecił zmiany i sprawdza wynik.
+
+## #41 – Przejście ścieżki z instrukcji (część 8) na żywej aplikacji (22.11, ok. 7:05)
+- Przeszedłem w przeglądarce (localhost:5173 u człowieka B) wszystkie kroki 8.1–8.6: wniosek o konto `szkola1` → zatwierdzenie przez admina → formularz „Zgłoś nowe AED” (walidacja: 11 błędów dla pustego formularza) → wgranie `zrodlo_gmina_przyklad.csv` → „Odeślij do poprawy” (bez komentarza blokuje) → „Popraw” → „Zatwierdź” → karta AED z etykietą „Prototyp – nieopublikowane w dane.gov.pl”. **Wszystko działa.**
+- Zdjęcie i plik CSV dołączyłem skryptem w przeglądarce (DataTransfer), bo okna wyboru pliku nie da się obsłużyć zdalnie – człowiek wybiera plik normalnie.
+- Poprawki w instrukcji: dokładne komunikaty, „Wyloguj” jest na stronie „Zgłoszenia AED” (nie w menu), po zalogowaniu otwiera się od razu „Zgłoszenia AED”, w 8.4 pola Rodzaj instytucji i zasady + „Sprawdź plik”, krok dopasowania kolumn pojawia się tylko przy nierozpoznanych kolumnach, przy poprawce trzeba ponownie dołączyć zdjęcie, uwaga o innym loginie przy drugim przejściu.
+- Uwaga dla TL: przy duplikatach komunikat „Wybór „To inne AED” zadziała po aktualizacji serwera” – brak obsługi po stronie API (strefa A). W bazie u B zostały dane testowe: konto `szkola1` i AED „Szkoła Podstawowa nr 1”, Floriańska 3, Kraków.
+- Użycie AI: Claude (Opus 5.5) przeklikał ścieżkę i poprawił instrukcję; człowiek B zlecił test.
+
+## HANDOFF #39 (portal uruchomiony)
+
+- Zrzuty z uruchomionego portalu dane.gov.pl w `pitch/zrzuty/01–06` i `12` (opis: `pitch/zrzuty/README.md`). Prezentacja (`pitch/prezentacja.md`, slajdy 3–7 i 10), `pitch/opis_projektu.md` i `README.md` – bez „portalu nie uruchomiliśmy”; testy Wykazu AED 28/28; znak umowny „-” na slajdzie 4.

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Wykaz AED w dane.gov.pl – zespół MKS (prezentacja 3 min)</title>
+<link rel="stylesheet" href="styl.css">
+<style>
+  p, li { font-size: 24px; }
+  h2 { font-size: 42px; }
+</style>
+</head>
+<body>
+
+<!-- 1 · ok. 15 s -->
+<section class="slide title">
+  <div style="display:flex;align-items:center;gap:28px;margin-bottom:18px">
+    <img src="../../brand/logo/png/aed-w-danych_poziome-bez-hasla_negatyw.png" alt="Logo akcji AED w danych" style="height:86px">
+    <p style="font-size:30px;font-weight:700;color:#E2A23B;margin:0">„Dane prosto z serca”</p>
+  </div>
+  <p class="kicker">HackNation 2026 · Misja AED – dane na ratunek · zespół MKS</p>
+  <h1 style="font-size:64px">Wykaz AED w dane.gov.pl</h1>
+  <p style="font-size:30px;max-width:980px">Jedna lista defibrylatorów od wielu dostawców – w kodzie portalu, tak jak wykaz chronionych danych.</p>
+  <p style="margin-top:auto;font-size:18px">github.com/Serafin21/misja-aed</p>
+</section>
+
+<!-- 2 · ok. 25 s -->
+<section class="slide">
+  <p class="kicker">Problem</p>
+  <h2>Za dane o AED nikt nie odpowiada</h2>
+  <div class="cols-3" style="margin-top:30px">
+    <div><div class="stat" style="font-size:84px">18 297</div><p>AED w OpenStreetMap – bez właściciela danych</p></div>
+    <div><div class="stat stat--amber" style="font-size:84px">3 219</div><p>z 18 347 AED sprawdzono w ostatnim roku</p></div>
+    <div><div class="stat stat--amber" style="font-size:84px">351</div><p>z 2 479 gmin bez żadnego AED w danych</p></div>
+  </div>
+  <p style="margin-top:30px">Samorządy, które już publikują AED w dane.gov.pl, robią to każdy w innym układzie.</p>
+  <p class="src">Źródło: docs/tech/LICZBY.md (OpenStreetMap, PRG – GUGiK, dane.gov.pl; 21.11.2026)</p>
+</section>
+
+<!-- 3 · ok. 35 s -->
+<section class="slide">
+  <p class="kicker">Rozwiązanie</p>
+  <h2>Publikuje ten, kto odpowiada. Portal łączy.</h2>
+  <div class="flow" style="margin-top:20px">
+    <div class="step" style="font-size:19px"><span class="n">1</span><b style="font-size:21px">Dostawca</b>wgrywa plik z 44 kolumnami w swoim zbiorze</div>
+    <div class="arrow">→</div>
+    <div class="step" style="font-size:19px"><span class="n">2</span><b style="font-size:21px">„Zawiera wykaz AED”</b>jedno pole przy zasobie</div>
+    <div class="arrow">→</div>
+    <div class="step" style="font-size:19px"><span class="n">3</span><b style="font-size:21px">Portal sprawdza</b>kolumny, współrzędne, TERYT</div>
+    <div class="arrow">→</div>
+    <div class="step" style="font-size:19px"><span class="n">4</span><b style="font-size:21px">Co noc</b>„Wykaz AED – wykaz zbiorczy”</div>
+    <div class="arrow">→</div>
+    <div class="step" style="font-size:19px"><span class="n">5</span><b style="font-size:21px">API i mapa</b><code>/aed-aggregated</code></div>
+  </div>
+  <p style="margin-top:18px">W każdym wierszu: <b>nazwa dostawcy i link do źródła</b>. Wiersze różnych dostawców nie są scalane – możliwy duplikat jest tylko oznaczany.</p>
+</section>
+
+<!-- 4 · ok. 30 s -->
+<section class="slide">
+  <p class="kicker">Zmiana w portalu dane.gov.pl</p>
+  <h2>Wzorem istniejącego wykazu DGA</h2>
+  <div class="cols" style="margin-top:6px">
+    <div>
+      <p class="codehead">git log --oneline -- portal/</p>
+      <div class="code" style="font-size:16px"><span class="k">b229557</span> Import: kod portalu – <span class="s">bez zmian</span>
+<span class="k">1464bf3</span> Wykaz AED: model
+<span class="k">48fb8da</span> Wykaz AED: walidacja pliku
+<span class="k">3184384</span> Wykaz AED: pole w panelu
+<span class="k">e5f4f91</span> Wykaz AED: zadanie nocne
+<span class="k">5a214fd</span> Wykaz AED: /aed-aggregated
+<span class="k">67ce118</span> Wykaz AED: testy</div>
+    </div>
+    <div>
+      <table style="font-size:18px">
+        <tr><th>DGA w portalu</th><th>Wykaz AED</th></tr>
+        <tr><td><code>contains_protected_data</code></td><td><code>contains_aed_list</code></td></tr>
+        <tr><td><code>create_main_dga_resource_task</code></td><td><code>create_main_aed_resource_task</code></td></tr>
+        <tr><td><code>/dga-aggregated</code></td><td><code>/aed-aggregated</code></td></tr>
+      </table>
+      <p style="font-size:20px;margin-top:16px">Kod leży w repozytorium – jury przeczyta go bez dostępu do zewnętrznych stron.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · ok. 30 s -->
+<section class="slide">
+  <p class="kicker">Mapa danych AED</p>
+  <h2 style="font-size:38px">Mieszkaniec widzi najbliższe AED i kto za nie odpowiada</h2>
+  <div style="display:grid;grid-template-columns:11fr 9fr;gap:22px;align-items:start">
+    <div><img class="shot" src="../zrzuty/07_mapa_kadr.png" alt=""><p class="cap" style="font-size:17px">„Znajdź AED” – gmina Krosno</p></div>
+    <div><img class="shot" src="../zrzuty/08_karta_zrodlo.png" alt=""><p class="cap" style="font-size:17px">Karta AED: dostawca, zbiór w dane.gov.pl, data danych</p></div>
+  </div>
+  <p style="font-size:20px;margin-top:10px">Otwarte teraz · szafka i instrukcja dostępu · dostawca i źródło danych · zgłoszenie wraca do dostawcy · WCAG 2.2 AA, od 320 px</p>
+</section>
+
+<!-- 6 · ok. 25 s -->
+<section class="slide">
+  <p class="kicker">Akcja dla dostawców danych</p>
+  <div class="cols-46" style="align-items:center">
+    <img src="../../brand/logo/png/aed-w-danych_pionowe_kolor.png" alt="Logo AED w danych" style="width:100%;max-width:440px">
+    <div>
+      <h2>Masz AED? Udostępnij je na dane.gov.pl</h2>
+      <p>Każda komórka serca to jeden wiersz danych – jeden defibrylator. Bursztynowa to Twoje AED, którego jeszcze brakuje.</p>
+      <p>Najpierw tam, gdzie mapa pokazuje luki. Logo, księga znaku, #AEDwDanych.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7 · ok. 20 s -->
+<section class="slide title">
+  <p class="kicker">Co dalej</p>
+  <h1 style="font-size:48px">Przegląd zmiany z zespołem dane.gov.pl → pilotaż z jedną gminą → akcja w gminach bez AED</h1>
+  <p style="font-size:22px">Uczciwie: kod Wykazu AED w portalu ma testy (23 bez bazy – passed), ale panelu portalu nie uruchomiliśmy w całości w środowisku hackathonu.</p>
+  <p style="margin-top:auto;font-size:18px">Zespół MKS · github.com/Serafin21/misja-aed · INSTRUKCJA_DLA_JURY.md</p>
+</section>
+
+</body>
+</html>
