@@ -21,6 +21,10 @@ def test_konto_instytucji_pelny_cykl(client):
     assert client.post("/api/v1/konta", headers=mod, json={"login": "Zły Login!", "dysponent_nazwa": "Xyz"}).status_code == 422
     r, uh = _login(client, "uczelnia.testowa", haslo)
     assert r.status_code == 200 and r.json()["rola"] == "dysponent" and r.json()["dysponent_nazwa"] == "Uczelnia Testowa"
+    # CR-TL-11: one-time password – first set your own (the new token replaces the old session)
+    assert client.get("/api/v1/zgloszenia", headers=uh).status_code == 403
+    r = client.post("/api/v1/konta/ja/haslo", headers=uh, json={"stare": haslo, "nowe": "wlasne-haslo-1"})
+    uh = {"Authorization": f"Bearer {r.json()['token']}"}
     assert _login(client, "uczelnia.testowa", "zle-haslo")[0].status_code == 401
     assert client.get("/api/v1/konta/ja", headers=uh).json()["data"]["dysponent_nazwa"] == "Uczelnia Testowa"
     assert client.get("/api/v1/konta", headers=uh).status_code == 403  # only the moderator manages accounts
@@ -31,7 +35,9 @@ def test_konto_instytucji_pelny_cykl(client):
     assert zid in {i["id"] for i in client.get("/api/v1/zgloszenia", headers=uh).json()["data"]}
     assert client.post(f"/api/v1/zgloszenia/{zid}/decyzja", headers=uh, json={"decyzja": "przyjete"}).status_code == 200
     # own password, then blocking the account stops its token at once
-    assert client.post("/api/v1/konta/ja/haslo", headers=uh, json={"stare": haslo, "nowe": "nowe-haslo-123"}).status_code == 200
+    r = client.post("/api/v1/konta/ja/haslo", headers=uh, json={"stare": "wlasne-haslo-1", "nowe": "nowe-haslo-123"})
+    assert r.status_code == 200
+    uh = {"Authorization": f"Bearer {r.json()['token']}"}
     assert _login(client, "uczelnia.testowa", "nowe-haslo-123")[0].status_code == 200
     assert client.patch("/api/v1/konta/uczelnia.testowa", headers=mod, json={"aktywne": False}).status_code == 200
     assert client.get("/api/v1/konta/ja", headers=uh).status_code == 401

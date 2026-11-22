@@ -9,10 +9,18 @@ def _h(client, login, haslo):
     return {"Authorization": f"Bearer {r.json()['token']}"}
 
 
+def _aktywuj(client, login, jednorazowe, wlasne="Wlasne-haslo-123"):
+    """CR-TL-11: the first login with a one-time password – the institution sets its own; returns the new session."""
+    h = _h(client, login, jednorazowe)
+    r = client.post("/api/v1/konta/ja/haslo", headers=h, json={"stare": jednorazowe, "nowe": wlasne})
+    assert r.status_code == 200, r.json()
+    return {"Authorization": f"Bearer {r.json()['token']}"}
+
+
 def _instytucja(client, adm, nazwa="Urząd Gminy Przykładowo", login="ug.przykladowo"):
     r = client.post("/api/v1/konta", headers=adm, json={"login": login, "dysponent_nazwa": nazwa, "dostawca_podstawa": "wlasciciel"})
     assert r.status_code == 201
-    return _h(client, login, r.json()["haslo_jednorazowe"])
+    return _aktywuj(client, login, r.json()["haslo_jednorazowe"])
 
 
 def test_konto_admin_i_zalozenie_instytucji(client):
@@ -33,11 +41,11 @@ def test_admin_edytuje_konto(client):
                                                                        "telefon": "+48 120 000 001", "email": "nowy@ug.example"})
     assert r.status_code == 200 and r.json()["data"]["login"] == "ug.nowy" and r.json()["data"]["telefon"] == "+48 120 000 001"
     assert client.post("/api/v1/auth/login", json={"login": "ug.przykladowo", "haslo": "Nowe-haslo-123"}).status_code == 401
-    inst = _h(client, "ug.nowy", "Nowe-haslo-123")
+    inst = _aktywuj(client, "ug.nowy", "Nowe-haslo-123")  # the password set by the administrator is one-time
     # rename the institution: its AED follow (assignments, app AED, submissions)
     client.put("/api/v1/admin/aed/AED-PL-AED495CA3B/przypisanie", headers=adm, json={"organizacja": "Urząd Gminy Przykładowo"})
     client.patch("/api/v1/konta/ug.nowy", headers=adm, json={"dysponent_nazwa": "Urząd Gminy Przykładowo Nowa"})
-    inst = _h(client, "ug.nowy", "Nowe-haslo-123")
+    inst = _h(client, "ug.nowy", "Wlasne-haslo-123")
     ids = [d["id"] for d in client.get("/api/v1/moje-urzadzenia", headers=inst).json()["data"]]
     assert ids == ["AED-PL-AED495CA3B"]
     assert client.patch("/api/v1/konta/ug.nowy", headers=adm, json={"aktywne": False}).status_code == 200
@@ -136,26 +144,52 @@ def test_login_dowolny_i_haslo_od_admina(client):
     assert client.post("/api/v1/konta", headers=adm, json={"login": "ab", "dysponent_nazwa": "Xyz", "dostawca_podstawa": "wlasciciel"}).status_code == 422
 
 
-def test_podglad_hasla_i_haslo_za_krotkie(client):
+def test_haslo_niewidoczne_jednorazowe_i_odzyskanie(client):
+    """CR-TL-11: nobody can read a password (no view endpoint, only PBKDF2); a lost password → "Nie pamiętam hasła" →
+    the administrator issues a one-time password (shown once, valid 72 h) → the institution must set its own;
+    a new password ends the sessions opened with the old one."""
+    from src.api import auth
     adm = _h(client, "admin", "admin123")
     r = client.post("/api/v1/konta", headers=adm, json={"login": "UM Krosno", "haslo": "abc", "dysponent_nazwa": "Urząd Miasta Krosna",
                                                         "dostawca_podstawa": "wlasciciel"})
     assert r.status_code == 201 and r.json()["haslo_wygenerowane"] is True and r.json()["haslo_jednorazowe"] != "abc"
     gen = r.json()["haslo_jednorazowe"]
-    v = client.get("/api/v1/konta/um.krosno/haslo", headers=adm).json()["data"]
-    assert v == {"login": "um.krosno", "haslo": gen, "uwaga": None}
-    # after the administrator sets a new one, and after the institution changes its own – the view follows
-    client.patch("/api/v1/konta/um.krosno", headers=adm, json={"haslo": "Nowe-haslo-1"})
-    assert client.get("/api/v1/konta/um.krosno/haslo", headers=adm).json()["data"]["haslo"] == "Nowe-haslo-1"
-    inst = _h(client, "um.krosno", "Nowe-haslo-1")
-    assert client.post("/api/v1/konta/ja/haslo", headers=inst, json={"stare": "Nowe-haslo-1", "nowe": "Moje-wlasne-123"}).status_code == 200
-    assert client.get("/api/v1/konta/um.krosno/haslo", headers=adm).json()["data"]["haslo"] == "Moje-wlasne-123"
-    assert client.get("/api/v1/konta/um.krosno/haslo", headers=inst).status_code == 403
-    assert client.get("/api/v1/konta/admin/haslo", headers=adm).json()["data"]["haslo"] == "admin123"
-    assert any(e["operacja"] == "konto:podglad_hasla" for e in client.get("/api/v1/dziennik", headers=adm).json()["data"])
-    r = client.post("/api/v1/konta", headers=adm, json={"login": "szkola5", "haslo": "Dobre-haslo-9", "dysponent_nazwa": "Szkoła 5",
-                                                        "dostawca_podstawa": "wlasciciel"})
-    assert r.json()["haslo_wygenerowane"] is False and r.json()["haslo_jednorazowe"] == "Dobre-haslo-9"
+    assert "Widzisz je tylko teraz" in r.json()["meta"]["komunikat"] and r.json()["haslo_jednorazowe_do"]
+    # no way to read a password: no endpoint, no field, no readable column
+    assert client.get("/api/v1/konta/um.krosno/haslo", headers=adm).status_code in (404, 405)
+    assert {k for k in client.get("/api/v1/konta", headers=adm).json()["data"][0] if "haslo" in k} == {"haslo_jednorazowe_do", "haslo_jednorazowe_wygaslo", "prosba_o_haslo"}
+    acc = auth.account("um.krosno")
+    assert "haslo_podglad" not in acc and acc["haslo"].startswith("pbkdf2_sha256$") and gen not in str(acc)
+    # first login with the one-time password: only "set your own password"
+    r = client.post("/api/v1/auth/login", json={"login": "um.krosno", "haslo": gen})
+    assert r.status_code == 200 and r.json()["musi_zmienic_haslo"] is True
+    tmp = {"Authorization": f"Bearer {r.json()['token']}"}
+    assert client.get("/api/v1/konta/ja", headers=tmp).json()["data"]["musi_zmienic_haslo"] is True
+    assert client.get("/api/v1/moje-urzadzenia", headers=tmp).json()["error"]["code"] == "zmien_haslo"
+    assert client.post("/api/v1/konta/ja/haslo", headers=tmp, json={"stare": gen, "nowe": gen}).status_code == 422  # must differ
+    r = client.post("/api/v1/konta/ja/haslo", headers=tmp, json={"stare": gen, "nowe": "Moje-wlasne-123"})
+    inst = {"Authorization": f"Bearer {r.json()['token']}"}
+    assert client.get("/api/v1/moje-urzadzenia", headers=inst).status_code == 200
+    assert client.get("/api/v1/konta/ja", headers=tmp).status_code == 401  # the old session ended
+    # lost password: the same answer whether the account exists or not; the administrator sees the request
+    a1 = client.post("/api/v1/auth/nie-pamietam-hasla", json={"login_lub_email": "um.krosno"}).json()
+    a2 = client.post("/api/v1/auth/nie-pamietam-hasla", json={"login_lub_email": "nie.ma.takiego"}).json()
+    assert a1 == a2
+    k = next(k for k in client.get("/api/v1/konta", headers=adm).json()["data"] if k["login"] == "um.krosno")
+    assert k["prosba_o_haslo"]
+    r = client.post("/api/v1/konta/um.krosno/reset-hasla", headers=adm)
+    nowe = r.json()["haslo_jednorazowe"]
+    assert client.get("/api/v1/moje-urzadzenia", headers=inst).status_code == 401  # a thief's session ends too
+    assert client.post("/api/v1/auth/login", json={"login": "um.krosno", "haslo": "Moje-wlasne-123"}).status_code == 401
+    k = next(k for k in client.get("/api/v1/konta", headers=adm).json()["data"] if k["login"] == "um.krosno")
+    assert k["prosba_o_haslo"] is None and k["haslo_jednorazowe_do"]
+    # the one-time password expires
+    client.app  # noqa: B018
+    from src.core.store import get_store
+    get_store().conn.execute("UPDATE konta SET haslo_tymczasowe_do='2000-01-01T00:00' WHERE login='um.krosno'")
+    r = client.post("/api/v1/auth/login", json={"login": "um.krosno", "haslo": nowe})
+    assert r.status_code == 403 and r.json()["error"]["code"] == "haslo_wygaslo"
+    assert any(e["operacja"] == "konto:reset_hasla" for e in client.get("/api/v1/dziennik", headers=adm).json()["data"])
 
 
 def test_zatwierdzanie_z_listy(client):
