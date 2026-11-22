@@ -269,8 +269,68 @@ def _zrodlo_online(d: dict, dostawca: str | None = None) -> dict:
 
 
 # ---------- aggregation (P5, P8, P9) ----------
+# ---------- CR-TL-9: the common list read from the portal's "Wykaz AED – wykaz zbiorczy" ----------
+PORTAL_PROVIDER_COLS = ("Nazwa dostawcy", "Typ instytucji", "Link do zasobu źródłowego", "Data aktualizacji zasobu")
+
+
+def _portal_get(url: str, timeout: int = 30) -> bytes:
+    import urllib.request
+    req = urllib.request.Request(url, headers={"Accept": "application/json, text/csv;q=0.9", "User-Agent": "MapaAED/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 – address from the PORTAL_API setting
+        return r.read()
+
+
+def agreguj_z_portalu(store: Store, api: str) -> dict:
+    """When PORTAL_API is set (the local dane.gov.pl portal with the AED list increment, portal/README.md), the common list
+    is the portal's "Wykaz AED – wykaz zbiorczy": GET {PORTAL_API}/aed-aggregated → csv_url → rows of all providers.
+    Rows are taken as they are (the portal already validated them and marked possible duplicates); each row keeps its
+    provider and the link to the source resource. Nothing is merged."""
+    from . import db, dziennik
+    info = json.loads(_portal_get(api.rstrip("/") + "/aed-aggregated"))
+    data = info.get("data", info)
+    attrs = data.get("attributes", data) if isinstance(data, dict) else {}
+    csv_url = attrs.get("csv_url")
+    if not csv_url:
+        raise ValueError("Portal nie podał adresu pliku CSV wykazu zbiorczego (csv_url).")
+    rows = list(csv.DictReader(io.StringIO(_portal_get(csv_url, timeout=120).decode("utf-8-sig"))))
+    items, per_provider = [], {}
+    for row in rows:
+        provider = (row.get("Nazwa dostawcy") or "").strip()
+        rec = _typed({f: row.get(f) for f in schema.field_order()})
+        if not provider or not rec.get("id_aed") or rec.get("szerokosc_geograficzna") is None:
+            continue
+        dup = (row.get("Możliwy duplikat") or "").replace("tak:", "").strip()
+        link = row.get("Link do zasobu źródłowego") or None
+        when = (row.get("Data aktualizacji zasobu") or "")[:10] or None
+        pid = f"portal:{slug(provider)}"
+        prov = {"dostawca": provider, "regon": rec.get("dysponent_regon"), "zbior_id": pid, "zbior_tytul": f"Wykaz AED – {provider}",
+                "zbior_url": link, "zasob_id": pid, "zasob_url": link, "data_danych": when, "zbior_zmodyfikowany": when,
+                "czestotliwosc": None, "zbior_nieaktualny": False, "licencja_zbioru": rec.get("licencja"), "fikcyjny": False,
+                "mozliwe_duplikaty": [x.strip() for x in dup.split(",") if x.strip()], "zgodnosc": "wzorzec",
+                "typ_instytucji": row.get("Typ instytucji"), "z_portalu": True}
+        items.append((rec, prov))
+        e = per_provider.setdefault(provider, {"zbior_id": pid, "tytul": f"Wykaz AED – {provider}", "dostawca": provider,
+                                               "zbior_url": link, "zasob_url": link, "czestotliwosc": None, "zmodyfikowany": when,
+                                               "nieaktualny": False, "fikcyjny": False, "rekordy": 0, "wlaczone": 0, "odrzucone": 0,
+                                               "problemy": [], "problemy_rekordow": [], "licencja": rec.get("licencja"),
+                                               "data_danych": when, "zgodnosc": "wzorzec", "status": "wlaczony"})
+        e["rekordy"] += 1
+        e["wlaczone"] += 1
+    store.replace_list(items)
+    raport = list(per_provider.values())
+    OSTATNI_RAPORT.update(czas=now_min(), zbiory=raport, zrodlo=f"{api.rstrip('/')}/aed-aggregated")
+    store.conn.execute("INSERT OR REPLACE INTO stan VALUES (?,?)", ("raport_agregacji", db.dumps(OSTATNI_RAPORT)))
+    store.conn.commit()
+    dziennik.zapisz("system-agregujacy", "agregacja", "wspolna-lista",
+                    po={"zrodlo": "portal (Wykaz AED – wykaz zbiorczy)", "rekordy": len(items), "dostawcy": len(raport)})
+    return {"czas": OSTATNI_RAPORT["czas"], "rekordy": len(items), "zbiory": raport}
+
+
 def agreguj(store: Store, online: bool | None = None) -> dict:
     from . import dziennik
+    api = os.environ.get("PORTAL_API", "").strip()
+    if api:  # CR-TL-9: the portal builds the list (wzorem wykazu DGA); this app only reads it
+        return agreguj_z_portalu(store, api)
     online = (os.environ.get("AED_DGP", "tak") != "brak") if online is None else online
     raport, items = [], []
     marked, other = _remote(online)
