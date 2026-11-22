@@ -184,6 +184,8 @@ To jest główna ścieżka prototypu: **instytucja (dostawca danych) wprowadza s
 
 > **Przygotuj zdjęcie.** Formularz wymaga zdjęcia AED albo szafki. Możesz użyć dowolnego pliku JPG albo PNG z komputera. Jeśli nie masz żadnego, otwórz **http://localhost:5173/img/aed-tomaszow-mazowiecki.jpg**, kliknij obraz prawym przyciskiem myszy → **„Zapisz obraz jako…”** i zapisz go na pulpicie.
 
+> **Przechodzisz kroki drugi raz?** Login `szkola1` już istnieje – użyj innego, np. `szkola2`, i dalej wpisuj go zamiast `szkola1`.
+
 ### 8.1. Instytucja składa wniosek o konto (bez logowania)
 
 1. W prawym górnym rogu kliknij zielony przycisk **„Zaloguj się, aby dodać AED”**.
@@ -191,30 +193,30 @@ To jest główna ścieżka prototypu: **instytucja (dostawca danych) wprowadza s
 3. Wypełnij formularz, np.:
    - nazwa instytucji: **Szkoła Podstawowa nr 1 w Testowie**,
    - REGON: dowolne **9 cyfr**, np. `123456785` (jeśli formularz go odrzuci, spróbuj innego),
-   - podstawa publikacji: **Właściciel AED**,
+   - „Na jakiej podstawie publikujecie dane o AED?”: **Właściciel**,
    - e-mail służbowy i telefon: dowolne, np. `aed@szkola-test.pl`, `500600700`,
-   - login: **szkola1**, hasło (dwa razy): **Szkola123!**
+   - login: **szkola1**, hasło (dwa razy, co najmniej 10 znaków): **Szkola123!**
 4. Kliknij **„Wyślij wniosek”**.
 
-**Co powinieneś zobaczyć:** informację, że wniosek czeka na zatwierdzenie przez administratora. Logowanie na `szkola1` do tego czasu nie zadziała.
+**Co powinieneś zobaczyć:** napis **„Wniosek wysłany”** i informację, że do czasu sprawdzenia przez administratora konto jest nieaktywne.
 
 ### 8.2. Administrator zatwierdza wniosek o konto
 
 1. Kliknij **„Zaloguj się, aby dodać AED”** i zaloguj się kontem administratora: login **`admin`**, hasło **`admin123`**.
-2. W menu kliknij **„Zgłoszenia AED”**.
+2. Po zalogowaniu od razu otworzy się strona **„Zgłoszenia AED”** (jest też w menu u góry).
 3. W sekcji **„Wnioski o konto instytucji”** znajdź wniosek **szkola1** – widać nazwę, REGON, podstawę publikacji i kontakt.
 4. Kliknij **„Zatwierdź”**.
 
-**Co powinieneś zobaczyć:** komunikat, że konto zostało zatwierdzone; wniosek znika z listy oczekujących.
+**Co powinieneś zobaczyć:** komunikat **„Konto „szkola1” zatwierdzone – instytucja może się zalogować.”**
 
 > **Inna droga:** administrator może sam założyć konto instytucji: menu **„Panel moderacji prototypu”** → **„Instytucje i konta”** → wypełnij **Login**, nazwę instytucji i **Podstawę publikacji** → **„Załóż konto”**. Hasło można wpisać albo zostawić puste – wtedy zostanie wygenerowane i pokazane.
 
-5. Na koniec kliknij **„Wyloguj”** (menu u góry).
+5. Na koniec kliknij przycisk **„Wyloguj”** – jest na górze strony „Zgłoszenia AED”, pod nazwą zalogowanego konta.
 
 ### 8.3. Dostawca wypełnia formularz „Zgłoś nowe AED”
 
 1. Zaloguj się kontem instytucji: login **szkola1**, hasło **Szkola123!**.
-2. W menu kliknij **„Zgłoszenia AED”**. Zobaczysz sekcje: **„Twoje AED”**, **„Twoje zgłoszenia”**, **„Zgłoszenia mieszkańców”**, **„Przypomnienia i powiadomienia”**.
+2. Po zalogowaniu otworzy się strona **„Zgłoszenia AED”**. Zobaczysz sekcje: **„Twoje AED”**, **„Twoje zgłoszenia”**, **„Zgłoszenia mieszkańców”**, **„Przypomnienia i powiadomienia”**.
 3. Kliknij duży przycisk **„Zgłoś nowe AED”**. Otworzy się formularz w czterech częściach:
 
 **1. Adres**
@@ -237,45 +239,45 @@ To jest główna ścieżka prototypu: **instytucja (dostawca danych) wprowadza s
 
 4. Kliknij **„Wyślij do zatwierdzenia”**.
 
-**Co powinieneś zobaczyć:** potwierdzenie wysłania, a w tabeli **„Twoje zgłoszenia”** nowy wiersz ze stanem **„czeka na zatwierdzenie”**.
+**Co powinieneś zobaczyć:** komunikat **„Zgłoszenie wysłane do zatwierdzenia przez administratora.”**, a w tabeli **„Twoje zgłoszenia”** nowy wiersz ze stanem **„czeka na zatwierdzenie”**.
 
-**Sprawdź też walidację:** otwórz formularz jeszcze raz i kliknij **„Wyślij do zatwierdzenia”** bez wypełniania pól. Na górze pojawi się lista błędów (np. brak kodu pocztowego w formie 00-000, brak zdjęcia), a przy każdym polu – czerwony komunikat. Kliknięcie błędu na liście przenosi do pola. Kliknij **„Anuluj”**.
+**Sprawdź też walidację:** otwórz formularz jeszcze raz i kliknij **„Wyślij do zatwierdzenia”** bez wypełniania pól. Na górze pojawi się **„Formularz zawiera 11 błędów”** z listą (np. kod pocztowy w formie 00-000, położenie, zdjęcie), a przy każdym polu – czerwony komunikat. Kliknięcie błędu na liście przenosi do pola. Kliknij **„Anuluj”**.
 
 ### 8.4. Dostawca wgrywa plik z listą AED (wiele AED naraz)
 
 1. Będąc zalogowanym jako **szkola1**, przewiń stronę na dół i w stopce kliknij **„Dla instytucji”**.
-2. Na górze strony jest instrukcja publikacji wykazu AED **w panelu dane.gov.pl** (docelowa droga). Niżej jest **„Pomocnik prototypu: przygotuj plik przed publikacją”** – on niczego nie publikuje w dane.gov.pl, tylko sprawdza plik.
-3. Kliknij **„Pobierz wzór w Excelu”** – pobierze się szablon z 44 kolumnami wzorca. (Gotowy przykładowy plik z błędami jest też w projekcie: `C:\misja-aed\data\sample\zrodlo_gmina_przyklad.csv`.)
-4. Wybierz **„Mam listę AED w pliku”**.
-5. Krok **„Wgraj plik z listą AED”**: przeciągnij plik na ramkę albo kliknij **„Wybierz plik z komputera”** i wskaż `zrodlo_gmina_przyklad.csv`. Zobaczysz pasek postępu.
-6. Krok **„Dopasuj kolumny, których nie rozpoznaliśmy”**: przy kolumnach z pliku wybierz z listy odpowiednie pole wzorca (rozpoznane kolumny są dopasowane same) i przejdź dalej.
-7. Krok **„Wynik sprawdzania”**: AED podzielone na grupy – gotowe, do poprawy (z numerem wiersza, polem i opisem błędu, np. zły zapis godzin) i możliwe duplikaty.
-8. Krok **„Gotowe – AED są w Twojej kopii roboczej”**.
+2. Na górze strony jest instrukcja publikacji wykazu AED **w panelu dane.gov.pl** (docelowa droga) i typowe błędy walidacji. Niżej jest **„Pomocnik prototypu: przygotuj plik przed publikacją”** – on niczego nie publikuje w dane.gov.pl, tylko sprawdza plik.
+3. Kliknij **„Mam listę AED w pliku”**. Otworzy się krok **„Wgraj plik z listą AED”**.
+4. (Nieobowiązkowe) Kliknij **„Pobierz wzór w Excelu”** – pobierze się szablon wzorca. Do testu użyj jednak gotowego pliku z projektu: `C:\misja-aed\data\sample\zrodlo_gmina_przyklad.csv` (3 AED, kolumny po polsku).
+5. Wypełnij: **Nazwa instytucji** (wpisana sama), **Rodzaj instytucji** – np. „szkoła lub placówka oświatowa”, **„Na jakich zasadach udostępniasz dane?”** – pierwsza opcja (zalecane).
+6. Przeciągnij plik na ramkę albo kliknij **„Wybierz plik z komputera”** i wskaż `zrodlo_gmina_przyklad.csv`. Kliknij **„Sprawdź plik”**.
+7. Jeśli strona nie rozpozna jakiejś kolumny, pokaże krok **„Dopasuj kolumny, których nie rozpoznaliśmy”** – wybierz z listy pole wzorca. W przykładowym pliku wszystkie kolumny są rozpoznane, więc ten krok się nie pojawi.
+8. Krok **„Wynik sprawdzania”**: AED podzielone na grupy **„Gotowe”**, **„Do poprawy”** (z numerem wiersza i opisem błędu) i **„Może już jest w Twoich danych”** (możliwe duplikaty). Jeśli plik był już wcześniej wgrany, wszystkie 3 AED trafią do duplikatów – zaznacz **„To samo AED”** i kliknij **„Zapisz wybór”**.
+9. Kliknij **„Dodaj gotowe do moich AED, resztę poprawię później”**.
 
-**Co powinieneś zobaczyć:** podsumowanie, ile AED przyjęto, a ile czeka na poprawki.
+**Co powinieneś zobaczyć:** **„Gotowe – AED są w Twojej kopii roboczej”** i np. „Dodaliśmy 3 AED do Twojej kopii roboczej.” oraz przycisk **„Przejdź do „Moje AED””**.
 
 ### 8.5. Administrator sprawdza zgłoszenie AED
 
-1. Kliknij **„Wyloguj”** i zaloguj się jako **`admin`** / **`admin123`**.
-2. W menu kliknij **„Zgłoszenia AED”**.
+1. Kliknij **„Wyloguj”** i zaloguj się jako **`admin`** / **`admin123`** – otworzy się strona **„Zgłoszenia AED”**.
 3. W sekcji **„Zgłoszenia AED do zatwierdzenia”** znajdź zgłoszenie od **Szkoła Podstawowa nr 1 w Testowie**. Widać: **zdjęcie** (kliknij, żeby powiększyć), nadawcę, adres, położenie, opis dojścia, dostęp, godziny i szafkę.
 4. Sprawdź, czy zdjęcie pokazuje AED i czy położenie zgadza się z adresem. Następnie wybierz jedno z trzech:
    - **„Zatwierdź”** – zgłoszenie jest kompletne;
    - **„Odeślij do poprawy”** – najpierw wpisz w polu **Komentarz** (wymagany), co trzeba poprawić, np. `Zdjęcie nieczytelne – dołącz nowe`;
    - **„Odrzuć”** – z komentarzem.
 
-   Do testu wybierz **„Odeślij do poprawy”** z komentarzem.
+   Do testu kliknij najpierw **„Odeślij do poprawy”** bez komentarza – strona nie pozwoli i pokaże błąd. Potem wpisz komentarz i kliknij jeszcze raz.
 
-**Co powinieneś zobaczyć:** komunikat o decyzji; zgłoszenie znika z listy oczekujących.
+**Co powinieneś zobaczyć:** komunikat **„„Szkoła Podstawowa nr 1” odesłane do poprawy.”**
 
 ### 8.6. Dostawca poprawia zgłoszenie, administrator zatwierdza
 
-1. Wyloguj się i zaloguj jako **szkola1**. Menu **„Zgłoszenia AED”**.
+1. Wyloguj się i zaloguj jako **szkola1** – otworzy się **„Zgłoszenia AED”**.
 2. W tabeli **„Twoje zgłoszenia”** zgłoszenie ma stan **„do poprawy”**, a w kolumnie **„Decyzja administratora”** – komentarz.
-3. Kliknij **„Popraw”** – formularz otworzy się z poprzednimi danymi. Dołącz zdjęcie ponownie i kliknij **„Wyślij poprawione zgłoszenie”**.
-4. Wyloguj się, zaloguj jako **admin**, menu **„Zgłoszenia AED”** → przy zgłoszeniu kliknij **„Zatwierdź”**.
+3. Kliknij **„Popraw”** – formularz otworzy się z poprzednimi danymi. **Dołącz zdjęcie ponownie** (bez tego pojawi się błąd „Zdjęcie jest wymagane”) i kliknij **„Wyślij poprawione zgłoszenie”**. Stan wróci na **„czeka na zatwierdzenie”**.
+4. Wyloguj się, zaloguj jako **admin** → przy zgłoszeniu kliknij **„Zatwierdź”**. Komunikat: **„„Szkoła Podstawowa nr 1” zatwierdzone – dane są już na mapie.”**
 5. Zaloguj się jeszcze raz jako **szkola1**: zgłoszenie ma stan **„zatwierdzone”**, a AED jest na liście **„Twoje AED”**. Przycisk **„Zgłoś zmianę lub nowe zdjęcie”** przy AED działa tak samo – każda zmiana też idzie do sprawdzenia.
-6. Otwórz **„Znajdź AED”** i wpisz adres z formularza – AED jest na mapie z oznaczeniem **„Prototyp – nieopublikowane w dane.gov.pl”**.
+6. Otwórz **„Znajdź AED”** i wpisz adres z formularza – AED jest na mapie. Na jego karcie jest dostawca **„Szkoła Podstawowa nr 1 w Testowie (właściciel)”** i oznaczenie **„Prototyp – nieopublikowane w dane.gov.pl”**.
 
 > **Ważne – prototyp a rozwiązanie docelowe.** W prototypie zatwierdzone AED od razu pokazuje się na mapie, a administrator może też edytować dane w „Panelu moderacji prototypu”. To **tryb pokazowy prototypu, docelowo wyłączony**. W rozwiązaniu docelowym dostawca publikuje swój wykaz AED **w panelu dane.gov.pl** (pole „Zawiera wykaz AED”), portal sprawdza plik i co noc łączy wykazy w „Wykaz AED – wykaz zbiorczy” – patrz część 10 i `docs/MODEL_ROL.md`.
 
