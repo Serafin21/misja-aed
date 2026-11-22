@@ -24,9 +24,9 @@ ACCESS = {"yes": "publiczny", "public": "publiczny", "permissive": "ograniczony"
           "destination": "ograniczony", "private": "prywatny", "no": "prywatny", "staff": "prywatny",
           "employees": "prywatny"}
 # OSM layer: address is often missing in OSM – these required fields are downgraded to warnings (CR-3)
-RELAXED = {"wojewodztwo", "gmina", "miejscowosc", "numer_budynku", "kod_pocztowy", "dysponent_nazwa",
+RELAXED = {"nazwa_obiektu", "wojewodztwo", "gmina", "miejscowosc", "numer_budynku", "kod_pocztowy", "dysponent_nazwa",
            "godziny_dostepnosci", "data_weryfikacji"}
-_FILL = {"wojewodztwo": "mazowieckie", "kod_pocztowy": "00-000", "godziny_dostepnosci": "24/7",
+_FILL = {"nazwa_obiektu": "Brak nazwy", "wojewodztwo": "mazowieckie", "kod_pocztowy": "00-000", "godziny_dostepnosci": "24/7",
          "data_weryfikacji": "2000-01-01"}
 
 
@@ -41,17 +41,34 @@ def osm_id(props: dict, feature: dict) -> str:
 NAME_MAX = 80  # longer "names" in OSM are descriptions ("Aby dostać się do budynku należy…")
 
 
-def _name(p: dict) -> str:
-    """Short name of the place. The description is NEVER used as a name (it goes to opis_lokalizacji); without a
-    name: the operator, the building / shop name, or "AED – street number, town"."""
-    for k in ("name", "name:pl", "operator", "brand", "addr:housename"):
+# Text that describes WHERE the device hangs, not what the place is called ("AED na ścianie budynku", "obok wejścia")
+_DESC = re.compile(r"^(aed|defibrylator)\b.*\b(na|w|we|przy|obok|pod|nad)\s|zamontowan|znajduje si|na wyposażeniu|na ścian|"
+                   r"przy wej|obok wej|klatk[ai] schodow|^aby\b|^(na|w|we|przy|obok|pod)\s", re.I)
+# Placeholders that older versions stored instead of a name
+PLACEHOLDER_NAMES = ("Defibrylator AED",)
+
+
+def looks_like_description(v: str | None) -> bool:
+    return bool(v) and (len(v) > NAME_MAX or v[:1].islower() or bool(_DESC.search(v)))
+
+
+def _name(p: dict) -> str | None:
+    """Name of the place from OSM `name` tags only. The description, the operator (= the owner, dysponent_nazwa) or the
+    address are NEVER used as a name; without a real name the record has no name and the app shows
+    "Brak nazwy urządzenia" (owner's decision 22.11)."""
+    for k in ("name", "name:pl", "official_name", "addr:housename"):
         v = N.text(p.get(k))
         v = re.sub(r"^[\s\-–•*.,;:]+", "", v or "")  # "- AED zamontowane…" → "AED zamontowane…"
-        if v and len(v) <= NAME_MAX and not re.fullmatch(r"[\d\s+()/-]+", v):  # a phone number is not a name
+        if v and not looks_like_description(v) and not re.fullmatch(r"[\d\s+()/-]+", v):  # a phone number is not a name
             return v
-    street = " ".join(x for x in (p.get("addr:street"), p.get("addr:housenumber")) if x)
-    where = ", ".join(x for x in (street, p.get("addr:city") or p.get("addr:place")) if x)
-    return f"AED – {where}" if where else "Defibrylator AED"
+    return None
+
+
+def clean_name(rec: dict) -> None:
+    """Fix records imported by older versions (operator, description or "AED – street" stored as the name)."""
+    n = rec.get("nazwa_obiektu")
+    if n and (n in PLACEHOLDER_NAMES or n.startswith("AED – ") or n == rec.get("dysponent_nazwa") or looks_like_description(n)):
+        rec["nazwa_obiektu"] = None
 
 
 def to_record(feature: dict) -> tuple[dict, list[dict]]:

@@ -45,8 +45,12 @@ class Store:
                 src["dane"] = db.loads(src["dane"])
                 self.sources.setdefault(src["id_aed"], []).append(src)
                 self.by_key[(src["kod_zrodla"], src["id_w_zrodle"])] = src["id_aed"]
+            from .connectors.osm import clean_name  # lazy: the OSM connector imports this module
             for row in self.conn.execute("SELECT id_aed, data FROM aed"):
                 rec = db.loads(row["data"])
+                srcs = self.sources.get(row["id_aed"])
+                if srcs and all(x["kod_zrodla"] == "osm" for x in srcs):
+                    clean_name(rec)  # older imports stored the operator / description as the name
                 self.records[row["id_aed"]] = rec
             for id_aed, srcs in self.sources.items():
                 if id_aed in self.records:
@@ -107,6 +111,10 @@ class Store:
             if not base:
                 return
             rec = db.loads(base["data"])
+            srcs = self.sources.get(id_aed)
+            if srcs and all(x["kod_zrodla"] == "osm" for x in srcs):
+                from .connectors.osm import clean_name
+                clean_name(rec)
             if lst:
                 self.lista[id_aed] = db.loads(lst["data"])
             if ed:

@@ -6,6 +6,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/core src/core
 COPY src/api src/api
 COPY src/__init__.py src/__init__.py
+COPY .env.example .env.example
 COPY scripts scripts
 COPY docs/schema docs/schema
 COPY data/sample data/sample
