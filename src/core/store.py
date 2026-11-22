@@ -35,6 +35,8 @@ class Store:
     # ---------- loading ----------
     def load(self):
         with self.lock:
+            from .connectors.osm import clean_name, migrate_names  # lazy: the OSM connector imports this module
+            migrate_names(self.conn)  # one-time: names of OSM points from older imports (operator/address as name)
             self.version += 1
             self.records.clear(); self.sources.clear(); self.by_key.clear(); self.master.clear(); self.lista.clear()
             for row in self.conn.execute("SELECT id_aed, data FROM lista"):
@@ -45,7 +47,6 @@ class Store:
                 src["dane"] = db.loads(src["dane"])
                 self.sources.setdefault(src["id_aed"], []).append(src)
                 self.by_key[(src["kod_zrodla"], src["id_w_zrodle"])] = src["id_aed"]
-            from .connectors.osm import clean_name  # lazy: the OSM connector imports this module
             for row in self.conn.execute("SELECT id_aed, data FROM aed"):
                 rec = db.loads(row["data"])
                 srcs = self.sources.get(row["id_aed"])

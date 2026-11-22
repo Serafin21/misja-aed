@@ -19,14 +19,42 @@ def test_nazwa_tylko_z_tagu_name():
 
 
 def test_stare_nazwy_czyszczone():
-    for n, d in (("Defibrylator AED", None), ("AED – Lipowa 4, Kraków", None), ("Burmistrz Szubina", "Burmistrz Szubina"),
-                 ("na wyposażeniu samochodu", None)):
+    for n, d in (("Defibrylator AED", None), ("AED – Lipowa 4, Kraków", None), ("na wyposażeniu samochodu", None)):
         r = {"nazwa_obiektu": n, "dysponent_nazwa": d}
         clean_name(r)
         assert r["nazwa_obiektu"] is None, n
-    r = {"nazwa_obiektu": "Hala Sportowa", "dysponent_nazwa": "Gmina X"}
+    r = {"nazwa_obiektu": "Castorama", "dysponent_nazwa": "Castorama"}  # a real name may equal the operator
     clean_name(r)
-    assert r["nazwa_obiektu"] == "Hala Sportowa"
+    assert r["nazwa_obiektu"] == "Castorama"
+
+
+def test_migracja_nazw_ze_starej_bazy(tmp_path, monkeypatch):
+    """A database from an older import had the operator / address as the name; on load names are recomputed once."""
+    import json
+
+    from src.core import db
+    from src.core.connectors import osm
+    from src.core.store import Store
+    f = {"type": "Feature", "properties": {"osm_id": "node/1", "operator": "Burmistrz Szubina"},
+         "geometry": {"type": "Point", "coordinates": [17.73, 53.0]}}
+    g = {"type": "Feature", "properties": {"osm_id": "node/2", "operator": "Castorama", "name": "Castorama"},
+         "geometry": {"type": "Point", "coordinates": [17.74, 53.0]}}
+    src = tmp_path / "osm.geojson"
+    src.write_text(json.dumps({"type": "FeatureCollection", "features": [f, g]}), encoding="utf-8")
+    monkeypatch.setattr(osm, "SAMPLE", src)
+    conn = db.connect(tmp_path / "a.sqlite3")
+    for oid, aid, name, op in (("node/1", "AED-PL-1", "Burmistrz Szubina", "Burmistrz Szubina"),
+                               ("node/2", "AED-PL-2", "Castorama", "Castorama"),
+                               ("node/3", "AED-PL-3", "Defibrylator AED", None)):
+        rec = {"id_aed": aid, "nazwa_obiektu": name, "dysponent_nazwa": op, "szerokosc_geograficzna": 53.0, "dlugosc_geograficzna": 17.7}
+        conn.execute("INSERT INTO aed (id_aed, data) VALUES (?,?)", (aid, json.dumps(rec)))
+        conn.execute("INSERT INTO pochodzenie VALUES (?,?,?,?,?,?)", ("osm", oid, aid, "ODbL-1.0", "2026-11-21", json.dumps(rec)))
+    conn.commit()
+    st = Store(conn)
+    assert st.records["AED-PL-1"]["nazwa_obiektu"] is None
+    assert st.records["AED-PL-2"]["nazwa_obiektu"] == "Castorama"
+    assert st.records["AED-PL-3"]["nazwa_obiektu"] is None
+    assert osm.migrate_names(conn) == 0  # only once
 
 
 def test_env_plik_i_wzor(tmp_path, monkeypatch):

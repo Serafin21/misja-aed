@@ -65,10 +65,58 @@ def _name(p: dict) -> str | None:
 
 
 def clean_name(rec: dict) -> None:
-    """Fix records imported by older versions (operator, description or "AED – street" stored as the name)."""
+    """Fix names stored by older versions: placeholders, "AED – street", descriptions."""
     n = rec.get("nazwa_obiektu")
-    if n and (n in PLACEHOLDER_NAMES or n.startswith("AED – ") or n == rec.get("dysponent_nazwa") or looks_like_description(n)):
+    if n and (n in PLACEHOLDER_NAMES or n.startswith("AED – ") or looks_like_description(n)):
         rec["nazwa_obiektu"] = None
+
+
+NAMES_MIGRATION = "nazwy_osm_v2"
+
+
+def migrate_names(conn) -> int:
+    """One-time fix of OSM names in a database imported by an older version, which used the operator (owner) or the
+    address as the name. Names are recomputed from the OSM source file (data/cache, else the sample); OSM points
+    missing from it keep the stored name minus placeholders/descriptions, and the operator-as-name is removed.
+    Returns the number of changed records."""
+    from .net import CACHE  # noqa: PLC0415
+    if conn.execute("SELECT 1 FROM stan WHERE klucz=?", (NAMES_MIGRATION,)).fetchone():
+        return 0
+    rows = conn.execute("SELECT id_w_zrodle, id_aed, dane FROM pochodzenie WHERE kod_zrodla='osm'").fetchall()
+    names: dict[str, str | None] = {}
+    for path in ((SAMPLE, CACHE / CACHE_NAME) if rows else ()):
+        if path.is_file():
+            try:
+                for f in json.loads(path.read_text(encoding="utf-8")).get("features", []):
+                    p = f.get("properties") or {}
+                    names[osm_id(p, f)] = _name(p)
+            except (ValueError, OSError):
+                pass
+    changed = 0
+    for r in rows:
+        dane = json.loads(r["dane"])
+        old = dane.get("nazwa_obiektu")
+        if r["id_w_zrodle"] in names:
+            new = names[r["id_w_zrodle"]]
+        else:
+            tmp = dict(dane)
+            clean_name(tmp)
+            new = None if tmp.get("nazwa_obiektu") and tmp["nazwa_obiektu"] == dane.get("dysponent_nazwa") else tmp.get("nazwa_obiektu")
+        if new == old:
+            continue
+        dane["nazwa_obiektu"] = new
+        conn.execute("UPDATE pochodzenie SET dane=? WHERE kod_zrodla='osm' AND id_w_zrodle=?",
+                     (json.dumps(dane, ensure_ascii=False), r["id_w_zrodle"]))
+        only_osm = not conn.execute("SELECT 1 FROM pochodzenie WHERE id_aed=? AND kod_zrodla<>'osm'", (r["id_aed"],)).fetchone()
+        row = conn.execute("SELECT data FROM aed WHERE id_aed=?", (r["id_aed"],)).fetchone()
+        if only_osm and row:
+            rec = json.loads(row["data"])
+            rec["nazwa_obiektu"] = new
+            conn.execute("UPDATE aed SET data=? WHERE id_aed=?", (json.dumps(rec, ensure_ascii=False), r["id_aed"]))
+        changed += 1
+    conn.execute("INSERT OR REPLACE INTO stan VALUES (?,?)", (NAMES_MIGRATION, json.dumps({"zmienione": changed})))
+    conn.commit()
+    return changed
 
 
 def to_record(feature: dict) -> tuple[dict, list[dict]]:
