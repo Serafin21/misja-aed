@@ -1,4 +1,4 @@
-> **Wersja 2.1 (22.11.2026, TL – rozstrzygnięcie po uwagach mentorów; sekcja „Zmiany v2.1” na końcu). Obowiązuje zasada: administrator nie zmienia danych dostawców, zgłoszenia wracają do dostawcy, a wspólna lista na mapie pochodzi wyłącznie z wykazu zbiorczego portalu (`GET /aed-aggregated`). Funkcje z v1.4 (edycja, usuwanie i przypisywanie AED przez administratora, zatwierdzone zgłoszenia od razu na mapie) to „tryb pokazowy prototypu, docelowo wyłączony” – nie są częścią proponowanego rozwiązania.**
+> **Wersja 2.2 (23.11.2026, CR-TL-11): administrator nie widzi haseł – §9 „Hasła i odzyskanie dostępu”.** **Wersja 2.1 (22.11.2026, TL – rozstrzygnięcie po uwagach mentorów; sekcja „Zmiany v2.1” na końcu). Obowiązuje zasada: administrator nie zmienia danych dostawców, zgłoszenia wracają do dostawcy, a wspólna lista na mapie pochodzi wyłącznie z wykazu zbiorczego portalu (`GET /aed-aggregated`). Funkcje z v1.4 (edycja, usuwanie i przypisywanie AED przez administratora, zatwierdzone zgłoszenia od razu na mapie) to „tryb pokazowy prototypu, docelowo wyłączony” – nie są częścią proponowanego rozwiązania.**
 >
 > Źródło: dokument zespołu „Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności” (21.11.2026). Wiążący dla CONTRACT.md od wersji 2.0 (obecnie CONTRACT v3.0). Stan wdrożenia w prototypie: sekcja „Wdrożenie” na końcu. **Wersja 2.0** (22.11.2026, CR-TL-9 – sekcja „Zmiany v2.0” na końcu): wspólna lista = **„Wykaz AED – wykaz zbiorczy”**, który buduje portal dane.gov.pl tak jak wykaz chronionych danych (DGA); każdy wiersz ma dostawcę i link do zasobu; odpowiedzialność i edycja – u dostawcy w panelu dane.gov.pl. Wersja 1.4 (decyzja właściciela projektu, sekcja „Zmiany v1.4”) obowiązuje dla prototypu aplikacji tam, gdzie nie jest sprzeczna z v2.0. Wersja 1.3 (CR-TL-8): zaufane konta instytucji, kryteria K13–K16.
 
@@ -186,6 +186,12 @@ Każdy zapis jest autoryzowany po stronie serwera i rejestrowany w dzienniku zda
 
 - **Uwierzytelnienie.** Docelowo konta portalu dane.gov.pl z logowaniem przez login.gov.pl. Od administratorów i dostawców wymaga się uwierzytelniania dwuskładnikowego.
 
+- **Hasła i odzyskanie dostępu (v2.2, CR-TL-11).** **Administrator nie widzi haseł** – nikt ich nie widzi: serwer przechowuje tylko skrót PBKDF2-SHA256 z solą, nie ma podglądu ani kopii do odczytu. Gdy instytucja zgubi hasło (albo ktoś je ukradł), postępuje się jak w dużych serwisach:
+  1. instytucja klika „Nie pamiętam hasła” (login albo służbowy e-mail) – odpowiedź jest zawsze taka sama, więc nie zdradza, czy konto istnieje; prośba trafia do administratora;
+  2. administrator sprawdza instytucję kanałem z konta (telefon, służbowy e-mail – nie adresem podanym w prośbie) i wydaje **hasło jednorazowe**: pokazane mu raz, ważne 72 godziny; stare hasło i wszystkie otwarte sesje przestają działać;
+  3. przy pierwszym logowaniu hasłem jednorazowym instytucja może tylko ustawić własne hasło (różne od jednorazowego); dopiero potem korzysta z konta.
+  Tak samo działa hasło nowego konta i pracownika (jednorazowe). Każda zmiana i wydanie hasła jest w dzienniku. Docelowo login.gov.pl i 2FA zastępują hasła aplikacji, a odzyskanie dostępu prowadzi login.gov.pl.
+
 - **Dziennik zdarzeń.** Rejestruje się: kto, kiedy, jaką operację, na którym rekordzie, stan przed i po. Dziennika nie można zmieniać z poziomu aplikacji.
 
 - **Dane osobowe.** Zbiory dostawców nie zawierają danych osobowych. Zgłoszenia są domyślnie anonimowe; e-mail zgłaszającego jest opcjonalny, służy tylko do odpowiedzi i jest usuwany po zamknięciu zgłoszenia (RODO).
@@ -293,7 +299,7 @@ Właściciel projektu zdecydował, że prototyp ma działać od razu, bez czekan
 
 | Temat | Wcześniej | Od v1.4 |
 |---|---|---|
-| Konta | konta testowe `dysponent`, `administrator` | jedno konto wbudowane **`admin`** (hasło z `ADMIN_PASSWORD`; od v2.0 bez wartości domyślnej w kodzie, demo `admin123` w `.env.example`); konta instytucji tylko z zatwierdzonego wniosku albo zakładane przez administratora (z podanym hasłem albo wygenerowanym); **administrator może podejrzeć login i hasło każdego konta** (zaszyfrowana kopia, każdy podgląd w dzienniku – w usłudze produkcyjnej hasła nie powinny być odczytywalne) |
+| Konta | konta testowe `dysponent`, `administrator` | jedno konto wbudowane **`admin`** (hasło z `ADMIN_PASSWORD`; od v2.0 bez wartości domyślnej w kodzie, demo `admin123` w `.env.example`); konta instytucji tylko z zatwierdzonego wniosku albo zakładane przez administratora (z podanym hasłem albo wygenerowanym); ~~administrator może podejrzeć login i hasło każdego konta~~ – usunięte w v2.2: administrator nie widzi haseł (§9) |
 | Edycja danych przez administratora (K2) | administrator nigdy nie zmienia danych AED | administrator **może edytować, usuwać i przypisywać do instytucji każde AED** (także z OpenStreetMap); każda zmiana w dzienniku (kto, kiedy, przed, po), bez oznaczenia na karcie AED; edycje są nakładane na źródło i przetrwają odświeżenie danych |
 | Zgłoszenia AED | tylko nowe AED instytucji; po zatwierdzeniu – do kopii roboczej, na mapie dopiero po publikacji w dane.gov.pl (K11) | zgłoszenia **nowych AED i zmian** istniejących (poprawki, nowe zdjęcie) od instytucji i od administratora; **każde** zatwierdza administrator; zatwierdzone jest **od razu na mapie** (źródło „aplikacja”, dopisek „czeka na publikację w dane.gov.pl”); decyzje: zatwierdź / do poprawy / odrzuć (z komentarzem) |
 | Instytucja a AED | AED z jej zbioru w dane.gov.pl | AED z jej zbioru, dodane przez nią w aplikacji i **przypisane jej przez administratora**; zgłoszenia mieszkańców o tych AED trafiają do niej; przypomnienia o AED niesprawdzanych od roku |
@@ -333,7 +339,7 @@ Pakiet plików do publikacji w dane.gov.pl (`POST /moje-aed/pakiet`) i agregacja
 |---|---|---|
 | Administrator edytuje, usuwa i przypisuje każde AED („Panel moderacji prototypu” → „Wszystkie AED”) | nazwa panelu; edycje w dzienniku; **nie zmieniają wykazu zbiorczego** | brak – zmienia tylko dostawca w panelu dane.gov.pl (R1) |
 | Administrator zatwierdza zgłoszenia nowych AED i zmian; zatwierdzone od razu na mapie | etykieta „Prototyp – nieopublikowane w dane.gov.pl” | zgłoszenie trafia do dostawcy; na mapę dopiero przez jego wykaz (R2, R3) |
-| Administrator podgląda hasła kont | – | brak; logowanie przez login.gov.pl i 2FA (§9) |
+| ~~Administrator podgląda hasła kont~~ | **usunięte w v2.2 (CR-TL-11)** – administrator nie widzi haseł; odzyskanie dostępu: „Nie pamiętam hasła” → hasło jednorazowe pokazane raz, ważne 72 h, obowiązkowa zmiana (§9) | brak; logowanie przez login.gov.pl i 2FA (§9) |
 | Mapa bez `PORTAL_API` czyta pakiety fikcyjnych dostawców i zbiory przejściowe | „dostawca fikcyjny – prototyp”, „Zbiór przejściowy” | tylko `/aed-aggregated` (R3) |
 
 Jury: ta tabela jest powtórzona w `INSTRUKCJA_DLA_JURY.md` (krok „Czego nie oceniać jako rozwiązania”) i w `SUBMISSION.md`. Kryteria K2 i K16 obowiązują w rozwiązaniu docelowym; w trybie pokazowym prototypu są świadomie zawieszone (testy v1.4: `tests/test_admin_edycja.py`).

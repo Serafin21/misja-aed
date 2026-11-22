@@ -1,4 +1,4 @@
-# CONTRACT v3.0 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
+# CONTRACT v3.1 – Misja AED (Ministerstwo Cyfryzacji, Departament Zarządzania Danymi)
 
 > Wspólny plik: edytuje tylko Team Leader. Zamrożenie: sob 15:00 (po konsultacji na stoisku danych). Zmiany wyłącznie przez CR (tabela na końcu).
 > **Od v2.0 obowiązuje model ról i odpowiedzialności: `docs/MODEL_ROL.md`.** Dane o AED publikuje wyłącznie właściciel urządzenia (dostawca) na własnym koncie w dane.gov.pl; wspólna lista łączy zbiory dostawców bez zmian; administrator (MC) nie wprowadza danych; OSM to tylko warstwa pomocnicza „Do sprawdzenia”.
@@ -117,7 +117,8 @@ Pełne opisy, przykłady, słowniki i mapowanie na OpenStreetMap i schema.org: `
 | `GET /admin/luki`, `GET/POST /admin/przypomnienia` | administrator | gminy bez dostawcy (z liczbą punktów OSM – cel akcji); zbiory po terminie |
 | `GET /dziennik` | administrator | dziennik zdarzeń (tylko odczyt) |
 | `GET/POST /konta`, `POST /konta/{login}/reset-hasla`, `PATCH /konta/{login}` | administrator | konta dostawców (organizacja = `dysponent_nazwa`, `dostawca_podstawa` wymagana), hasło jednorazowe, blokada |
-| `GET /konta/ja`, `POST /konta/ja/haslo` | zalogowany | kim jestem, zmiana hasła |
+| `GET /konta/ja`, `POST /konta/ja/haslo` | zalogowany | kim jestem (`musi_zmienic_haslo`), zmiana hasła – zwraca nowy token, stare sesje wygasają; po haśle jednorazowym obowiązkowa (inne zapytania: `403 zmien_haslo`) (v3.1) |
+| `POST /auth/nie-pamietam-hasla` `{login_lub_email}` | publiczny (limit zapytań) | prośba do administratora o hasło jednorazowe; zawsze ta sama odpowiedź (v3.1) |
 | `GET /zrodla`, `POST /zrodla/odswiez`, `GET /zrodla/odswiezanie`, `POST /zrodla/osm/odswiez`, `POST /zrodla/dane-gov-pl/szukaj` | publiczny / administrator | źródła, odświeżanie (agregacja + OSM), podgląd zbiorów AED w dane.gov.pl (bez importu) |
 | `GET /eksport`, `GET /eksport/{plik}`, `GET /szablon.csv`, `GET /szablon.xlsx` | publiczny | kompilacja listy (§3), szablony dla dostawców |
 | `GET /statystyki`, `GET /pokrycie?wojewodztwo=` | publiczny | mierniki (§10 MODEL_ROL: dostawcy, AED na liście, % gmin z dostawcą, % zweryfikowanych), mapa luk (z liczbą punktów „do sprawdzenia”) |
@@ -158,3 +159,4 @@ Mapa ma dwa tryby. **Dostępność** – jak dotąd (§7, `dostepny_teraz`). **A
 | CR-TL-8 | Team Leader | Zaufane konta instytucji (wniosek → zatwierdzenie, pracownicy), „Zgłoś AED” tylko po zalogowaniu z zatwierdzeniem formalnym przez administratora, `GET /miejsca/odwrotnie`, `teryt_terc` w `/miejsca` (MODEL_ROL v1.3) | przyjęta | 2.2 |
 | v2.3 | właściciel projektu | Konto `admin`/`admin123`, administrator edytuje / usuwa / przypisuje AED i konta, zgłoszenia nowych AED i zmian (także administratora) zatwierdzane przez administratora i od razu na mapie, `typ` i `id_aed` w `POST /zgloszenia-aed`, decyzja `odrzuc`, `nazwa` w `/aed/punkty`, przypomnienia w powiadomieniach (MODEL_ROL v1.4) | przyjęta | 2.3 |
 | CR-TL-9 | Team Leader | Import kodu portalu dane.gov.pl (`portal/backend`), przyrost „Wykaz AED” wzorem DGA (`contains_aed_list`, walidacja, XML 1.14, wykaz zbiorczy CSV+XLSX, `GET /aed-aggregated`, testy), `PORTAL_API` w agregacji, `meta.status_publikacji` AED z prototypu i wyłączenie ich z eksportu, „Panel moderacji prototypu”, hasło `admin` tylko z `ADMIN_PASSWORD` (MODEL_ROL v2.0) | przyjęta | 3.0 |
+| CR-TL-11 | Team Leader | Administrator nie widzi haseł: usunięte `GET /konta/{login}/haslo` i kolumna `haslo_podglad`; `POST /auth/nie-pamietam-hasla`; hasło jednorazowe (`POST /konta/{login}/reset-hasla`, nowe konta, pracownicy, hasło od administratora) ważne 72 h z obowiązkową zmianą (`403 zmien_haslo`, `musi_zmienic_haslo` w `POST /auth/login` i `GET /konta/ja`); `POST /konta/ja/haslo` zwraca nowy token, stare sesje wygasają (MODEL_ROL v2.2 §9) | przyjęta | 3.1 |
