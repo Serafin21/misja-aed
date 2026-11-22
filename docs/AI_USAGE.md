@@ -1,6 +1,6 @@
 # Zakres wykorzystania sztucznej inteligencji (wymóg §2 ust. 8 regulaminu zadania)
 
-> Regulamin dopuszcza AI, jeśli finalna praca jest efektem analizy i pracy człowieka i autorskim rozwiązaniem zespołu. Uzupełniamy na bieżąco z linii „Użycie AI” w HANDOFF_A i HANDOFF_B. Edytuje Team Leader.
+> Regulamin dopuszcza AI, jeśli finalna praca jest efektem analizy i pracy człowieka i autorskim rozwiązaniem zespołu. Zestawienie przygotował Team Leader na podstawie zapisów zespołu z pracy nad projektem.
 
 | Element rozwiązania | Narzędzie AI | Do czego użyto AI | Co zrobił zespół (analiza, decyzje, poprawki) |
 |---|---|---|---|

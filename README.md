@@ -1,8 +1,6 @@
 # Wykaz AED w dane.gov.pl + Mapa danych AED
 
-> **Pierwszy raz? Nie programujesz?** Instrukcja krok po kroku dla Windows – instalacja, uruchomienie i sprawdzenie najważniejszych funkcji: [`INSTRUKCJA_URUCHOMIENIA.md`](INSTRUKCJA_URUCHOMIENIA.md).
-
-**Prototyp online (tryb demonstracyjny, bez instalacji): https://serafin21.github.io/misja-aed/**
+**Prototyp online (bez instalacji): https://misja-aed.onrender.com/** · instrukcja dla jury: [`INSTRUKCJA_DLA_JURY.md`](INSTRUKCJA_DLA_JURY.md)
 
 Zespół **MKS**, HackNation 2026, zadanie Ministerstwa Cyfryzacji „Misja AED – dane na ratunek”. **Jury: zacznij od [`INSTRUKCJA_DLA_JURY.md`](INSTRUKCJA_DLA_JURY.md).**
 
@@ -66,10 +64,6 @@ npm run dev
 ```
 
 Otwórz http://localhost:5173. Gdy API nie odpowiada, aplikacja sama przełącza się na dane przykładowe z `data/sample/` i pokazuje baner „Tryb demonstracyjny”.
-
-## Dla zespołu
-
-Jak każdy uruchamia Claude Code na tym repo ze swojego konta: [`docs/user/claude_code_dla_zespolu.md`](docs/user/claude_code_dla_zespolu.md).
 
 ## Ścieżki testowe dla jury
 

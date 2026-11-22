@@ -16,7 +16,7 @@ MISJA AED – DANE NA RATUNEK
 https://github.com/Serafin21/misja-aed
 
 ## Link do prototypu (klikalny, bez konfiguracji)
-https://serafin21.github.io/misja-aed/ – Mapa danych AED w trybie demonstracyjnym (dane przykładowe, bez logowania i serwera): Znajdź AED, karta z dostawcą i źródłem, zgłoszenie problemu, „Dla instytucji”, akcja „AED w danych”. Portal dane.gov.pl z Wykazem AED – zrzuty z uruchomionego portalu: `pitch/zrzuty/01–06`.
+https://misja-aed.onrender.com/ (pierwsze wejście po przerwie może potrwać do 2–3 minut – serwer się budzi)
 
 ## Instrukcja dla jury (kroki ponumerowane)
 https://github.com/Serafin21/misja-aed/blob/main/INSTRUKCJA_DLA_JURY.md

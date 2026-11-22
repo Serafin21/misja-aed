@@ -1,78 +1,57 @@
 # Instrukcja dla jury – MKS · Misja AED – dane na ratunek
 
-Rozwiązanie ma trzy części:
+**Prototyp online: https://misja-aed.onrender.com/** – bez instalacji i konfiguracji.
 
-1. **Wykaz AED w portalu dane.gov.pl** – zmiana w kodzie portalu (katalog `portal/`), zrobiona wzorem istniejącego wykazu chronionych danych (DGA). To jest rdzeń rozwiązania.
-2. **Mapa danych AED** – aplikacja, która tylko czyta wykaz zbiorczy z portalu (`/aed-aggregated`) i pokazuje AED z dostawcą i linkiem do źródła.
-3. **Akcja „AED w danych”** – materiały, które zachęcają instytucje do publikacji wykazu (`brand/`).
+> Serwer zasypia po 15 minutach bez ruchu. Jeśli strona ładuje się dłużej, poczekaj do 2–3 minut i odśwież – serwer się budzi i wczytuje dane.
 
-Zasada: **publikuje dostawca, który odpowiada za dane. Portal scala wykazy wielu dostawców w jedną listę, nie zmieniając wierszy.** Nikt poza dostawcą nie publikuje ani nie poprawia jego danych.
+## Co oceniacie
 
----
+1. **Wykaz AED w portalu dane.gov.pl** (rdzeń) – zmiana w kodzie portalu wzorem istniejącego wykazu chronionych danych (DGA): instytucja zaznacza przy swoim zasobie „Zawiera wykaz AED”, portal sprawdza plik i składa wykazy wszystkich dostawców w jeden „Wykaz AED – wykaz zbiorczy” (API `/aed-aggregated`). Każdy wiersz ma dostawcę, który za niego odpowiada; wiersze nie są scalane.
+2. **Mapa danych AED** – aplikacja, która czyta wykaz i pokazuje AED z dostawcą i źródłem danych.
+3. **Akcja „AED w danych”** – nazwa, hasło, logotyp i księga znaku dla dostawców danych.
 
-## A. Klikalny prototyp (bez instalacji)
+## Krok po kroku (ok. 10 minut)
 
-1. Otwórz https://serafin21.github.io/misja-aed/ (tryb demonstracyjny: dane przykładowe, bez logowania – logowanie i panele działają po uruchomieniu lokalnym, sekcja C).
-2. Kliknij **„Znajdź AED”**, wpisz miejscowość albo kliknij **„Moja lokalizacja”**.
-3. Kliknij AED na liście → **„Szczegóły”**. Sekcja **„Skąd są te dane i kto za nie odpowiada”** pokazuje dostawcę, link do zbioru w dane.gov.pl i datę danych.
-4. Zwróć uwagę na oznaczenia: **„Do sprawdzenia”** = punkt z OpenStreetMap, poza wspólną listą; **„Prototyp – nieopublikowane w dane.gov.pl”** = AED dodane w aplikacji, poza wykazem zbiorczym.
-5. W stopce kliknij **„Dla instytucji”** – instrukcja publikacji wykazu AED w panelu dane.gov.pl w krokach, szablon pliku i typowe komunikaty walidacji portalu.
-6. W stopce kliknij **„Akcja „AED w danych””** – hasło, logotyp, księga znaku.
-7. (Tylko w wersji uruchomionej lokalnie) Stopka → **„Logowanie”**, konto `admin`, hasło `admin123` → „Panel moderacji prototypu”. To tryb pokazowy – patrz sekcja D.
+1. Otwórz **https://misja-aed.onrender.com/**.
+2. Kliknij **„Znajdź AED”**. Wpisz miejscowość (np. „Krosno”) albo kliknij **„Moja lokalizacja”**.
+3. Kliknij AED na liście → **„Szczegóły”**. Na dole karty, w sekcji **„Skąd są te dane i kto za nie odpowiada”**, jest dostawca danych, link do zbioru w dane.gov.pl i data danych.
+4. Na mapie: punkty **„Do sprawdzenia”** pochodzą z OpenStreetMap i nie należą do wspólnej listy (nikt za nie nie odpowiada).
+5. W stopce kliknij **„Dla instytucji”** – jak instytucja publikuje wykaz AED w panelu dane.gov.pl, szablon pliku i typowe komunikaty walidacji portalu.
+6. W stopce kliknij **„Akcja „AED w danych””** – hasło, logotyp i księga znaku (PDF).
+7. Kliknij **„Zaloguj się, aby dodać AED”**, login **`admin`**, hasło **`admin123`** → **„Panel moderacji prototypu”**: konta instytucji, zgłoszenia AED, zbiory dostawców. To **tryb pokazowy prototypu** – docelowo dane zmienia wyłącznie dostawca w panelu dane.gov.pl (`docs/MODEL_ROL.md`).
 
-## B. Kod zmian w portalu dane.gov.pl (bez dostępu do zewnętrznych domen)
+## Zmiana w portalu dane.gov.pl
 
-1. Sklonuj repozytorium: `git clone https://github.com/Serafin21/misja-aed` i wejdź do katalogu `misja-aed`.
-2. Uruchom `git log --oneline -- portal/`. Najstarszy commit (`b229557`) to **oryginalny kod dane.gov.pl bez zmian** (mcod-backend 2.62.3, pochodzenie i suma kontrolna: `portal/IMPORT.md`). Każdy następny commit „Wykaz AED: …” to nasz przyrost.
-3. Zobacz cały przyrost jednym poleceniem: `git diff b229557 HEAD -- portal/backend`.
-4. Otwórz `portal/README.md`, sekcja **„Gdzie wzór DGA, gdzie Wykaz AED (plik:linia)”** – każdy element Wykazu AED stoi obok swojego odpowiednika DGA.
-5. Najważniejsze pliki (w `portal/backend/mcod/`):
-   - `resources/models.py` – pole zasobu `contains_aed_list` („Zawiera wykaz AED”),
-   - `resources/aed_constants.py` – 44 kolumny wzorca i pola wymagane,
-   - `resources/aed_utils.py` – walidacja pliku i budowa wykazu zbiorczego bez scalania,
-   - `resources/tasks/aed.py` i `celeryapp.py` – nocne zadanie `create_main_aed_resource_task` (3:40),
-   - `resources/views.py`, `routes.py` – `GET /aed-aggregated`,
-   - `resources/tests/test_aed.py` – testy.
-6. Treść strony informacyjnej „Wykaz AED – punkt informacyjny” (odpowiednik strony wykazu chronionych danych w CMS): `portal/cms/wykaz_aed.md`.
+Portal (backend dane.gov.pl z naszą zmianą) uruchomiliśmy lokalnie – zrzuty z działającego portalu: `pitch/zrzuty/01`–`06` (pole „Zawiera wykaz AED”, odrzucony plik z błędami, wykaz zbiorczy, odpowiedź `/aed-aggregated`).
 
-## C. Uruchomienie lokalne
+Kod przeczytacie w repozytorium, bez dostępu do zewnętrznych domen:
 
-**Mapa danych AED (aplikacja + API), Docker:**
+1. `git clone https://github.com/Serafin21/misja-aed` i `cd misja-aed`.
+2. `git log --oneline -- portal/` – pierwszy commit to **oryginalny kod dane.gov.pl bez zmian** (`portal/IMPORT.md`), każdy następny to nasz przyrost „Wykaz AED: …”.
+3. `portal/README.md` – jak to działa, tabela „gdzie wzór DGA, gdzie Wykaz AED” z numerami linii i kroki uruchomienia portalu.
 
-1. `cp .env.example .env`
-2. `docker compose up --build`
-3. Otwórz http://localhost. Dokumentacja API: http://localhost/api/docs.
+## Gdzie jest każde wymaganie z treści zadania
 
-**Portal dane.gov.pl z Wykazem AED** (Docker, ok. 8 GB RAM, pierwsze budowanie kilkadziesiąt minut): kroki w `portal/README.md`, sekcja „Uruchomienie portalu lokalnie”. Potem:
-
-1. Panel https://admin.mcod.local, konto `admin@mcod.local` / `testadmin123!`.
-2. Zbiory danych → zbiór instytucji → Dodaj zasób → plik CSV/XLSX z szablonu → **„Zawiera wykaz AED” = Tak** → Zapisz.
-3. Wgraj plik z błędem (np. bez kolumny albo z pustym `teryt_terc`) → portal pokaże komunikat z numerem wiersza i nie zapisze zasobu.
-4. `docker compose -f docker-compose.local.yml run mcod-local-run python manage.py create_main_aed_resource` → w zbiorze Ministerstwa Cyfryzacji powstaje „Wykaz AED – wykaz zbiorczy” (CSV + XLSX).
-5. `curl -k https://api.mcod.local/aed-aggregated` → linki do plików wykazu zbiorczego.
-6. W `.env` aplikacji ustaw `PORTAL_API=https://api.mcod.local` i uruchom aplikację ponownie – Mapa danych AED czyta wykaz zbiorczy.
-
-**Testy:** aplikacja – `pip install -r requirements.txt` i `pytest` (114 testów); portal – `portal/local/run_aed_tests.sh` (25 testów Wykazu AED bez bazy) i 3 testy z bazą w uruchomionym portalu (`portal/README.md`); razem 28/28. Zrzuty z uruchomionego portalu: `pitch/zrzuty/01–06`.
-
-## D. Czego nie oceniać jako rozwiązania – tryb pokazowy prototypu
-
-Żeby dało się przeklikać całą ścieżkę bez uruchamiania portalu, aplikacja ma **tryb pokazowy prototypu, docelowo wyłączony** (`docs/MODEL_ROL.md`, sekcja „Zmiany v2.1”):
-
-| W prototypie | Docelowo |
+| Wymaganie | Gdzie |
 |---|---|
-| Administrator aplikacji może edytować, usuwać i przypisywać AED („Panel moderacji prototypu”) | brak – dane zmienia tylko dostawca, nową wersją zasobu w panelu dane.gov.pl; edycje w prototypie **nie zmieniają wykazu zbiorczego** |
-| Zatwierdzone zgłoszenie nowego AED pojawia się od razu na mapie | zgłoszenie wraca do dostawcy; AED trafia na mapę dopiero przez jego wykaz – w prototypie ma etykietę „Prototyp – nieopublikowane w dane.gov.pl” |
-| Bez `PORTAL_API` mapa czyta pakiety fikcyjnych dostawców i 3 prawdziwe zbiory samorządów (Krosno, Przemyśl, Marki) | mapa czyta wyłącznie `/aed-aggregated` |
-| Logowanie kontami testowymi | login.gov.pl i 2FA |
-
-## E. Gdzie co jest
-
-| Co | Gdzie |
-|---|---|
-| Opis zgłoszenia | `SUBMISSION.md` |
-| Model ról (v2.1) | `docs/MODEL_ROL.md` |
-| Wzorcowy zakres danych (XLSX) | `deliverables/zakres_danych/` |
-| Przykładowy pakiet dostawcy, eksport listy | `deliverables/` |
-| Logotyp i księga znaku akcji | `brand/` |
-| Prezentacja (PDF) | `pitch/prezentacja.pdf` |
+| Opis i tytuł | `SUBMISSION.md`, `pitch/opis_projektu.md` |
+| Prezentacja | `pitch/prezentacja.pdf` (krótsza: `pitch/prezentacja_krotka.pdf`) |
+| Prototyp | https://misja-aed.onrender.com/ |
+| Wzorcowy zakres danych (XLSX) | `deliverables/zakres_danych/wzorcowy_zakres_danych_AED_v0.9.xlsx` |
+| Kod źródłowy | to repozytorium (`src/` – aplikacja, `portal/` – zmiana w portalu) |
+| Logotyp (JPG, PNG, PDF, SVG) i księga znaku (PDF) | `brand/` |
+| Dane w formatach maszynowych | `deliverables/dataset/` (CSV, GeoJSON, JSON-LD), API `/api/v1/docs` |
+| Zgodność z zasadami dane.gov.pl | `portal/README.md`, `docs/tech/COMPLIANCE.md` |
+| WCAG i responsywność | `docs/a11y/raport.md` |
 | Zakres użycia AI | `docs/AI_USAGE.md` |
+
+## Uruchomienie u siebie (opcjonalnie)
+
+Wymaga Dockera:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Aplikacja: http://localhost, konto `admin` / `admin123`.
