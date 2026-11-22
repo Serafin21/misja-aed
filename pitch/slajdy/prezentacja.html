@@ -76,29 +76,15 @@
     <div class="step"><span class="n">5</span><b>API i mapa</b><code>GET /aed-aggregated</code> → Mapa danych AED i każda inna aplikacja</div>
   </div>
   <div class="cols">
-    <div class="box"><h3>Bez scalania wierszy</h3><p class="small">Każdy wiersz wykazu zbiorczego ma nazwę dostawcy i link do zasobu źródłowego (15 czytelnych kolumn; pełne 44 pola zostają u dostawcy). Dwa AED różnych dostawców bliżej niż 25 m dostają tylko oznaczenie „Możliwy duplikat” – decydują dostawcy.</p></div>
+    <div class="box"><h3>Bez scalania wierszy</h3><p class="small">Każdy wiersz wykazu zbiorczego ma nazwę dostawcy, typ instytucji, link do zasobu źródłowego i datę aktualizacji. Dwa AED różnych dostawców bliżej niż 25 m dostają tylko oznaczenie „Możliwy duplikat” – decydują dostawcy.</p></div>
     <div class="box"><h3>Ten sam mechanizm co DGA</h3><p class="small">Portal ma już wykaz chronionych danych: pole <code>contains_protected_data</code>, walidację, zadanie <code>create_main_dga_resource_task</code> i <code>/dga-aggregated</code>. Wykaz AED powtarza każdy z tych elementów – zmiana w portalu, nie osobny system.</p></div>
   </div>
   <p class="src">Kod: <code>portal/backend/mcod/resources/</code> · opis i mapa „DGA → AED” z numerami linii: <code>portal/README.md</code></p>
 </section>
 
-<!-- 4a: najważniejszy dowód (CR-TL-14/15) -->
-<section class="slide">
-  <p class="kicker">Dowód 1 · tabela Wykazu AED w portalu dane.gov.pl</p>
-  <h2>Wykaz AED w portalu – obok „Punkt informacyjny DGA”</h2>
-  <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:22px;align-items:start">
-    <img src="../zrzuty/14_portal_wykaz_aed_kadr.png" alt="Frontend portalu dane.gov.pl na localhost: menu z pozycjami Punkt informacyjny DGA i Wykaz AED, strona Wykaz AED – wykaz zbiorczy z tabelą 5 AED od dwóch dostawców" style="width:100%;max-height:560px;object-fit:cover;object-position:top;border:1px solid #C9D3CC;border-radius:6px">
-    <div>
-      <div class="box"><h3>Ten sam mechanizm co DGA, inny zakres kolumn</h3><p class="small">Strona zbudowana jak wykaz chronionych danych: <code>!aed</code> → <code>!list-aed</code> → <code>!table</code>, tabela zasobu z <code>/aed-aggregated</code>. Zamiast kolumn DGA – 15 czytelnych: Identyfikator AED, Nazwa dostawcy, Nazwa obiektu, adres, Dostęp, Godziny, współrzędne, Data weryfikacji, Link do zasobu źródłowego, Możliwy duplikat.</p></div>
-      <div class="box" style="margin-top:12px"><h3>Dwa sposoby zasilenia</h3><p class="small"><b>Ręcznie:</b> Urząd Miasta Testowo wgrał plik w panelu i zaznaczył „Zawiera wykaz AED”.<br><b>Automatycznie:</b> Fundacja Serce dla Miasta – harvester XML z <code>&lt;containsAedList&gt;true&lt;/containsAedList&gt;</code>. Dwa AED 7 m od siebie: „Możliwy duplikat”, bez scalania.</p></div>
-    </div>
-  </div>
-  <p class="src">Prawdziwy frontend i backend portalu (mcod-frontend 3.5.2, mcod-backend 2.62.3) uruchomione lokalnie 22.11.2026 · kod: <code>portal/frontend/src/app/pages/aed-information-point/</code>, <code>portal/backend/mcod/resources/aed_*.py</code></p>
-</section>
-
 <!-- 5 -->
 <section class="slide">
-  <p class="kicker">Dowód 2 · zgodność z zasadami portalu</p>
+  <p class="kicker">Dowód 1 · zgodność z zasadami portalu</p>
   <h2>Zmiana w kodzie dane.gov.pl, nie obok niego</h2>
   <div class="cols">
     <div>
@@ -134,18 +120,18 @@
 
 <!-- 6 -->
 <section class="slide">
-  <p class="kicker">Dowód 3 · zasilanie ręczne w panelu</p>
+  <p class="kicker">Dowód 2 · uruchomiony portal · zasilanie ręczne</p>
   <h2>Dostawca zaznacza „Zawiera wykaz AED” – portal sprawdza plik</h2>
   <p class="codehead" style="margin-top:4px">Panel dane.gov.pl: nowe pole przy zasobie (wzorem „Contains protected data list” – DGA) · <code>forms.py</code></p>
   <img src="../zrzuty/02_portal_pole_kadr.png" alt="Panel portalu: pole Contains AED list zaznaczone na Tak, z opisem wykazu AED" style="width:100%;border:1px solid #C9D3CC;border-radius:6px">
   <p class="codehead" style="margin-top:14px">Plik z błędami nie przechodzi – błędy wiersz po wierszu · <code>aed_utils.py</code></p>
   <img src="../zrzuty/03_portal_walidacja_kadr.png" alt="Panel portalu: 3 z 3 wierszy nie spełnia wzorca AED – zamienione współrzędne, brak kontaktu, zły TERYT, zły słownik dostępu" style="width:100%;border:1px solid #C9D3CC;border-radius:6px">
-  <p class="src">Portal dane.gov.pl z naszą zmianą uruchomiony lokalnie 22.11.2026 (panel, API, Celery, Elasticsearch) · testy Wykazu AED: 28/28</p>
+  <p class="src">Portal dane.gov.pl z naszą zmianą uruchomiony lokalnie 22.11.2026 (panel, API, Celery, Elasticsearch) · testy Wykazu AED: 28/28 · etykiety po angielsku = lokalna instalacja bez skompilowanych tłumaczeń</p>
 </section>
 
 <!-- 7 -->
 <section class="slide">
-  <p class="kicker">Dowód 4 · wykaz zbiorczy i API</p>
+  <p class="kicker">Dowód 3 · uruchomiony portal · wykaz zbiorczy i API</p>
   <h2>Co noc jeden „Wykaz AED – wykaz zbiorczy” i <code style="font-size:32px">/aed-aggregated</code></h2>
   <div class="cols" style="grid-template-columns:3fr 2fr;gap:22px">
     <div>
@@ -163,7 +149,7 @@
 
 <!-- 8 -->
 <section class="slide">
-  <p class="kicker">Dowód 5 · wzorcowy zakres danych</p>
+  <p class="kicker">Dowód 4 · wzorcowy zakres danych</p>
   <h2>44 pola – jeden wzór dla wszystkich dostawców</h2>
   <div class="cols-46">
     <div>
@@ -198,7 +184,7 @@
 
 <!-- 9 -->
 <section class="slide">
-  <p class="kicker">Dowód 6 · przykładowy odbiorca wykazu – Mapa danych AED</p>
+  <p class="kicker">Dowód 5 · Mapa danych AED – strona odczytu wykazu</p>
   <h2>Mieszkaniec widzi najbliższe AED i kto za nie odpowiada</h2>
   <div style="display:grid;grid-template-columns:5fr 5fr 2fr;gap:18px;align-items:start">
     <div><img class="shot" src="../zrzuty/07_mapa_kadr.png" alt=""><p class="cap">„Znajdź AED” – gmina Krosno: lista i mapa, godziny, szafka, Nawiguj.</p></div>

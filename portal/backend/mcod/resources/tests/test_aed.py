@@ -55,13 +55,8 @@ def _csv(rows) -> BytesIO:
 # ---------- constants ----------
 def test_aed_columns_are_44_template_fields():
     assert len(AED_COLUMNS) == 44 and len(set(AED_COLUMNS)) == 44
-    # wykaz zbiorczy (CR-TL-14): jak wykaz DGA – czytelne nagłówki, inny (węższy) zakres kolumn niż 44 pola wzorca
-    assert MAIN_AED_COLUMNS == [
-        "Lp.", "Identyfikator AED", "Nazwa dostawcy", "Nazwa obiektu", "Miejscowość", "Ulica", "Numer budynku",
-        "Opis lokalizacji", "Dostęp", "Godziny dostępności", "Szerokość geograficzna", "Długość geograficzna",
-        "Data weryfikacji", "Link do zasobu źródłowego", MAIN_AED_DUPLICATE_COLUMN,
-    ]
-    assert len(set(MAIN_AED_COLUMNS)) == len(MAIN_AED_COLUMNS) == 15
+    assert MAIN_AED_COLUMNS[:5] == ["Lp.", "Nazwa dostawcy", "Typ instytucji", "Link do zasobu źródłowego", "Data aktualizacji zasobu"]
+    assert MAIN_AED_COLUMNS[-1] == MAIN_AED_DUPLICATE_COLUMN
 
 
 def test_all_institution_types_can_publish_aed_list():
@@ -134,8 +129,8 @@ def test_main_aed_table_schema_fixed_types_and_special_sign():
     s = main_aed_table_schema()
     types = {f["name"]: f["type"] for f in s["fields"]}
     assert [f["name"] for f in s["fields"]] == MAIN_AED_COLUMNS and s["missingValues"] == ["-"]
-    assert types["Numer budynku"] == types["Identyfikator AED"] == types["Data weryfikacji"] == "string"
-    assert types["Szerokość geograficzna"] == types["Długość geograficzna"] == "number" and types["Lp."] == "integer"
+    assert types["numer_budynku"] == types["kod_pocztowy"] == types["teryt_terc"] == "string"
+    assert types["szerokosc_geograficzna"] == types["dlugosc_geograficzna"] == "number" and types["Lp."] == "integer"
 
 
 def test_validate_aed_file_reports_rows():
@@ -188,21 +183,10 @@ def test_create_main_aed_df_keeps_rows_and_providers():
     assert list(df.columns) == MAIN_AED_COLUMNS
     assert list(df["Lp."]) == [1, 2, 3]
     assert list(df["Nazwa dostawcy"]) == ["Uczelnia Testowa", "Uczelnia Testowa", "MPK Przykładowo"]
-    assert list(df["Identyfikator AED"]) == ["U1", "U2", "M1"]  # no merging, provider's values unchanged
+    assert list(df["id_aed"]) == ["U1", "U2", "M1"]  # no merging, provider's values unchanged
     assert df.loc[0, "Link do zasobu źródłowego"].endswith("/resource/1")
-    assert df.loc[0, "Szerokość geograficzna"] == _row()["szerokosc_geograficzna"]
+    assert df.loc[0, "Data aktualizacji zasobu"] == "2026-11-02"
     assert list(df[MAIN_AED_DUPLICATE_COLUMN]) == ["tak: M1", "", "tak: U1"]
-
-
-def test_create_main_aed_df_street_and_hours():
-    sources = {1: pd.DataFrame([
-        _row(id_aed="S1", ulica_cecha="ul.", ulica="Królewska", dostepny_24h="true", godziny_dostepnosci=None),
-        _row(id_aed="S2", ulica_cecha=None, ulica="Rynek", dostepny_24h="false", godziny_dostepnosci="Mo-Fr 08:00-16:00"),
-    ])}
-    with patch("mcod.resources.aed_utils.get_aed_source_df", side_effect=lambda r: sources[r.pk]):
-        df = create_main_aed_df([_resource(1, "Urząd")])
-    assert list(df["Ulica"]) == ["ul. Królewska", "Rynek"]
-    assert list(df["Godziny dostępności"]) == ["24/7", "Mo-Fr 08:00-16:00"]
 
 
 def test_create_main_aed_df_empty():

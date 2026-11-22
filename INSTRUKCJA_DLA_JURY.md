@@ -10,15 +10,6 @@ Zasada: **publikuje dostawca, który odpowiada za dane. Portal scala wykazy wiel
 
 ---
 
-## 0. Najważniejsze: tabela Wykazu AED w portalu dane.gov.pl
-
-1. Otwórz `pitch/zrzuty/14_portal_strona_wykaz_aed_tabela.png` – prawdziwy frontend portalu dane.gov.pl uruchomiony lokalnie: w menu **„Punkt informacyjny DGA”** i obok nasza pozycja **„Wykaz AED”**; strona „Wykaz AED – wykaz zbiorczy” z tabelą, przyciskami CSV/XLSX i wyszukiwarką – tak jak wykaz chronionych danych (DGA), z innym zakresem kolumn.
-2. Odczytaj kolumny: Lp., Identyfikator AED, **Nazwa dostawcy**, Nazwa obiektu, adres, Dostęp, Godziny dostępności, współrzędne, Data weryfikacji, **Link do zasobu źródłowego**, **Możliwy duplikat**. Każdy wiersz ma dostawcę, który za niego odpowiada; wiersze nie są scalane.
-3. Otwórz `pitch/zrzuty/16_portal_wykaz_po_harvesterze.png` – wiersze dwóch dostawców: **Urząd Miasta Testowo** (zasilenie ręczne: plik w panelu + „Zawiera wykaz AED”) i **Fundacja Serce dla Miasta** (zasilenie automatyczne: harvester XML z `<containsAedList>true</containsAedList>`, plik `portal/local/harvester/wykaz-aed-fundacja-serce.xml`). Dwa AED 7 m od siebie mają „Możliwy duplikat”.
-4. Otwórz `pitch/zrzuty/13_portal_tabela_zasobu_wykaz_aed.png` – ten sam wykaz w zwykłym widoku tabeli zasobu w zbiorze „Wykaz AED – wykaz zbiorczy”.
-5. Kod strony: `portal/frontend/src/app/pages/aed-information-point/` (kopia `dga-information-point`), `portal/frontend/src/app/services/aed.service.ts`; kod wykazu: `portal/backend/mcod/resources/aed_constants.py`, `aed_utils.py`. Historia: `git log --oneline -- portal/` (pierwsze commity frontendu i backendu to oryginalny kod bez zmian).
-6. Jak to uruchomić u siebie: `portal/README.md`, sekcje „Uruchomienie portalu lokalnie” i „Tabela Wykazu AED we frontendzie portalu i dwa sposoby zasilenia”.
-
 ## A. Klikalny prototyp (bez instalacji)
 
 1. Otwórz https://serafin21.github.io/misja-aed/ (tryb demonstracyjny: dane przykładowe, bez logowania – logowanie i panele działają po uruchomieniu lokalnym, sekcja C).
@@ -61,7 +52,7 @@ Zasada: **publikuje dostawca, który odpowiada za dane. Portal scala wykazy wiel
 5. `curl -k https://api.mcod.local/aed-aggregated` → linki do plików wykazu zbiorczego.
 6. W `.env` aplikacji ustaw `PORTAL_API=https://api.mcod.local` i uruchom aplikację ponownie – Mapa danych AED czyta wykaz zbiorczy.
 
-**Testy:** aplikacja – `pip install -r requirements.txt` i `pytest` (115 testów); portal – `portal/local/run_aed_tests.sh` (25 testów Wykazu AED bez bazy) i 3 testy z bazą w uruchomionym portalu (`portal/README.md`); razem 28/28. Zrzuty z uruchomionego portalu: `pitch/zrzuty/01–06`.
+**Testy:** aplikacja – `pip install -r requirements.txt` i `pytest` (114 testów); portal – `portal/local/run_aed_tests.sh` (25 testów Wykazu AED bez bazy) i 3 testy z bazą w uruchomionym portalu (`portal/README.md`); razem 28/28. Zrzuty z uruchomionego portalu: `pitch/zrzuty/01–06`.
 
 ## D. Czego nie oceniać jako rozwiązania – tryb pokazowy prototypu
 

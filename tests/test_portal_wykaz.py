@@ -78,29 +78,3 @@ def test_pakiet_dla_instytucji_bez_pustych_komorek():
     assert all(v.strip() for v in raw.values()) and raw["pietro"] == "-"
     assert rows[0]["pietro"] == "" and rows[0]["nazwa_obiektu"] == "Szkoła"
     assert b"<specialSign>-</specialSign>" in z.read("aed_harvester.xml")
-
-
-def test_wykaz_zbiorczy_z_czytelnymi_naglowkami(client, monkeypatch):
-    """CR-TL-14: wykaz zbiorczy portalu ma czytelne nagłówki i węższy zakres kolumn (jak wykaz DGA) – aplikacja go czyta."""
-    api = "http://api.mcod.local"
-    cols = ["Lp.", "Identyfikator AED", "Nazwa dostawcy", "Nazwa obiektu", "Miejscowość", "Ulica", "Numer budynku",
-            "Opis lokalizacji", "Dostęp", "Godziny dostępności", "Szerokość geograficzna", "Długość geograficzna",
-            "Data weryfikacji", "Link do zasobu źródłowego", "Możliwy duplikat"]
-    buf = io.StringIO()
-    w = csv.DictWriter(buf, fieldnames=cols)
-    w.writeheader()
-    w.writerow({"Lp.": 1, "Identyfikator AED": "AED-PL-P000000021", "Nazwa dostawcy": "Urząd Miasta Testowo",
-                "Nazwa obiektu": "Ratusz", "Miejscowość": "Warszawa", "Ulica": "ul. Królewska", "Numer budynku": "27",
-                "Opis lokalizacji": "hol główny", "Dostęp": "publiczny", "Godziny dostępności": "24/7",
-                "Szerokość geograficzna": "52.2401", "Długość geograficzna": "21.0154", "Data weryfikacji": "2026-11-02",
-                "Link do zasobu źródłowego": "https://mcod.local/pl/dataset/1/resource/5", "Możliwy duplikat": "-"})
-    answers = {f"{api}/aed-aggregated": json.dumps({"csv_url": "http://api.mcod.local/media/n.csv"}).encode(),
-               "http://api.mcod.local/media/n.csv": buf.getvalue().encode()}
-    monkeypatch.setattr(dostawcy, "_portal_get", lambda url, timeout=30: answers[url])
-    monkeypatch.setenv("PORTAL_API", api)
-    adm = {"Authorization": "Bearer " + client.post("/api/v1/auth/login", json={"login": "admin", "haslo": "admin123"}).json()["token"]}
-    assert client.post("/api/v1/admin/agregacja", headers=adm).json()["data"]["rekordy"] == 1
-    a = client.get("/api/v1/aed/AED-PL-P000000021").json()["data"]
-    assert a["attributes"]["nazwa_obiektu"] == "Ratusz" and a["attributes"]["ulica"] == "ul. Królewska"
-    assert a["attributes"]["dostepny_24h"] is True and a["meta"]["dostawca"] == "Urząd Miasta Testowo"
-    assert a["meta"]["zasob_url"].endswith("/resource/5") and a["meta"]["mozliwe_duplikaty"] == []

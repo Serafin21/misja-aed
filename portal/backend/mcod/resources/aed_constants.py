@@ -11,7 +11,7 @@ Tak jak w DGA trzy listy mają różne zadania:
 - AED_REQUIRED – pola, które w każdym wierszu muszą mieć wartość (grupy „jedno z”),
 - MAIN_AED_COLUMNS – struktura wykazu zbiorczego.
 """
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from mcod.organizations.models import Organization
 
@@ -93,35 +93,15 @@ TERYT_TERC_PATTERN: str = r"^\d{7}$"
 # (inaczej niż DGA: ALLOWED_DGA_INSTITUTIONS = samorządy i administracja państwowa).
 ALLOWED_AED_INSTITUTIONS: List[str] = [code for code, _label in Organization.INSTITUTION_TYPE_CHOICES]
 
-# Wykaz zbiorczy – zakres kolumn (CR-TL-14): jak wykaz chronionych danych (MAIN_DGA_COLUMNS) – czytelne polskie
-# nagłówki i tylko pola potrzebne, żeby znaleźć AED i sprawdzić źródło. Pełne 44 pola wzorca zostają w zasobach
-# dostawców (kolumna „Link do zasobu źródłowego”). „Identyfikator AED” łączy wiersz z zasobem dostawcy i z kolumną
-# „Możliwy duplikat”.
+# Wykaz zbiorczy: dostawca, typ instytucji, link do zasobu, data aktualizacji zasobu, 44 kolumny wzorca, możliwy duplikat
 MAIN_AED_PROVIDER_COLUMNS: List[str] = [
     "Nazwa dostawcy",
+    "Typ instytucji",
     "Link do zasobu źródłowego",
+    "Data aktualizacji zasobu",
 ]
 MAIN_AED_DUPLICATE_COLUMN: str = "Możliwy duplikat"
-# nagłówek wykazu zbiorczego -> pole wzorca AED (None = kolumna wyliczana: Lp., dostawca, link, duplikat, ulica, godziny)
-MAIN_AED_COLUMN_SOURCES: List[Tuple[str, Optional[str]]] = [
-    ("Lp.", None),
-    ("Identyfikator AED", "id_aed"),
-    ("Nazwa dostawcy", None),
-    ("Nazwa obiektu", "nazwa_obiektu"),
-    ("Miejscowość", "miejscowosc"),
-    ("Ulica", None),  # ulica_cecha + ulica, np. „ul. Królewska”
-    ("Numer budynku", "numer_budynku"),
-    ("Opis lokalizacji", "opis_lokalizacji"),
-    ("Dostęp", "dostep"),
-    ("Godziny dostępności", None),  # godziny_dostepnosci albo „24/7”, gdy dostepny_24h = true
-    ("Szerokość geograficzna", "szerokosc_geograficzna"),
-    ("Długość geograficzna", "dlugosc_geograficzna"),
-    ("Data weryfikacji", "data_weryfikacji"),
-    ("Link do zasobu źródłowego", None),
-    (MAIN_AED_DUPLICATE_COLUMN, None),
-]
-MAIN_AED_COLUMNS: List[str] = [name for name, _field in MAIN_AED_COLUMN_SOURCES]
-MAIN_AED_NUMBER_COLUMNS: List[str] = ["Szerokość geograficzna", "Długość geograficzna"]
+MAIN_AED_COLUMNS: List[str] = ["Lp."] + MAIN_AED_PROVIDER_COLUMNS + AED_COLUMNS + [MAIN_AED_DUPLICATE_COLUMN]
 # Rekord oznaczany jako „możliwy duplikat”, gdy w promieniu tylu metrów jest AED innego dostawcy (wiersze nie są scalane)
 MAIN_AED_DUPLICATE_DISTANCE_M: float = 25.0
 

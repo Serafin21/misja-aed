@@ -117,39 +117,6 @@ ponowieniami (jak w DGA), a plik XLSX wykazu zbiorczego ma format i bezpośredni
 Etykiety pól w zrzutach są po angielsku („Contains AED list”) – lokalna instalacja bez skompilowanych tłumaczeń;
 tak samo wyglądają oryginalne pola portalu. Polskie tłumaczenie naszego pola jest w `translations/system/pl/…/django.po`.
 
-### Tabela Wykazu AED we frontendzie portalu i dwa sposoby zasilenia (CR-TL-14, 22.11, 9:00–9:20)
-
-**Frontend portalu** (`frontend/`, mcod-frontend 3.5.2 – import bez zmian, potem commity „Wykaz AED (frontend): …”): strona
-**„Wykaz AED”** zbudowana jak punkt informacyjny DGA – `AedService.getAedAggregatedData()` (`/aed-aggregated`), trasy
-`!aed` → `!list-aed` → `!table` z `<app-resource-table-no-filters [resourceId]>`, resolver i okruszki jak w DGA (strona CMS
-opcjonalna – tytuł i opis z tłumaczeń), link w menu i mapie strony obok „Punkt informacyjny DGA”, tłumaczenia PL/EN.
-**Zakres kolumn wykazu zbiorczego** jak w DGA – czytelne nagłówki, inny zakres: Lp., Identyfikator AED, Nazwa dostawcy,
-Nazwa obiektu, Miejscowość, Ulica, Numer budynku, Opis lokalizacji, Dostęp, Godziny dostępności, Szerokość
-geograficzna, Długość geograficzna, Data weryfikacji, Link do zasobu źródłowego, Możliwy duplikat (`aed_constants.py`,
-`MAIN_AED_COLUMN_SOURCES`); pełne 44 pola zostają w zasobach dostawców.
-
-Uruchomienie (backend jak wyżej, potem z katalogu `portal/frontend`): `npm ci` i
-`npx ng serve --configuration local --proxy-config ../local/proxy.session.json` (w sesji z proxy – bez nginx; na zwykłym
-komputerze `npm run start:local` z oryginalnym `proxy.local.conf.json`). Strona: http://localhost:4200/pl/aed.
-W `mcod/settings/local.py` (kopia `local.py.sample`) usuń `"timeout": 1` z `ELASTICSEARCH_DSL_INDEX_SETTINGS` i
-`ELASTICSEARCH_HISTORIES_IDX_SETTINGS` – Elasticsearch 6.8 odrzuca to ustawienie indeksu i tabela zasobu nie powstaje.
-
-**Zasilenie ręczne:** instytucja (tu: Urząd Miasta Testowo) dodaje w panelu zasób z plikiem wykazu
-(`local/harvester/wykaz-aed-urzad-miasta-testowo.csv`), zaznacza „Zawiera wykaz AED” i znak umowny „-”.
-
-**Zasilenie automatyczne (harvester XML):** panel → „Źródła danych” → źródło typu XML instytucji (tu: Fundacja Serce dla
-Miasta) z adresem pliku `local/harvester/wykaz-aed-fundacja-serce.xml` (XSD 1.14: zasób z
-`<containsAedList>true</containsAedList>`; obok pliku XML portal wymaga pliku `.md5` z sumą kontrolną, adres zasobu –
-https). Import tworzy zbiór i zasób z „Zawiera wykaz AED”, walidacja wykazu AED działa jak w panelu
-(`harvester/serializers.py`, `validate_xml_contains_aed_list`). Dokumentacja importu XML portalu:
-`backend/data/harvester/xml_import_otwarte_dane_1_14.xsd` (opis pól w adnotacjach) i baza wiedzy dane.gov.pl.
-
-Wynik na uruchomionym portalu: import XML `ok`; zadanie `create_main_aed_resource_task` → „Wykaz AED – wykaz zbiorczy”
-z 5 wierszami od 2 dostawców, „Możliwy duplikat” dla AED 7 m od siebie; tabela na stronie „Wykaz AED”
-(`pitch/zrzuty/14_portal_strona_wykaz_aed_tabela.png`), widok tabeli zasobu (`13_…`), wiersze z harvestera (`16_…`).
-Nie zrobione: zrzut wykazu DGA do porównania (lokalna baza nie ma zasobów DGA ani stron CMS punktu DGA), zrzuty panelu
-15 i 02p–04p (panel administracyjny nie wczytał się w przeglądarce bez dostępu do zewnętrznych zasobów).
-
 ## Ścieżka dostawcy w panelu
 
 1. Zaloguj się do panelu (https://admin.mcod.local) kontem instytucji (albo `admin@mcod.local`).
