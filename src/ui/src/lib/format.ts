@@ -92,3 +92,9 @@ export function osmDirections(from: { lat: number; lon: number } | null, to: { l
   if (!from) return `https://www.openstreetmap.org/?mlat=${to.lat}&mlon=${to.lon}#map=19/${to.lat}/${to.lon}`;
   return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=${from.lat.toFixed(6)},${from.lon.toFixed(6)};${dest}`;
 }
+
+/** Owner's decision 22.11: an AED without a real name shows this text (never the description or the owner as a name). */
+export const NO_NAME = 'Brak nazwy urządzenia';
+export function aedName(n: string | null | undefined): string {
+  return n && n.trim() ? n : NO_NAME;
+}

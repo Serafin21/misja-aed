@@ -11,7 +11,7 @@ import {
 import { RequireLogin, SessionBar } from '../components/Auth';
 import { ReportsQueue } from '../components/ReportsQueue';
 import { ErrorBox, ExternalLink, Loading } from '../components/ui';
-import { dictValues } from '../lib/format';
+import { dictValues, aedName } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { Link, usePageTitle } from '../router';
 import { PODSTAWA_LABEL, type Aed, type PodstawaPublikacji } from '../api/types';
@@ -489,7 +489,7 @@ function AllAed() {
       if (Object.keys(pola).length) await adminAedEdit(edit.id, pola);
       const before = list.data?.data.find((x) => x.id_aed === edit.id)?.organizacja ?? '';
       if (edit.org !== before) await adminAedAssign(edit.id, edit.org || null);
-      setInfo(`Zapisano zmiany AED „${edit.vals.nazwa_obiektu}”.`); setEdit(null); list.reload();
+      setInfo(`Zapisano zmiany AED „${aedName(edit.vals.nazwa_obiektu)}”.`); setEdit(null); list.reload();
     } catch (ex) { setErr(ex as Error); }
   }
   async function decideChange(r: AedAdmin, d: 'zatwierdz' | 'odrzuc') {
@@ -497,18 +497,18 @@ function AllAed() {
     setErr(null); setInfo('');
     let why: string | undefined;
     if (d === 'odrzuc') {
-      why = window.prompt(`Dlaczego odrzucasz zmianę „${r.nazwa_obiektu}”? (instytucja zobaczy ten komentarz)`)?.trim();
+      why = window.prompt(`Dlaczego odrzucasz zmianę „${aedName(r.nazwa_obiektu)}”? (instytucja zobaczy ten komentarz)`)?.trim();
       if (!why) return;
     }
     try {
       await decideSubmission(r.zgloszenie.id, d, why);
-      setInfo(d === 'zatwierdz' ? `Zmiana „${r.nazwa_obiektu}” zatwierdzona – jest już na mapie.` : `Zmiana „${r.nazwa_obiektu}” odrzucona.`);
+      setInfo(d === 'zatwierdz' ? `Zmiana „${aedName(r.nazwa_obiektu)}” zatwierdzona – jest już na mapie.` : `Zmiana „${aedName(r.nazwa_obiektu)}” odrzucona.`);
       list.reload();
     } catch (ex) { setErr(ex as Error); }
   }
   async function remove(r: AedAdmin) {
-    if (!window.confirm(`Usunąć AED „${r.nazwa_obiektu}”? Zniknie z mapy (także po odświeżeniu danych).`)) return;
-    try { await adminAedDelete(r.id_aed); setInfo(`Usunięto „${r.nazwa_obiektu}”.`); list.reload(); } catch (ex) { setErr(ex as Error); }
+    if (!window.confirm(`Usunąć AED „${aedName(r.nazwa_obiektu)}”? Zniknie z mapy (także po odświeżeniu danych).`)) return;
+    try { await adminAedDelete(r.id_aed); setInfo(`Usunięto „${aedName(r.nazwa_obiektu)}”.`); list.reload(); } catch (ex) { setErr(ex as Error); }
   }
   const total = list.data?.meta.count ?? 0;
   const pages = Math.max(1, Math.ceil(total / 25));
@@ -546,7 +546,7 @@ function AllAed() {
             <tbody>
               {list.data.data.map((r) => (
                 <tr key={r.id_aed}>
-                  <td><Link to={`/aed/${r.id_aed}`}>{r.nazwa_obiektu || 'bez nazwy'}</Link>{r.edytowane && <div className="hint">zmienione przez administratora</div>}
+                  <td><Link to={`/aed/${r.id_aed}`}>{aedName(r.nazwa_obiektu)}</Link>{r.edytowane && <div className="hint">zmienione przez administratora</div>}
                     {r.zgloszenie && <div><span className="badge badge--stale">zmiana czeka na zatwierdzenie</span>
                       <div className="hint">od {r.zgloszenie.nadawca ?? '—'}, {when(r.zgloszenie.utworzono)} · <Link to="/zgloszenia-aed">zobacz szczegóły</Link></div></div>}</td>
                   <td>{[r.adres, r.miejscowosc].filter(Boolean).join(', ') || '—'}</td>
@@ -555,11 +555,11 @@ function AllAed() {
                   <td>{r.data_weryfikacji ?? '—'}</td>
                   <td className="table-actions">
                     {r.zgloszenie && <>
-                      <button type="button" className="btn btn--primary btn--small" onClick={() => decideChange(r, 'zatwierdz')}>Zatwierdź zmianę<span className="visually-hidden"> {r.nazwa_obiektu}</span></button>
-                      <button type="button" className="btn btn--secondary btn--small" onClick={() => decideChange(r, 'odrzuc')}>Odrzuć zmianę<span className="visually-hidden"> {r.nazwa_obiektu}</span></button>
+                      <button type="button" className="btn btn--primary btn--small" onClick={() => decideChange(r, 'zatwierdz')}>Zatwierdź zmianę<span className="visually-hidden"> {aedName(r.nazwa_obiektu)}</span></button>
+                      <button type="button" className="btn btn--secondary btn--small" onClick={() => decideChange(r, 'odrzuc')}>Odrzuć zmianę<span className="visually-hidden"> {aedName(r.nazwa_obiektu)}</span></button>
                     </>}
-                    <button type="button" className="btn btn--secondary btn--small" onClick={() => openEdit(r)}>Edytuj<span className="visually-hidden"> {r.nazwa_obiektu}</span></button>
-                    <button type="button" className="btn btn--danger btn--small" onClick={() => remove(r)}>Usuń<span className="visually-hidden"> {r.nazwa_obiektu}</span></button>
+                    <button type="button" className="btn btn--secondary btn--small" onClick={() => openEdit(r)}>Edytuj<span className="visually-hidden"> {aedName(r.nazwa_obiektu)}</span></button>
+                    <button type="button" className="btn btn--danger btn--small" onClick={() => remove(r)}>Usuń<span className="visually-hidden"> {aedName(r.nazwa_obiektu)}</span></button>
                   </td>
                 </tr>
               ))}
@@ -573,7 +573,7 @@ function AllAed() {
       )}
       {edit && (
         <form className="panel" onSubmit={save} aria-labelledby="h-aed-edit">
-          <h3 id="h-aed-edit">Edytuj AED: {edit.vals.nazwa_obiektu}</h3>
+          <h3 id="h-aed-edit">Edytuj AED: {aedName(edit.vals.nazwa_obiektu)}</h3>
           <div className="field"><label htmlFor="ae-org">Instytucja odpowiedzialna</label>
             <select id="ae-org" value={edit.org} onChange={(e) => setEdit({ ...edit, org: e.target.value })}>
               <option value="">— brak —</option>{[...new Set([...(orgs.data ?? []), ...(edit.org ? [edit.org] : [])])].map((o) => <option key={o} value={o}>{o}</option>)}
