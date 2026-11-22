@@ -1,5 +1,11 @@
 # HANDOFF – Model A
 
+## 2026-11-22 – ZLECENIA TL dla A (po scaleniu CR-TL-9, przed 10:30)
+
+1. **Hosting publicznego prototypu (priorytet).** Jury chce klikalnego prototypu bez konfiguracji. Postaw obraz z `docker compose up --build` (API + UI) na publicznym adresie https (dowolny hosting kontenerów z wolnym planem; `ADMIN_PASSWORD` inne niż demo, `AED_PUBLIC_URL` = adres publiczny). Minimum awaryjne: statyczny build UI w trybie demonstracyjnym (`VITE_USE_MOCKS=1 VITE_ROUTER=hash npm run build`) na GitHub Pages. Adres wpisz w `SUBMISSION.md` w miejsce `PROTOTYP_URL` (TL sprawdza link przed wysłaniem).
+2. **CR – etykieta pola w panelu:** `mcod/resources/forms.py:272` `_("Contains AED list").capitalize()` – `str.capitalize()` zamienia „Zawiera wykaz AED” na „Zawiera wykaz aed”. Usunąć `.capitalize()` (tłumaczenie już zaczyna się wielką literą).
+3. **Zrzuty portalu** `pitch/zrzuty/01–06` (panel z „Zawiera wykaz AED”, komunikat walidacji, wykaz zbiorczy, `/aed-aggregated`) – jeśli portal ruszy na komputerze bez proxy (`portal/README.md`).
+
 ## 2026-11-22 – HANDOFF #16 (w CR-TL-9 nazwany „#13” – numeracja A była już na #15): CR-TL-9 – kod dane.gov.pl, „Wykaz AED” wzorem DGA
 
 - **Import (pkt 1):** `portal/backend` = backend portalu dane.gov.pl (mcod 2.62.3, kopia github.com/olekstomek/mcod-backend-dane.gov.pl, commit `00a0813`), jeden commit bez zmian `b229557`; skąd, suma SHA-256 i data – `portal/IMPORT.md`.
