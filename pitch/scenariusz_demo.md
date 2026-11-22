@@ -1,19 +1,22 @@
-# Scenariusz demo (maks. 2:00) – v2, model ról
+# Scenariusz demo (maks. 2:00) – v3, rdzeń: Wykaz AED w portalu dane.gov.pl (CR-TL-9)
 
-Nagranie ok. 07:00 w niedzielę. Model: `docs/MODEL_ROL.md`. Przed nagraniem: API z `a/core` po scaleniu, dane `python -m scripts.seed --reset --osm full --lista auto`, czysty profil przeglądarki, powiększenie 100%, okno 1440 px; część mieszkańca na widoku 390 px. Długość sprawdź w odtwarzaczu (≤ 2:00; tempo lektora ok. 2 słowa na sekundę). Liczby w tekście lektora tylko z `docs/tech/LICZBY.md` po regeneracji przez A.
+Przed nagraniem: lokalny portal dane.gov.pl z przyrostem „Wykaz AED” (`portal/README.md`, „Uruchomienie portalu lokalnie”), konto panelu `admin@mcod.local`; zbiór instytucji z zasobem z zaznaczonym „Zawiera wykaz AED”; plik z błędem (np. pusty `teryt_terc` w wierszu 4); aplikacja z `PORTAL_API=https://api.mcod.local`. Okno 1440 px, powiększenie 100%. Liczby lektora tylko z `docs/tech/LICZBY.md`. Tempo ok. 2 słowa na sekundę.
 
-| Czas | Ekran (adres) | Co robimy | Lektor |
+| Czas | Ekran | Co robimy | Lektor |
 |---|---|---|---|
-| 0:00–0:20 | Mapa (`/mapa`), cała Polska, warstwa „Do sprawdzenia” włączona | statyczny kadr: tysiące punktów OSM | „W otwartych danych jest dziś ponad 18 tysięcy AED. Tylko co szósty był sprawdzony w ostatnim roku i za żaden nikt nie odpowiada. Dlatego te punkty są tylko warstwą do sprawdzenia.” |
-| 0:20–0:45 | „Znajdź AED” (`/znajdz`) na telefonie → karta AED | najbliższe AED → karta: dostawca, link do zbioru, data danych, etykieta „Zbiór przejściowy” | „Mieszkaniec widzi najbliższe AED, a na karcie – kto odpowiada za te dane, z którego zbioru na dane.gov.pl pochodzą i z jakiego są dnia.” |
-| 0:45–1:05 | Karta AED → „Zgłoś problem z tym AED” (`/zglos?aed=…`) | typ „szafka zamknięta” → informacja „trafi do: [dostawca]” → wysłanie; powrót na kartę – dane bez zmian | „Zamknięta szafka? Zgłoszenie trafia prosto do dostawcy. Dane na liście się nie zmieniają – decyduje ten, kto za nie odpowiada.” |
-| 1:05–1:35 | Logowanie (`/logowanie`, konto `dysponent`) → Moje AED (`/moje-aed`) | dodaj AED → sprawdzenie ze wzorcem → „Pobierz pliki do publikacji” → pokazać CSV i XML w pakiecie | „Dysponent dodaje swoje AED i pobiera komplet plików: CSV według wzorca i XML zgodny z harvesterem dane.gov.pl. Publikuje je na własnym koncie – my niczego nie publikujemy za niego.” |
-| 1:35–2:00 | Panel moderacji prototypu (`/panel`, konto `administrator`) → luki → akcja (`/akcja`) | raport agregacji (zbiory zgodne ze wzorcem, przejściowe, Warszawa poza listą) → mapa luk → strona akcji | „Administrator łączy zbiory, ale nie wpisuje danych. Mapa luk pokazuje, gdzie brakuje dostawców – tam trafia akcja AED w danych. Dane prosto z serca. Masz AED? Udostępnij je na dane.gov.pl.” |
+| 0:00–0:20 | Panel dane.gov.pl (https://admin.mcod.local) → Zbiory danych → zbiór instytucji → zasób | pokazujemy zasób z zaznaczonym **„Zawiera wykaz AED” = Tak** | „To jest panel dane.gov.pl. Gmina publikuje swój wykaz defibrylatorów jak każdy zasób i zaznacza jedno pole: zawiera wykaz AED. Tak samo działa dziś wykaz chronionych danych.” |
+| 0:20–0:45 | Ten sam panel → Dodaj zasób → plik z błędem → Zapisz | komunikat walidacji portalu z numerem wiersza (np. „wiersz 4: brak wartości: teryt_terc”); zasób się nie zapisuje | „Portal od razu sprawdza plik: 44 kolumny wzorca i pola wymagane. Błąd – komunikat z numerem wiersza. Do wykazu trafiają tylko poprawne dane.” |
+| 0:45–1:10 | Terminal: `python manage.py create_main_aed_resource` → panel → zbiór Ministerstwa Cyfryzacji | zasób **„Wykaz AED – wykaz zbiorczy”** (CSV + XLSX); otwieramy plik: kolumny „Nazwa dostawcy”, „Link do zasobu źródłowego”, „Możliwy duplikat” | „Co noc portal składa wykazy wszystkich instytucji w jeden wykaz zbiorczy. Nic nie jest scalane ani poprawiane – przy każdym wierszu jest dostawca i link do jego pliku.” |
+| 1:10–1:25 | Przeglądarka: `https://api.mcod.local/aed-aggregated` | odpowiedź JSON z linkami `csv_url`, `xlsx_url` | „Aplikacje pobierają wykaz z jednego adresu API: aed-aggregated.” |
+| 1:25–1:50 | Mapa danych AED: „Znajdź AED” → karta AED | AED z wykazu, sekcja „Skąd są te dane i kto za nie odpowiada”: dostawca i link do źródła | „Nasza Mapa danych AED tylko czyta ten wykaz. Przy każdym AED widać, kto za nie odpowiada i skąd pochodzą dane. Poprawić je może tylko dostawca – w swoim panelu.” |
+| 1:50–2:00 | Strona akcji (`/akcja`) – logo „AED w danych” | ostatni kadr | „Masz AED? Udostępnij je na dane.gov.pl. AED w danych – dane prosto z serca.” |
 
-**Przed nagraniem:** każde zdanie lektora sprawdzić z działającą aplikacją i `docs/tech/LICZBY.md`. Etykieta „Zbiór przejściowy” i podział „przejściowe / poza listą” w raporcie tylko, jeśli po scaleniu A `/api/v1/zbiory` je pokazuje – inaczej pominąć te słowa. Ostatnie zdanie łączy hasło z nazwą akcji i podtytułem (zasada z `brand/haslo.txt`); logo akcji pojawia się dopiero w ostatnim kadrze.
+**Zasady nagrania:** każde zdanie lektora sprawdzić z działającym portalem i aplikacją. Logo akcji dopiero w ostatnim kadrze (`brand/haslo.txt`). Nie pokazujemy „Panelu moderacji prototypu” – to tryb pokazowy, docelowo wyłączony (`docs/MODEL_ROL.md` v2.1).
+
+**Jeśli portal nie wystartuje przed nagraniem:** kroki 1–4 zastąpić kadrami kodu z `portal/backend` (pole w `mcod/resources/forms.py`, komunikat z `mcod/resources/aed_utils.py`, zadanie `mcod/resources/tasks/aed.py`, trasa w `mcod/routes.py`) i wynikiem testów `portal/local/run_aed_tests.sh` (23 passed) – lektor mówi „w kodzie portalu” zamiast „w panelu”. Nie pokazywać niczego, co udaje działający panel.
 
 ## Plan B na finale (awaria internetu lub API)
 
 1. Nagranie demo odtwarzane lokalnie z pliku.
-2. Aplikacja w trybie demonstracyjnym (`VITE_USE_MOCKS=1 npm run dev`) – działa bez backendu (bez logowania, bez pełnych danych OSM).
-3. Zrzuty ekranu w prezentacji PDF (`pitch/zrzuty/`).
+2. Aplikacja w trybie demonstracyjnym (`VITE_USE_MOCKS=1 npm run dev`) – działa bez backendu.
+3. Zrzuty w prezentacji PDF (`pitch/zrzuty/`).
