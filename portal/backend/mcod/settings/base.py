@@ -1732,6 +1732,27 @@ MAIN_DGA_DATASET_TAGS_NAMES = [
     "chronione dane",
 ]
 
+# Wykaz AED – wykaz zbiorczy (HackNation 2026, wzorem MAIN_DGA_*)
+MAIN_AED_RESOURCE_CREATION_ROOT = str(ROOT_DIR.path(MEDIA_ROOT, "main_aed"))
+MAIN_AED_DATASET_OWNER_ORGANIZATION_PK = env("MAIN_AED_DATASET_OWNER_ORGANIZATION_PK", default=MAIN_DGA_DATASET_OWNER_ORGANIZATION_PK)
+MAIN_AED_DATASET_DEFAULT_TITLE = "Wykaz AED – wykaz zbiorczy"
+MAIN_AED_DATASET_DEFAULT_DESC = (
+    "Wykaz defibrylatorów AED – raport zbiorczy tworzony co noc przez portal z wykazów AED opublikowanych przez "
+    "instytucje (zasoby oznaczone jako „Zawiera wykaz AED”). Każdy wiersz pochodzi od wskazanego dostawcy (kolumny "
+    "„Nazwa dostawcy” i „Link do zasobu źródłowego”), który odpowiada za jego treść. Wiersze nie są scalane; rekordy "
+    "różnych dostawców leżące bliżej niż 25 m mają oznaczenie „Możliwy duplikat”."
+)
+MAIN_AED_RESOURCE_DEFAULT_TITLE = "Wykaz AED – wykaz zbiorczy"
+MAIN_AED_RESOURCE_DEFAULT_DESC = (
+    "Wszystkie wykazy AED dostawców w jednym pliku (CSV i XLSX): dostawca, typ instytucji, link do zasobu źródłowego, "
+    "data aktualizacji zasobu, 44 kolumny wzorcowego zakresu danych AED i „Możliwy duplikat”."
+)
+MAIN_AED_FILE_NAME_PREFIX = "Wykaz AED – wykaz zbiorczy – Ministerstwo Cyfryzacji"
+MAIN_AED_XLSX_WORKSHEET_NAME = "Wykaz AED"
+MAIN_AED_DATASET_UPDATE_NOTIFICATION_EMAIL = env("MAIN_AED_DATASET_UPDATE_NOTIFICATION_EMAIL", default="aed@mcod.local")
+MAIN_AED_DATASET_CATEGORIES_TITLES = ["Zdrowie"]
+MAIN_AED_DATASET_TAGS_NAMES = ["AED", "defibrylator", "wykaz AED", "wspolna-lista-aed"]
+
 PASSWORD_RESET_PATH = "/user/reset-password/%s/"
 EMAIL_VALIDATION_PATH = "/user/verify-email/%s/"
 

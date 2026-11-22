@@ -90,6 +90,12 @@ def get_beat_schedule(
             "options": default_options,
             "schedule": crontab(minute=30, hour=3),
         },
+        # Wykaz AED – wykaz zbiorczy (po harvesterze o 3:00, razem z wykazem DGA)
+        "aed_main_resource_creation": {
+            "task": "mcod.resources.tasks.create_main_aed_resource_task",
+            "options": default_options,
+            "schedule": crontab(minute=40, hour=3),
+        },
         "kibana-statistics": {
             "task": "mcod.counters.tasks.kibana_statistics",
             "options": default_options,

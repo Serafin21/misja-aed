@@ -193,3 +193,275 @@ def format_aed_file_errors(errors: List[str]) -> str:
     head, *rows = errors
     detail = "".join(f"<p>{r}</p>" for r in rows)
     return f"<p>{head}</p>" + (f'<div class="expandable">{detail}</div>' if detail else "")
+
+
+# =====================================================================================================================
+# Wykaz zbiorczy (create_main_aed_resource_task, wzorem create_main_dga_resource_task)
+# =====================================================================================================================
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    r = 6371008.8
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    a = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def mark_possible_duplicates(df: pd.DataFrame, distance_m: Optional[float] = None) -> pd.Series:
+    """Kolumna „Możliwy duplikat”: id_aed rekordów INNYCH dostawców w promieniu `distance_m` (domyślnie 25 m).
+    Wiersze nie są scalane – oba zostają w wykazie, a za każdy odpowiada jego dostawca."""
+    from mcod.resources.aed_constants import MAIN_AED_DUPLICATE_DISTANCE_M
+
+    limit = distance_m or MAIN_AED_DUPLICATE_DISTANCE_M
+    cell = 0.001  # ~110 m – siatka do szukania sąsiadów
+    grid: Dict[Tuple[int, int], List[int]] = {}
+    pts: List[Optional[Tuple[float, float]]] = []
+    for i, (lat, lon) in enumerate(zip(df["szerokosc_geograficzna"], df["dlugosc_geograficzna"])):
+        la, lo = _to_float(lat), _to_float(lon)
+        pts.append((la, lo) if la is not None and lo is not None else None)
+        if pts[-1]:
+            grid.setdefault((int(la // cell), int(lo // (cell * 1.6))), []).append(i)
+    providers = list(df["Nazwa dostawcy"])
+    ids = [str(v) for v in df["id_aed"]]
+    out: List[str] = []
+    for i, p in enumerate(pts):
+        near: List[str] = []
+        if p:
+            ky, kx = int(p[0] // cell), int(p[1] // (cell * 1.6))
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    for j in grid.get((ky + dy, kx + dx), []):
+                        if j != i and providers[j] != providers[i] and _haversine_m(p[0], p[1], *pts[j]) <= limit:
+                            near.append(ids[j])
+        out.append("tak: " + ", ".join(sorted(set(near))) if near else "")
+    return pd.Series(out, index=df.index)
+
+
+def get_all_aed_resources_sorted_by_organizations():
+    """Opublikowane wykazy AED dostawców z zakończoną walidacją, bez wykazu zbiorczego (wzór: DGA)."""
+    from django.apps import apps
+
+    Resource = apps.get_model("resources", "Resource")
+    main = get_main_aed_resource()
+    return (
+        Resource.objects.filter(
+            contains_aed_list=True,
+            status="published",
+            data_tasks_last_status="SUCCESS",
+            file_tasks_last_status="SUCCESS",
+            link_tasks_last_status="SUCCESS",
+        )
+        .exclude(id=main.pk if main else None)
+        .select_related("dataset__organization")
+        .order_by("dataset__organization__title")
+    )
+
+
+def get_aed_source_df(resource: "Resource") -> Optional[pd.DataFrame]:
+    """Wiersze wykazu AED jednego dostawcy: plik zasobu (wgrany w panelu) albo plik z linku (harvester).
+    Zasób bez kolumn wzorca jest pomijany; wiersze niezgodne ze wzorcem są pomijane i liczone w logu."""
+    import os
+    from mimetypes import guess_extension as _ext
+
+    from mcod.resources.dga_utils import get_remote_extension_if_correct_dga_content_type, request_remote_dga
+
+    df: Optional[pd.DataFrame] = None
+    main_file = getattr(resource, "main_file", None)
+    try:
+        if main_file and getattr(main_file, "path", None) and os.path.exists(main_file.path):
+            extension = os.path.splitext(main_file.path)[1][1:].lower()
+            with open(main_file.path, "rb") as f:
+                df = create_df_from_aed_file(BytesIO(f.read()), extension)
+        elif resource.link:
+            response = request_remote_dga(resource.link)
+            extension = get_remote_extension_if_correct_dga_content_type(response) if response.status_code == 200 else None
+            if extension is None:
+                guessed = _ext(response.headers.get("Content-Type", "")) if response.status_code == 200 else None
+                extension = guessed[1:] if guessed else None
+            df = create_df_from_aed_file(BytesIO(response.content), extension) if extension else None
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"Skipping AED list resource {resource.pk}: cannot read the file ({exc}).")
+        return None
+    if df is None or validate_aed_df_columns(df):
+        logger.error(f"Skipping AED list resource {resource.pk}: missing AED template columns.")
+        return None
+    rows = df.to_dict(orient="records")
+    ok = [r for r in rows if not validate_aed_row(r)]
+    if len(ok) < len(rows):
+        logger.warning(f"AED list resource {resource.pk}: {len(rows) - len(ok)} of {len(rows)} rows skipped (template errors).")
+    return pd.DataFrame(ok, columns=df.columns) if ok else None
+
+
+def create_main_aed_df(resources) -> pd.DataFrame:
+    """Wykaz zbiorczy: wiersze wszystkich dostawców jeden pod drugim + dostawca, typ instytucji, link do zasobu
+    źródłowego, data aktualizacji zasobu i „Możliwy duplikat”. Bez scalania i bez zmiany treści wierszy."""
+    from mcod.resources.aed_constants import (
+        AED_COLUMNS,
+        MAIN_AED_COLUMNS,
+        MAIN_AED_DUPLICATE_COLUMN,
+    )
+
+    parts: List[pd.DataFrame] = []
+    for resource in resources:
+        df = get_aed_source_df(resource)
+        if df is None or df.empty:
+            continue
+        org = resource.dataset.organization
+        df = df.reindex(columns=AED_COLUMNS)
+        df.insert(0, "Nazwa dostawcy", org.title)
+        df.insert(1, "Typ instytucji", org.get_institution_type_display())
+        df.insert(2, "Link do zasobu źródłowego", getattr(resource, "frontend_absolute_url", None) or resource.link)
+        updated = resource.data_date or (resource.modified.date() if resource.modified else None)
+        df.insert(3, "Data aktualizacji zasobu", updated.isoformat() if updated else None)
+        parts.append(df)
+    columns_without_lp = [c for c in MAIN_AED_COLUMNS if c != "Lp."]
+    main_df = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=columns_without_lp)
+    main_df[MAIN_AED_DUPLICATE_COLUMN] = mark_possible_duplicates(main_df) if not main_df.empty else []
+    main_df.insert(0, "Lp.", range(1, len(main_df) + 1))
+    return main_df[MAIN_AED_COLUMNS]
+
+
+def create_main_aed_files() -> Tuple[str, str]:
+    """Pliki wykazu zbiorczego: CSV (UTF-8, przecinek) i XLSX; zwraca ścieżki (csv, xlsx)."""
+    import datetime
+    import os
+
+    from django.conf import settings
+
+    from mcod.core.utils import save_df_to_xlsx
+
+    directory = settings.MAIN_AED_RESOURCE_CREATION_ROOT
+    os.makedirs(directory, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y%m%d")
+    base = os.path.join(directory, f"{settings.MAIN_AED_FILE_NAME_PREFIX} {stamp}")
+    df = create_main_aed_df(get_all_aed_resources_sorted_by_organizations())
+    df.to_csv(base + ".csv", index=False, encoding="utf-8")
+    save_df_to_xlsx(df=df, file_path=base + ".xlsx", sheet_name=settings.MAIN_AED_XLSX_WORKSHEET_NAME)
+    logger.info(f"Main AED files created: {len(df)} rows.")
+    return base + ".csv", base + ".xlsx"
+
+
+def create_main_aed_dataset() -> int:
+    """Zbiór „Wykaz AED – wykaz zbiorczy” instytucji Ministerstwo Cyfryzacji (wzór: create_main_dga_dataset)."""
+    from django.apps import apps
+    from django.conf import settings
+    from django.core.exceptions import ObjectDoesNotExist
+
+    Organization = apps.get_model("organizations", "Organization")
+    Dataset = apps.get_model("datasets", "Dataset")
+    Category = apps.get_model("categories", "Category")
+    Tag = apps.get_model("tags", "Tag")
+    try:
+        institution = Organization.objects.get(pk=settings.MAIN_AED_DATASET_OWNER_ORGANIZATION_PK)
+    except Organization.DoesNotExist:
+        raise ObjectDoesNotExist("Main AED owner institution not found.")
+    dataset = Dataset.objects.create(
+        title=settings.MAIN_AED_DATASET_DEFAULT_TITLE,
+        notes=settings.MAIN_AED_DATASET_DEFAULT_DESC,
+        organization=institution,
+        update_notification_recipient_email=settings.MAIN_AED_DATASET_UPDATE_NOTIFICATION_EMAIL,
+        has_dynamic_data=False,
+        has_high_value_data=False,
+        has_high_value_data_from_ec_list=False,
+        has_research_data=False,
+        update_frequency="daily",
+        status="published",
+    )
+    dataset.categories.set(Category.objects.filter(title__in=settings.MAIN_AED_DATASET_CATEGORIES_TITLES))
+    lang = settings.LANGUAGES[0][0]
+    dataset.tags.set([Tag.objects.get_or_create(name=n, language=lang)[0] for n in settings.MAIN_AED_DATASET_TAGS_NAMES])
+    dataset.save()
+    return dataset.pk
+
+
+def get_main_aed_dataset():
+    from django.apps import apps
+
+    try:
+        AggregatedAEDInfo = apps.get_model("resources", "AggregatedAEDInfo")
+    except LookupError:
+        return None
+    info = AggregatedAEDInfo.objects.last()
+    return info.main_aed_dataset if info else None
+
+
+def create_main_aed_resource_with_dataset(csv_path: str, xlsx_path: str) -> Tuple[int, Optional[int]]:
+    """Zasób wykazu zbiorczego (plik główny CSV + XLSX) w zbiorze MC; zbiór tworzony, gdy go nie ma."""
+    import datetime
+    import os
+
+    from django.apps import apps
+    from django.conf import settings
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from django.db import transaction
+
+    Resource = apps.get_model("resources", "Resource")
+    ResourceFile = apps.get_model("resources", "ResourceFile")
+    Dataset = apps.get_model("datasets", "Dataset")
+    old = get_main_aed_resource()
+    dataset = get_main_aed_dataset()
+    created_dataset: Optional[int] = None
+    with transaction.atomic():
+        if dataset is None:
+            created_dataset = create_main_aed_dataset()
+            dataset = Dataset.objects.get(pk=created_dataset)
+        resource = Resource.objects.create(
+            title=old.title if old else settings.MAIN_AED_RESOURCE_DEFAULT_TITLE,
+            description=old.description if old else settings.MAIN_AED_RESOURCE_DEFAULT_DESC,
+            dataset=dataset,
+            has_dynamic_data=False,
+            has_high_value_data=False,
+            has_high_value_data_from_ec_list=False,
+            has_research_data=False,
+            contains_aed_list=True,
+            status="published",
+            data_date=datetime.datetime.today(),
+        )
+        for path, mime, is_main in (
+            (csv_path, "text/csv", True),
+            (xlsx_path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", False),
+        ):
+            with open(path, "rb") as f:
+                ResourceFile.objects.create(
+                    resource=resource,
+                    is_main=is_main,
+                    file=SimpleUploadedFile(name=os.path.basename(path), content=f.read(), content_type=mime),
+                )
+    return resource.pk, created_dataset
+
+
+def update_or_create_aggr_aed_info_and_delete_old_main_aed(new_main: "Resource") -> None:
+    """AggregatedAEDInfo wskazuje nowy wykaz zbiorczy, stary zasób jest usuwany (wzór: DGA)."""
+    from django.apps import apps
+    from django.db import transaction
+
+    AggregatedAEDInfo = apps.get_model("resources", "AggregatedAEDInfo")
+    info = AggregatedAEDInfo.objects.last()
+    old = info.main_aed_resource if info else None
+    with transaction.atomic():
+        if info:
+            info.resource = new_main
+            info.save()
+        else:
+            AggregatedAEDInfo.objects.create(resource=new_main)
+        if old and old.pk != new_main.pk:
+            old.delete()
+
+
+def clean_up_after_main_aed_resource_creation(created: Optional[Tuple[int, Optional[int]]], paths: Tuple[str, ...],
+                                              exception_occurred: bool) -> None:
+    """Po błędzie usuwa utworzony zasób i zbiór; zawsze usuwa pliki tymczasowe."""
+    import os
+
+    from django.apps import apps
+
+    if exception_occurred and created:
+        resource_pk, dataset_pk = created
+        if resource_pk:
+            apps.get_model("resources", "Resource").raw.filter(pk=resource_pk).delete()
+        if dataset_pk:
+            apps.get_model("datasets", "Dataset").raw.filter(pk=dataset_pk).delete()
+    for p in paths:
+        try:
+            if p and os.path.exists(p):
+                os.remove(p)
+        except OSError as exc:
+            logger.error(f"Cannot delete main AED temp file {p}: {exc}")

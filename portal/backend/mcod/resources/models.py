@@ -1653,6 +1653,31 @@ class AggregatedDGAInfo(models.Model):
         return None
 
 
+class AggregatedAEDInfo(models.Model):
+    """Wskazuje aktualny zasób „Wykaz AED – wykaz zbiorczy” (wzorem AggregatedDGAInfo). Jedna instancja."""
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    resource = models.ForeignKey(Resource, on_delete=models.SET_NULL, null=True, related_name="+")
+
+    def save(self, *args, **kwargs):
+        if not self.id and AggregatedAEDInfo.objects.exists():
+            raise ValidationError("There can be only one AggregatedAEDInfo instance")
+        return super().save(*args, **kwargs)
+
+    @property
+    def main_aed_resource(self) -> Optional[Resource]:
+        if self.resource and self.resource.is_published and not self.resource.is_removed:
+            return self.resource
+        return None
+
+    @property
+    def main_aed_dataset(self) -> Optional[Dataset]:
+        if self.resource and self.resource.dataset.is_published and not self.resource.dataset.is_removed:
+            return self.resource.dataset
+        return None
+
+
 class Chart(ExtendedModel):
     SIGNALS_MAP = {
         "updated": (update_chart_resource,),
