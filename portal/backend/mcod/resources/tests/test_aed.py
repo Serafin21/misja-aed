@@ -17,6 +17,7 @@ from mcod.resources.aed_utils import (
     create_main_aed_df,
     format_aed_file_errors,
     get_aed_resources_info_from_xml_harvester_file,
+    main_aed_table_schema,
     mark_possible_duplicates,
     validate_aed_df,
     validate_aed_file,
@@ -112,6 +113,24 @@ def test_duplicated_ids_and_empty_list():
 def test_validate_aed_file_csv_keeps_teryt_leading_zero():
     rows = [_row(teryt_terc="0201011", szerokosc_geograficzna="51.1", dlugosc_geograficzna="16.9")]
     assert validate_aed_file(_csv(rows), "csv") == []
+
+
+def test_special_sign_dash_means_no_value():
+    """Zasady dane.gov.pl: pusta komórka = znak umowny „-”. W polu nieobowiązkowym jest poprawny, w wymaganym = brak."""
+    rows = [{c: (v if v is not None else "-") for c, v in _row().items()}]
+    assert validate_aed_file(_csv(rows), "csv") == []
+    bad = [{c: (v if v is not None else "-") for c, v in _row(kontakt_email="-", teryt_terc="-").items()}]
+    errors = validate_aed_file(_csv(bad), "csv")
+    assert "brak wartości" in errors[1] and "teryt_terc" in errors[1] and "kontakt" in errors[1]
+
+
+def test_main_aed_table_schema_fixed_types_and_special_sign():
+    """Wykaz zbiorczy ma stały schemat danych – portal nie zgaduje typów („5A”, „00-950” są poprawne)."""
+    s = main_aed_table_schema()
+    types = {f["name"]: f["type"] for f in s["fields"]}
+    assert [f["name"] for f in s["fields"]] == MAIN_AED_COLUMNS and s["missingValues"] == ["-"]
+    assert types["numer_budynku"] == types["kod_pocztowy"] == types["teryt_terc"] == "string"
+    assert types["szerokosc_geograficzna"] == types["dlugosc_geograficzna"] == "number" and types["Lp."] == "integer"
 
 
 def test_validate_aed_file_reports_rows():

@@ -19,6 +19,8 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from mcod.resources.aed_constants import (
     AED_COLUMNS,
     AED_DOSTEP_VALUES,
+    AED_MISSING_VALUE_SIGN,
+    AED_MISSING_VALUE_SIGNS,
     AED_REQUIRED,
     POLAND_LAT,
     POLAND_LON,
@@ -47,7 +49,7 @@ def _is_empty(value: Any) -> bool:
         return True
     if isinstance(value, float) and math.isnan(value):
         return True
-    return str(value).strip() == ""
+    return str(value).strip() in ("", *AED_MISSING_VALUE_SIGNS)  # znak umowny „-” = brak wartości
 
 
 def _to_float(value: Any) -> Optional[float]:
@@ -83,7 +85,9 @@ def create_df_from_aed_file(file: Union[InMemoryUploadedFile, BytesIO], extensio
     else:
         return None
     df.columns = [str(c).strip() for c in df.columns]
-    return df.astype(object).where(pd.notna(df) & (df != ""), None)
+    df = df.astype(object).where(pd.notna(df) & (df != ""), None)
+    # znak umowny („-”) = brak wartości (zasady dane.gov.pl: bez pustych komórek)
+    return df.apply(lambda col: col.map(lambda v: None if isinstance(v, str) and v.strip() in AED_MISSING_VALUE_SIGNS else v))
 
 
 def validate_aed_df_columns(df: pd.DataFrame) -> List[str]:
@@ -337,6 +341,25 @@ def create_main_aed_df(resources) -> pd.DataFrame:
     return main_df[MAIN_AED_COLUMNS]
 
 
+MAIN_AED_FILES_CACHE_KEY = "main_aed_files_to_clean"
+MAIN_AED_OBJECTS_CACHE_KEY = "main_aed_to_clean"
+
+
+def _memoize_for_task_retries(key: str):
+    """Kroki 1–2 zadania są zapamiętywane między ponowieniami (wzór: cache_memoize w dga_utils) – ponowienie
+    po „walidacja w toku” sprawdza ten sam zasób, zamiast tworzyć kolejny. Pamięć czyści
+    clean_up_after_main_aed_resource_creation."""
+    from cache_memoize import cache_memoize
+    from django.conf import settings
+
+    return cache_memoize(
+        timeout=getattr(settings, "MAIN_DGA_RESOURCE_CREATION_CACHE_TIMEOUT", None),
+        hit_callable=lambda *a, **k: logger.info("Main AED objects get from cache."),
+        key_generator_callable=lambda *a, **k: key,
+    )
+
+
+@_memoize_for_task_retries(MAIN_AED_FILES_CACHE_KEY)
 def create_main_aed_files() -> Tuple[str, str]:
     """Pliki wykazu zbiorczego: CSV (UTF-8, przecinek) i XLSX; zwraca ścieżki (csv, xlsx)."""
     import datetime
@@ -351,6 +374,8 @@ def create_main_aed_files() -> Tuple[str, str]:
     stamp = datetime.datetime.now().strftime("%Y%m%d")
     base = os.path.join(directory, f"{settings.MAIN_AED_FILE_NAME_PREFIX} {stamp}")
     df = create_main_aed_df(get_all_aed_resources_sorted_by_organizations())
+    # bez pustych komórek: brak wartości = znak umowny „-” (przypisany do zasobu w create_main_aed_resource_with_dataset)
+    df = df.astype(object).where(pd.notna(df) & (df.astype(str).apply(lambda c: c.str.strip()) != ""), AED_MISSING_VALUE_SIGN)
     df.to_csv(base + ".csv", index=False, encoding="utf-8")
     save_df_to_xlsx(df=df, file_path=base + ".xlsx", sheet_name=settings.MAIN_AED_XLSX_WORKSHEET_NAME)
     logger.info(f"Main AED files created: {len(df)} rows.")
@@ -401,6 +426,20 @@ def get_main_aed_dataset():
     return info.main_aed_dataset if info else None
 
 
+def main_aed_table_schema() -> Dict[str, Any]:
+    """Schemat danych wykazu zbiorczego (tabular_data_schema): kolumny są stałe, więc portal nie zgaduje typów
+    z próbki (zgadywanie „po większości” uznałoby numer budynku „5A” albo kod „00-950” za błąd). Współrzędne i „Lp.”
+    są liczbami, reszta tekstem; znak umowny „-” = brak wartości (missingValues = znaki umowne zasobu)."""
+    from mcod.resources.aed_constants import MAIN_AED_COLUMNS
+
+    numbers = {"szerokosc_geograficzna": "number", "dlugosc_geograficzna": "number", "Lp.": "integer"}
+    return {
+        "fields": [{"name": c, "type": numbers.get(c, "string"), "format": "default"} for c in MAIN_AED_COLUMNS],
+        "missingValues": list(AED_MISSING_VALUE_SIGNS),
+    }
+
+
+@_memoize_for_task_retries(MAIN_AED_OBJECTS_CACHE_KEY)
 def create_main_aed_resource_with_dataset(csv_path: str, xlsx_path: str) -> Tuple[int, Optional[int]]:
     """Zasób wykazu zbiorczego (plik główny CSV + XLSX) w zbiorze MC; zbiór tworzony, gdy go nie ma."""
     import datetime
@@ -432,7 +471,13 @@ def create_main_aed_resource_with_dataset(csv_path: str, xlsx_path: str) -> Tupl
             contains_aed_list=True,
             status="published",
             data_date=datetime.datetime.today(),
+            tabular_data_schema=main_aed_table_schema(),
         )
+        # znak umowny użyty w pustych komórkach („-” = „Zjawisko nie wystąpiło.”) – jak w zasobach instytucji
+        SpecialSign = apps.get_model("special_signs", "SpecialSign")
+        signs = list(SpecialSign.objects.filter(symbol__in=AED_MISSING_VALUE_SIGNS))
+        if signs:
+            resource.special_signs.add(*signs)
         for path, mime, is_main in (
             (csv_path, "text/csv", True),
             (xlsx_path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", False),
@@ -441,6 +486,7 @@ def create_main_aed_resource_with_dataset(csv_path: str, xlsx_path: str) -> Tupl
                 ResourceFile.objects.create(
                     resource=resource,
                     is_main=is_main,
+                    format=os.path.splitext(path)[1][1:].lower(),
                     file=SimpleUploadedFile(name=os.path.basename(path), content=f.read(), content_type=mime),
                 )
     return resource.pk, created_dataset
@@ -466,10 +512,15 @@ def update_or_create_aggr_aed_info_and_delete_old_main_aed(new_main: "Resource")
 
 def clean_up_after_main_aed_resource_creation(created: Optional[Tuple[int, Optional[int]]], paths: Tuple[str, ...],
                                               exception_occurred: bool) -> None:
-    """Po błędzie usuwa utworzony zasób i zbiór; zawsze usuwa pliki tymczasowe."""
+    """Po błędzie usuwa utworzony zasób i zbiór; zawsze usuwa pliki tymczasowe i zapamiętane kroki 1–2."""
     import os
 
     from django.apps import apps
+    from django.core.cache import caches
+
+    cache = caches["default"]
+    cache.delete(MAIN_AED_FILES_CACHE_KEY)
+    cache.delete(MAIN_AED_OBJECTS_CACHE_KEY)
 
     if exception_occurred and created:
         resource_pk, dataset_pk = created

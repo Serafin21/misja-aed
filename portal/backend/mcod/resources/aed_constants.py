@@ -104,3 +104,10 @@ MAIN_AED_DUPLICATE_COLUMN: str = "Możliwy duplikat"
 MAIN_AED_COLUMNS: List[str] = ["Lp."] + MAIN_AED_PROVIDER_COLUMNS + AED_COLUMNS + [MAIN_AED_DUPLICATE_COLUMN]
 # Rekord oznaczany jako „możliwy duplikat”, gdy w promieniu tylu metrów jest AED innego dostawcy (wiersze nie są scalane)
 MAIN_AED_DUPLICATE_DISTANCE_M: float = 25.0
+
+# Zasady dane.gov.pl: w tabeli nie zostawia się pustych komórek – brak wartości oznacza się znakiem umownym (tabela
+# special_signs, np. „-” = „Zjawisko nie wystąpiło.”), zaznaczonym przy zasobie. Ogólna walidacja danych portalu
+# (goodtables, mcod/resources/type_guess.py) traktuje pustą komórkę w kolumnie liczbowej lub daty jako błąd.
+# Walidacja wykazu AED czyta znak umowny jak brak wartości; wykaz zbiorczy wpisuje go w puste komórki.
+AED_MISSING_VALUE_SIGN: str = "-"
+AED_MISSING_VALUE_SIGNS: List[str] = ["-"]

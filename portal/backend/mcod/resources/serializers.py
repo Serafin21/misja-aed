@@ -714,9 +714,14 @@ class AggregatedAEDInfoApiResponse(ExtSchema):
 
     @staticmethod
     def _file_url(obj, extension: str):
+        """CSV = plik główny – link pobierania z licznikiem (/resources/{id},{slug}/file). XLSX to drugi plik zasobu;
+        widok pobierania portalu obsługuje tylko plik główny i jego konwersje, więc link prowadzi wprost do pliku
+        (tak jak Resource.file_url: API_URL + adres pliku)."""
+        from django.conf import settings
+
         for f in obj.resource.files.all():
             if f.file and f.file.name.lower().endswith(f".{extension}"):
-                return f.download_url
+                return f.download_url if f.is_main else f"{settings.API_URL}{f.file.url}"
         return None
 
     def get_csv_url(self, obj):
