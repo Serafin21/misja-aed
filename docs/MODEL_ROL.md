@@ -1,4 +1,4 @@
-> Źródło: dokument zespołu „Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności” (21.11.2026). Wiążący dla CONTRACT.md od wersji 2.0. Stan wdrożenia w prototypie: sekcja „Wdrożenie” na końcu. **Wersja 1.4** (22.11.2026, decyzja właściciela projektu – sekcja „Zmiany v1.4” na końcu; zastępuje K2 i K11 tam, gdzie są sprzeczne). Wersja 1.3 (CR-TL-8): zaufane konta instytucji (wniosek → zatwierdzenie), „Zgłoś AED” tylko po zalogowaniu, zatwierdzanie formalne przez administratora (§4, §5 P1a, P2a), kryteria K13–K16.
+> Źródło: dokument zespołu „Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności” (21.11.2026). Wiążący dla CONTRACT.md od wersji 2.0 (obecnie CONTRACT v3.0). Stan wdrożenia w prototypie: sekcja „Wdrożenie” na końcu. **Wersja 2.0** (22.11.2026, CR-TL-9 – sekcja „Zmiany v2.0” na końcu): wspólna lista = **„Wykaz AED – wykaz zbiorczy”**, który buduje portal dane.gov.pl tak jak wykaz chronionych danych (DGA); każdy wiersz ma dostawcę i link do zasobu; odpowiedzialność i edycja – u dostawcy w panelu dane.gov.pl. Wersja 1.4 (decyzja właściciela projektu, sekcja „Zmiany v1.4”) obowiązuje dla prototypu aplikacji tam, gdzie nie jest sprzeczna z v2.0. Wersja 1.3 (CR-TL-8): zaufane konta instytucji, kryteria K13–K16.
 
 # Wspólna lista AED w dane.gov.pl – model ról i odpowiedzialności
 
@@ -18,7 +18,7 @@ Poza zakresem:
 
 - przebudowa mechanizmów portalu tak, aby publikować mógł każdy,
 
-- zmiany w kodzie dane.gov.pl; model korzysta z mechanizmów, które portal już ma.
+- przebudowa portalu; jedyna zmiana w kodzie dane.gov.pl to przyrost „Wykaz AED” zbudowany na wzór istniejącego wykazu chronionych danych (DGA) – `portal/README.md` (v2.0).
 
 ## 2. Definicje
 
@@ -146,9 +146,9 @@ Dostawca oznacza zbiór słowem kluczowym listy (sekcja 13). System włącza go 
 
 ## 7. Reguły wspólnej listy
 
-Wspólna lista pokazuje rekordy dostawców bez zmian, z widocznym źródłem i datą; nie ma funkcji edycji.
+Wspólna lista to **„Wykaz AED – wykaz zbiorczy”**: zasób zbioru Ministerstwa Cyfryzacji, który portal dane.gov.pl buduje co noc z wykazów AED dostawców – tym samym mechanizmem co wykaz chronionych danych (DGA): znacznik „Zasób zawiera wykaz AED” na zasobie dostawcy → walidacja → łączenie → `GET /aed-aggregated` (v2.0). Pokazuje rekordy dostawców bez zmian, z widocznym źródłem i datą; nie ma funkcji edycji. Każdy wiersz ma nazwę dostawcy, typ instytucji, link do zasobu źródłowego i datę aktualizacji zasobu. Wiersze nie są scalane. Poprawić wiersz może tylko dostawca – nową wersją swojego zasobu w panelu dane.gov.pl.
 
-- **Źródła.** Tylko zbiory na dane.gov.pl oznaczone słowem kluczowym listy i zgodne ze wzorcem.
+- **Źródła.** Tylko zasoby na dane.gov.pl oznaczone „Zasób zawiera wykaz AED” i zgodne ze wzorcem (w prototypie aplikacji – do czasu wdrożenia przyrostu – także zbiory oznaczone słowem kluczowym listy i zbiory przejściowe).
 
 - **Pochodzenie.** Karta każdego AED pokazuje nazwę dostawcy, link do zbioru i zasobu, datę danych oraz datę weryfikacji.
 
@@ -217,7 +217,7 @@ Prototyp pokazuje model na fikcyjnych dostawcach; wersja docelowa korzysta z mec
 | Dostawcy                | 3 fikcyjnych dostawców, dane testowe                       | organizacje portalu: samorządowe, państwowe, prywatne, inne (mcod/organizations)           |
 | Logowanie               | konta testowe dla ról                                      | login.gov.pl (mcod/logingovpl) i 2FA                                                       |
 | Publikacja              | pliki do pobrania z kreatora; zespół niczego nie publikuje | zbiór na koncie dostawcy, harvester XML 1.13 (mcod/harvester)                              |
-| Agregacja               | pakiety fikcyjnych dostawców w formacie odpowiedzi API 1.4 | API 1.4 portalu albo funkcja portalu (sekcja 13)                                           |
+| Agregacja               | pakiety fikcyjnych dostawców w formacie odpowiedzi API 1.4; z `PORTAL_API` – wykaz zbiorczy z portalu | „Wykaz AED – wykaz zbiorczy” budowany przez portal wzorem DGA, `GET /aed-aggregated` (przyrost w `portal/`, v2.0) |
 | Zgłoszenia              | kolejka symulowana w aplikacji                             | komentarze do zbioru i zasobu: POST /datasets/{id}/comments, POST /resources/{id}/comments |
 | Przypomnienia           | symulacja w panelu administratora                          | częstotliwość aktualizacji z powiadomieniem: update_notification_frequency (mcod/datasets) |
 | Historia zmian          | dziennik zdarzeń aplikacji                                 | historia obiektów (mcod/histories)                                                         |
@@ -291,11 +291,23 @@ Właściciel projektu zdecydował, że prototyp ma działać od razu, bez czekan
 
 | Temat | Wcześniej | Od v1.4 |
 |---|---|---|
-| Konta | konta testowe `dysponent`, `administrator` | jedno konto wbudowane **`admin`** (hasło z `ADMIN_PASSWORD`, domyślnie `admin123`); konta instytucji tylko z zatwierdzonego wniosku albo zakładane przez administratora (z podanym hasłem albo wygenerowanym); **administrator może podejrzeć login i hasło każdego konta** (zaszyfrowana kopia, każdy podgląd w dzienniku – w usłudze produkcyjnej hasła nie powinny być odczytywalne) |
+| Konta | konta testowe `dysponent`, `administrator` | jedno konto wbudowane **`admin`** (hasło z `ADMIN_PASSWORD`; od v2.0 bez wartości domyślnej w kodzie, demo `admin123` w `.env.example`); konta instytucji tylko z zatwierdzonego wniosku albo zakładane przez administratora (z podanym hasłem albo wygenerowanym); **administrator może podejrzeć login i hasło każdego konta** (zaszyfrowana kopia, każdy podgląd w dzienniku – w usłudze produkcyjnej hasła nie powinny być odczytywalne) |
 | Edycja danych przez administratora (K2) | administrator nigdy nie zmienia danych AED | administrator **może edytować, usuwać i przypisywać do instytucji każde AED** (także z OpenStreetMap); każda zmiana w dzienniku (kto, kiedy, przed, po), bez oznaczenia na karcie AED; edycje są nakładane na źródło i przetrwają odświeżenie danych |
 | Zgłoszenia AED | tylko nowe AED instytucji; po zatwierdzeniu – do kopii roboczej, na mapie dopiero po publikacji w dane.gov.pl (K11) | zgłoszenia **nowych AED i zmian** istniejących (poprawki, nowe zdjęcie) od instytucji i od administratora; **każde** zatwierdza administrator; zatwierdzone jest **od razu na mapie** (źródło „aplikacja”, dopisek „czeka na publikację w dane.gov.pl”); decyzje: zatwierdź / do poprawy / odrzuć (z komentarzem) |
 | Instytucja a AED | AED z jej zbioru w dane.gov.pl | AED z jej zbioru, dodane przez nią w aplikacji i **przypisane jej przez administratora**; zgłoszenia mieszkańców o tych AED trafiają do niej; przypomnienia o AED niesprawdzanych od roku |
-| Interfejs | — | gość: Znajdź AED, Pierwsza pomoc, O projekcie, „Zaloguj się, aby dodać AED”; instytucja: dodatkowo „Zgłoszenia AED”; administrator: „Zgłoszenia AED” (wnioski o konto, zgłoszenia AED) i „Panel administratora” (instytucje i konta – edycja danych, loginu i hasła; wszystkie AED – edycja, usuwanie, przypisanie) |
+| Interfejs | — | gość: Znajdź AED, Pierwsza pomoc, O projekcie, „Zaloguj się, aby dodać AED”; instytucja: dodatkowo „Zgłoszenia AED”; administrator: „Zgłoszenia AED” (wnioski o konto, zgłoszenia AED) i „Panel administratora”, od v2.0 „Panel moderacji prototypu” (instytucje i konta – edycja danych, loginu i hasła; wszystkie AED – edycja, usuwanie, przypisanie) |
 
 Pakiet plików do publikacji w dane.gov.pl (`POST /moje-aed/pakiet`) i agregacja zbiorów dostawców działają dalej. Testy: `tests/test_admin_edycja.py`.
 
+
+## Zmiany v2.0 – „Wykaz AED – wykaz zbiorczy” wzorem DGA (CR-TL-9, 22.11.2026)
+
+| Temat | Do v1.4 | Od v2.0 |
+|---|---|---|
+| Czym jest wspólna lista | lista budowana przez naszą aplikację z zbiorów oznaczonych słowem kluczowym | **„Wykaz AED – wykaz zbiorczy”** – zasób zbioru MC budowany przez **portal dane.gov.pl** co noc z wykazów AED dostawców, tak jak wykaz chronionych danych (DGA); kod: `portal/backend/mcod/resources/aed_*.py`, opis i tabela DGA → AED: `portal/README.md` |
+| Jak dostawca dołącza | słowo kluczowe zbioru | zasób CSV/XLS/XLSX z 44 kolumnami wzorca + znacznik **„Zasób zawiera wykaz AED”** (panel) albo `containsAedList` (XML 1.14) / `contains_aed_list` (CKAN); portal sprawdza plik przy zapisie; jeden wykaz na instytucję; mogą publikować wszystkie typy instytucji |
+| Wiersz wspólnej listy | rekord z metadanymi pochodzenia | wiersz pliku dostawcy bez zmian + **nazwa dostawcy, typ instytucji, link do zasobu źródłowego, data aktualizacji zasobu**, „Możliwy duplikat” (≤ 25 m, różni dostawcy); **bez scalania** |
+| Odpowiedzialność i edycja | dostawca; w prototypie v1.4 – także administrator aplikacji | za treść wiersza odpowiada dostawca; **edytować może docelowo wyłącznie dostawca – w panelu dane.gov.pl** (nowa wersja zasobu). Edycje administratora prototypu (v1.4) nie zmieniają wykazu zbiorczego |
+| AED dodane w prototypie | „czeka na publikację w dane.gov.pl” | `status_publikacji = nieopublikowane_w_dane_gov_pl` z opisem „dodane w prototypie, nie pochodzą z wykazu w dane.gov.pl”; **nigdy** w wykazie zbiorczym ani w eksporcie aplikacji; instytucja publikuje je sama w swoim wykazie AED |
+| Aplikacja | czyta zbiory dostawców | gdy ustawiono `PORTAL_API` – czyta `GET {PORTAL_API}/aed-aggregated` i plik wykazu zbiorczego (`src/core/dostawcy.py`); bez niego – dotychczasowa ścieżka |
+| Nazwa panelu | „Panel administratora” | **„Panel moderacji prototypu”**; hasło konta `admin` tylko ze zmiennej `ADMIN_PASSWORD` (bez wartości domyślnej w kodzie; hasło demo w README) |
