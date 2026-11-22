@@ -138,7 +138,7 @@ export function LoginPage() {
   const [haslo, setHaslo] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  useEffect(() => { document.title = 'Logowanie – Mapa AED'; }, []);
+  useEffect(() => { document.title = 'Logowanie – Mapa danych AED'; }, []);
   async function submit(e: FormEvent) {
     e.preventDefault(); setErr('');
     if (!name.trim() || !haslo) { setErr('Wpisz login i hasło.'); return; }

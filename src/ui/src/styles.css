@@ -40,7 +40,7 @@ main:focus, h1:focus, h2[tabindex="-1"]:focus { outline: none; }
 .brand:hover { color: var(--color-text); }
 .brand__mark { display: inline-flex; }
 .brand__slogan { display: block; white-space: nowrap; font-size: 1rem; font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); line-height: 1.2; }
-@media (max-width: 420px) { .brand__slogan { display: none; } }
+@media (max-width: 420px) { .brand__slogan { display: none; } .brand { font-size: 1rem; gap: 6px; } .brand__mark svg { width: 28px; height: 28px; } .site-header__inner { column-gap: var(--space-s); } .brand { white-space: nowrap; } }
 .header-112 { margin-left: auto; display: inline-flex; align-items: center; gap: var(--space-s); color: var(--color-text); font-weight: var(--font-weight-bold); padding: 0 var(--space-m); min-height: var(--control-height); border: var(--border-width) solid var(--color-border-input); border-radius: var(--radius); text-decoration: none; }
 .header-112:hover { color: var(--color-action-hover); border-color: var(--color-action-hover); }
 .menu-btn { display: none; }
@@ -611,9 +611,6 @@ thead th { background: var(--color-surface); }
 .tiles--two .tile { padding: var(--space-l, 2rem); }
 .tiles--two .tile__title { font-size: 1.6rem; }
 .home-title { margin-top: var(--space-l, 2rem); }
-.brand--logo { padding: 6px 0; }
-.brand__logo { display: block; height: 80px; width: auto; }
-@media (max-width: 600px) { .brand__logo { height: 56px; } }
 .brandbook-link { margin-top: var(--space-l, 2rem); font-size: 1rem; }
 /* Responsive fix (320 px): the single-column E2 grid grew to the fieldset's min-content width (368 px) */
 @media (max-width: 1099px) { .e2 { grid-template-columns: minmax(0, 1fr); } }
@@ -632,3 +629,6 @@ fieldset.mode-switch, .e2__filters fieldset { min-width: 0; }
   .place-search__box--locate .place-search__locate { min-width: 0; width: 48px; height: 48px; padding: 0; flex-basis: auto; border-top: 0; }
   .place-search__locate-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+
+/* narrow phones: app name + menu button on one line */
+@media (max-width: 420px) { .menu-btn { margin-left: auto; padding: 0 10px; } .brand { font-size: .95rem; } }
