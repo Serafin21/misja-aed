@@ -24,7 +24,6 @@ export function Campaign() {
           <li className="stat stat--ok"><span className="stat__n">{String(st.data.liczba_aed ?? '–')}</span> AED w zbiorze</li>
           <li className="stat"><span className="stat__n">{String(st.data.liczba_dysponentow ?? '–')}</span> dysponentów udostępnia dane</li>
           {st.data.nieaktualne !== undefined && <li className="stat stat--warn"><span className="stat__n">{String(st.data.nieaktualne)}</span> AED czeka na potwierdzenie danych (ponad rok)</li>}
-          {st.data.gminy_bez_danych !== undefined && <li className="stat"><span className="stat__n">{String(st.data.gminy_bez_danych)}</span> gmin w Polsce (z 2 479) bez żadnego AED na wspólnej liście</li>}
         </ul>
       )}
 
